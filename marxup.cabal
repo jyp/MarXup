@@ -21,7 +21,7 @@ data-files:
 executable marxup
   extensions: FlexibleInstances, TupleSections
   main-is: Main.hs
-  build-depends: base==4.*
+  build-depends: base>=4.2&&<=5
   build-depends: pretty==1.1.*
   build-depends: parsec==2.1.*
   

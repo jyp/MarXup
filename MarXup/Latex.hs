@@ -5,7 +5,7 @@ import Control.Applicative
 import MarXup.Tex
 import MarXup.MetaPost
 import Data.List (intersperse)
-import Data.Monoid hiding ((<>))
+import Data.Monoid
 
 -- Separate the arguments with '\\'
 mkrows :: [TeX] -> TeX

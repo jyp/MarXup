@@ -63,9 +63,6 @@ instance Monoid (Tex ()) where
   mempty = Tex ""
   mappend = (>>)
   
-(<>) :: Monoid a =>  a -> a -> a
-(<>) = mappend
-  
 instance IsString (Tex ()) where  
   fromString = Tex
   
