@@ -85,37 +85,38 @@ em = cmd "emph"
 
 align  = env "align*" . mkrows . map mkcols 
 
+-- | A block
+block :: [TeX] -> TeX
 block  bod = do
   cmdn' "begin" [] [tex "array", tex "l"]
   mkrows $ bod
   cmdn' "end" [] [tex "array"]
+  return ()
 
 math = cmd "ensuremath"
 mbox = cmd "mbox"
 
 displayMath body = Tex "\\[" *> body <* Tex "\\]"
 
-paren bod = do
-  tex "("
-  bod
-  tex ")"
+paren = parenthesize (tex "(") (tex ")")
+brack = parenthesize (tex "[") (tex "]")
+brac = parenthesize (backslash >> tex "{") (backslash >> tex "}")
+bigBraces = bigParenthesize (backslash >> tex "{") (backslash >> tex "}")
 
-brack bod = do
-  tex "["
-  bod
-  tex "]"
-
-brac bod = do
-  backslash >> tex "{"
-  bod
-  backslash >> tex "}"
+bigParenthesize l r bod = do
+  Tex "\\left" >> l
+  x <- bod
+  Tex "\\right" >> r
+  return x
+  
+parenthesize l r bod = do
+  l
+  x <- bod
+  r
+  return x
 
 
 mathsf = cmd "mathsf"
-
-instance Eq TeX where
-instance Show TeX where
-  
 
 instance Fractional TeX where
     a / b = cmdn_ "frac" [a,b]

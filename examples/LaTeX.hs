@@ -9,6 +9,7 @@ preamble :: Tex ()
 preamble = do
   usepackage ["mathletters"] "ucs"
   usepackage ["utf8x"] "inputenc"
+  usepackage [] "graphicx"
 
 
 someTree = derivationTree [] $ Node (rule (mbox "modus ponens") "A → B") []

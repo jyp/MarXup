@@ -127,7 +127,7 @@ backslash = Tex ['\\']
 
 nil = braces (Tex "")
 
-cmd0 c = cmdn' c [] []
+cmd0 c = cmdn' c [] [] >> return ()
 
 cmd c = cmd' c []
 
