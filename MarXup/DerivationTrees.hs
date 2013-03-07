@@ -32,6 +32,7 @@ import Data.LabeledTree
 -- import Control.Applicative.State
 import Data.Monoid hiding ((<>))
 import MarXup.Tex hiding (label)
+import MarXup.MultiRef
 import MarXup.MetaPost
 
 ------------------
@@ -93,6 +94,7 @@ detachF Figure{..} = do
   contents <- detachD contents
   tell [Figure{..}]
 
+-- | Detach figures which should be detached.
 detachTop :: [Figure ()] -> Tex [Figure ()]
 detachTop fs = do 
   figs <- runWriterT $ for fs detachF
@@ -152,30 +154,28 @@ tagifyTop = mapM tagifyFig
 ----------------------------------------------------------
 -- Phase 4: Texify
 
-mpQuote :: Tex () -> Tex ()
-mpQuote t = Tex "\"" >> t >> Tex "\""
 
-mkTuple :: [Tex ()] -> Tex ()
-mkTuple l = Tex " (" >> sequence_ (intersperse "," l) >> Tex ") "
+mkTuple :: [MP ()] -> MP ()
+mkTuple l = " (" <> sequence_ (intersperse "," l) <> ") "
 
 link (Link {..} ::> Node (Rule{tag}) _) 
     | steps == 0 = sho tag
-    | otherwise = Tex "MVD " >> sho tag >> Tex " " >>
+    | otherwise = "MVD " <> sho tag <> " " <>
                   mkTuple [sho steps,sho "",mpQuote label,sho align,sho (fromEnum linkStyle)]
 
-type Stringize x = x Int -> Tex ()
+type Stringize x = x Int -> MP ()
 
-stringize :: Derivation' Label -> Tex ()
+stringize :: Derivation' Label -> MP ()
 stringize (Node Rule {tag = t, ..} premises) = do
   traverse (traverse stringize) premises
-  Tex "jgm " >> reference t >> Tex " " >> mpQuote conclusion >> Tex ";\n"
-  Tex "Nfr " >> reference t >> mkTuple (map link premises) >> Tex " " >>
-                     mkTuple [mpQuote ruleLabel,mpQuote delimiter,mpQuote (Tex ""),sho (fromEnum ruleStyle)] >> Tex ";\n"
+  MP (Raw "jgm ") <> mpRefer t <> " " <> mpQuote conclusion <> ";\n"
+  MP (Raw "Nfr ") <> mpRefer t <> mkTuple (map link premises) <> " " <>
+                     mkTuple [mpQuote ruleLabel,mpQuote delimiter,mpQuote "",sho (fromEnum ruleStyle)] <> ";\n"
 
-stringizeFig :: Figure Label -> Tex () 
-stringizeFig (Figure {..}) = metapostFigure figureTag $ do
+stringizeFig :: Figure Label -> MP () 
+stringizeFig (Figure {..}) = mkfig figureTag $ do
   stringize contents
-  texLn "draw drv_tree;"
+  mpRawLines ["draw drv_tree;"]
   
 
 ------------------------------------------
@@ -188,8 +188,8 @@ derivationTree opts j = do
   f <- newLabel
   a <- delayTop <$> detachTop [Figure f j]
   bz <- tagifyTop a   
-  Metapost $ mapM stringizeFig bz
-  cmd' "includegraphics" opts (MPFigure f)
+  mapM_ (inMP . stringizeFig) bz
+  includeMetaPostFigure opts f 
   return f
 
 -----------------------
@@ -209,20 +209,5 @@ haltDrv' tex (Node r _) = Node r {ruleStyle = None}
 
 -- | More compact variant
 haltDrv :: Tex () -> Derivation -> Derivation
-haltDrv t (Node r _) = Node r [defaultLink ::> Node dummy {conclusion = cmd "vdots" nil >> cmd "hspace" (Tex "2pt") >> t} []]
+haltDrv t (Node r _) = Node r [defaultLink ::> Node dummy {conclusion = cmd "vdots" nil >> cmd "hspace" (tex "2pt") >> t} []]
 
-
-{-------------------------
-brace :: TeX -> TeX
-brace (TeX x) = TeX $ '{' : x ++ ['}']
-paren (TeX x) = TeX $ '(' : x ++ [')']
-brack (TeX x) = TeX $ "[" ++ x ++ "]"
-
-tex :: String -> [TeX] -> TeX
-tex macro args = TeX ('\\' : macro) <> mconcat (map brace args)
-text x = tex "text" [TeX x]
-
-f ! x = brace f <> TeX "_" <> brace x
-
-
--}

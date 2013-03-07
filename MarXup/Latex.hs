@@ -43,23 +43,23 @@ color col bod = do
 ----------------
 -- Preamble stuff
 
-usepackage opts name = cmd' "usepackage" opts (Tex name)
+usepackage opts name = cmd' "usepackage" opts (tex name)
 
+stdPreamble :: TeX
 stdPreamble = do 
   usepackage [] "graphicx"
-  usepackage ["mathletters"] "ucs"
-  usepackage ["utf8x"] "inputenc"
+  usepackage ["utf8"] "inputenc"
   return ()
 
 latexDocument :: String -> [String] -> Tex a -> Tex a -> Tex ()
 latexDocument docClass options pre body = do
    preamble
-   Metapost $ metaPostPreamble preamble
+   inMP $ metaPostPreamble preamble
    env "document" body
-   Metapost $ metaPostEpilogue
+   inMP $ metaPostEpilogue
  where 
    preamble = do
-     cmd' "documentclass" options (Tex docClass)
+     cmd' "documentclass" options (tex docClass)
      pre
 
 ----------
@@ -96,7 +96,7 @@ block  bod = do
 math = cmd "ensuremath"
 mbox = cmd "mbox"
 
-displayMath body = Tex "\\[" *> body <* Tex "\\]"
+displayMath body = tex "\\[" *> body <* tex "\\]"
 
 paren = parenthesize (tex "(") (tex ")")
 brack = parenthesize (tex "[") (tex "]")
@@ -104,9 +104,9 @@ brac = parenthesize (backslash >> tex "{") (backslash >> tex "}")
 bigBraces = bigParenthesize (backslash >> tex "{") (backslash >> tex "}")
 
 bigParenthesize l r bod = do
-  Tex "\\left" >> l
+  tex "\\left" >> l
   x <- bod
-  Tex "\\right" >> r
+  tex "\\right" >> r
   return x
   
 parenthesize l r bod = do

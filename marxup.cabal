@@ -32,6 +32,7 @@ library
   build-depends: mtl==2.1.*
   build-depends: labeled-tree==1.*  
   build-depends: filepath==1.3.*  
+  build-depends: containers==0.4.*
 
   exposed-modules: MarXup.Tex
   exposed-modules: MarXup.MetaPost
@@ -39,5 +40,7 @@ library
   exposed-modules: MarXup.Beamer
   exposed-modules: MarXup.DerivationTrees  
   exposed-modules: MarXup.Text
+
+  other-modules: MarXup.MultiRef
 --  exposed-modules: MarXup.Pandoc (broken)
 

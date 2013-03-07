@@ -18,10 +18,10 @@ someTree = derivationTree [] $ Node (rule (mbox "modus ponens") "A → B") []
 γ = cmd "Gamma" nil
 (⊢) = binop $ cmd "vdash" nil
 
-x = Tex "x"
-y = Tex "y"
-a = Tex "a"
-b = Tex "b"
+x = text "x"
+y = text "y"
+a = text "a"
+b = text "b"
 
 (≜) = binop "="
 
@@ -42,7 +42,6 @@ Here comes @sf{some sans-serif text with @em{emphasis}!}
 
 Note that arguments put in braces are markup.
 
-
 @section{Math}
 
 Arguments in parenthesis are Haskell. Combined with unicode syntax,
@@ -52,6 +51,9 @@ example: @math(γ ⊢ x ∶ a).
 The operators are overloaded to work on text as well:
 @displayMath(b ≜ sqrt (a + (x/y)))
 
+There is also special support for derivation trees (via METAPOST)
+
+@someTree
 
 @concl<-section{Conclusion}
 
