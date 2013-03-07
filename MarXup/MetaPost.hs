@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings, EmptyDataDecls #-}
 
 module MarXup.MetaPost where
 
@@ -9,6 +9,7 @@ import Control.Applicative
 import GHC.Exts( IsString(..) )
 import Data.Monoid
 import System.FilePath
+import Data.Ratio  
   
 newtype MP a = MP (Multi a)
   deriving (Monad, MonadFix, Applicative, Functor)
@@ -73,3 +74,48 @@ includeMetaPostFigure opts l = do
   let figname = fname ++ "-" ++ show l ++ ".mps"
   cmd' "includegraphics" opts (tex figname)
     
+-----------------------
+-- Typed METAPOST
+
+newtype Expr a = Expr {fromExpr :: String}
+  deriving (Monoid,IsString)
+instance Show (Expr a) where
+  show (Expr s) = s
+  
+constant :: Rational -> Expr Numeric
+constant r = Expr $ show r
+
+data Numeric 
+data Pair 
+data Picture
+
+instance Num (Expr a) where
+  x + y = parens (x <> "+" <> y) 
+  x - y = parens (x <> "-" <> y)
+  x * y = parens (x <> "*" <> y)
+  
+(+:) :: Expr Numeric -> Expr Numeric -> Expr Pair
+(Expr x) +: (Expr y) = Expr $ parens (x<>","<>y)
+xpart,ypart :: Expr Pair -> Expr Numeric
+xpart (Expr x) = Expr $ parens ("xpart " <> x)
+ypart (Expr x) = Expr $ parens ("xpart " <> x)
+
+parens x = "(" <> x <> ")"
+
+(.*) :: Expr Numeric -> Expr Pair -> Expr Pair
+Expr x .* Expr y = Expr $ x <> y
+
+center :: [Expr Pair] -> Expr Pair
+center xs = Expr $ (show (1 % length xs)) <> fromExpr (sum xs)
+
+infix 4 === , =-= , =|=
+(===) :: Expr a -> Expr a -> MP ()
+(=-=),(=|=)  :: Expr Pair -> Expr Pair -> MP ()
+
+x === y = out (x <> "=" <> y <> ";")
+x =-= y = ypart x === ypart y
+x =|= y = xpart x === xpart y
+                      
+out :: Expr a -> MP ()                      
+out (Expr x) = MP $ Raw x
+
