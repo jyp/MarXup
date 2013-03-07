@@ -181,6 +181,8 @@ stringizeFig (Figure {..}) = metapostFigure figureTag $ do
 ------------------------------------------
 -- Pipeline
 
+-- | Render a derivation tree. The 1st argument are the options to
+-- pass to the includegraphics command.
 derivationTree :: [String] -> Derivation -> Tex Label
 derivationTree opts j = do 
   f <- newLabel
