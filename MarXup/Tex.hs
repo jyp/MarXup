@@ -94,12 +94,19 @@ cmdn'_ cmd options args = cmdn' cmd options args >> return ()
 cmdn cmd args = cmdn' cmd [] args
 cmdn_ cmd args = cmdn'_ cmd [] args
 
+-- | Environment
 env :: String -> Tex a -> Tex a
-env e body = do
+env x = env' x []
+
+-- | Environment with options
+env' :: String -> [String] -> Tex a -> Tex a
+env' e opts body = do
   cmd "begin" $ tex e
+  when (not $ null opts) $ brackets $ sequence_ $ map tex $ intersperse "," opts
   x <- body
   cmd "end" $ tex e
   return x
+
 
 label = do
   l <- newLabel

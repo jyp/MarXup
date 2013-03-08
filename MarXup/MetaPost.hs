@@ -24,7 +24,7 @@ instance Monoid (MP()) where
 mpRawLines :: [String] -> MP ()
 mpRawLines ls = MP $ Raw $ concat $ map (++"\n") ls 
 
-mpRefer l = sho =<< MP (Refer l)
+mpRefer l = MP (Refer l) >> return ()
 mpLabel  = MP $ Label
 
 sho :: Show a => a -> MP ()

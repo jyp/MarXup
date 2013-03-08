@@ -6,6 +6,7 @@ import MarXup.Tex
 import MarXup.MetaPost
 import Data.List (intersperse)
 import Data.Monoid
+import MarXup.MultiRef
 
 -- Separate the arguments with '\\'
 mkrows :: [TeX] -> TeX
@@ -27,13 +28,11 @@ maketitle = cmd "maketitle" $ return ()
 
 ldots = cmd "ldots" (return ())
 
-section s = 
-  do cmd "section" s
-     label
-
-subsection s = 
-  do cmd "subsection" s
-     label
+-- | Sectioning
+section,subsection,paragraph :: TeX -> Tex Label
+section s = cmd "section" s >> label
+subsection s = cmd "subsection" s >> label
+paragraph s = cmd "paragraph" s >> label
 
 color :: String -> Tex a -> Tex a
 color col bod = do 
@@ -88,9 +87,9 @@ align  = env "align*" . mkrows . map mkcols
 -- | A block
 block :: [TeX] -> TeX
 block  bod = do
-  cmdn' "begin" [] [tex "array", tex "l"]
-  mkrows $ bod
-  cmdn' "end" [] [tex "array"]
+  env "array" $ do
+    braces (tex "l") 
+    mkrows $ bod
   return ()
 
 math = cmd "ensuremath"
