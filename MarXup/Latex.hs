@@ -8,11 +8,12 @@ import Data.List (intersperse)
 import Data.Monoid
 import MarXup.MultiRef
 
--- Separate the arguments with '\\'
-mkrows :: [TeX] -> TeX
+
+-- | Separate the arguments with '\\'
+mkrows,mkcols :: [TeX] -> TeX
 mkrows ls = sequence_ $ intersperse newline ls 
 
--- Separate the arguments with '&'
+-- | Separate the arguments with '&'
 mkcols = sequence_ . intersperse newcol
 
 vspace = cmd "vspace"
@@ -84,6 +85,9 @@ em = cmd "emph"
 
 align  = env "align*" . mkrows . map mkcols 
 
+-- array :: [String] -> [String] -> [[TeX]] -> TeX
+-- array opts format body
+
 -- | A block
 block :: [TeX] -> TeX
 block  bod = do
@@ -126,10 +130,10 @@ instance Floating TeX where
     sqrt = cmd "sqrt"
 
 instance Num TeX where
-  fromInteger x = text $ show x
-  (+) = binop $ text "+"
-  (-) = binop $ text "-"
-  (*) = binop $ text "*"
+  fromInteger x = textual $ show x
+  (+) = binop $ textual "+"
+  (-) = binop $ textual "-"
+  (*) = binop $ textual "*"
   negate x = "-" <> x
 
 binop :: TeX -> TeX -> TeX -> TeX
