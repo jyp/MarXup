@@ -18,7 +18,12 @@ newtype Tex a = Tex (ReaderT FilePath Multi a)
 ---------------------------------
 -- MarXup interface
 textual :: String -> TeX
-textual s = Tex $ lift (Raw s)  -- FIXME: escape \, &, etc.
+textual s = Tex $ lift (Raw $ concatMap escape s) 
+
+escape '\\' = "\\backslash{}"            
+escape c | c `elem` "{}&" = '\\':c:[]
+escape c = [c]
+
 text = textual 
 
 

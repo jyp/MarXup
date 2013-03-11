@@ -18,7 +18,16 @@ mkcols = sequence_ . intersperse newcol
 
 vspace = cmd "vspace"
 hspace = cmd "hspace"
-title = cmd "title"
+
+title :: TeX -> TeX
+title = cmd "title" 
+
+data AuthorInfoStyle = Plain | LNCS | SIGPlan | IEEE
+
+-- | author info in as triplets name, institution, email
+authorinfo :: AuthorInfoStyle -> [(String,String,String)] -> TeX
+authorinfo Plain as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map author as
+  where author (name,_,institution) = textual name <> newline <> textual institution
 
 newline = backslash <> backslash
 newcol = tex "&"
