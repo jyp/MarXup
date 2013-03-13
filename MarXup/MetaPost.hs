@@ -5,34 +5,39 @@ module MarXup.MetaPost where
 import MarXup.Tex
 import MarXup.MultiRef
 import Control.Monad.Reader
+import Control.Monad.Writer
 import Control.Applicative
 import GHC.Exts( IsString(..) )
 import Data.Monoid
 import System.FilePath
 import Data.Ratio  
-  
-newtype MP a = MP (Multi a)
-  deriving (Monad, MonadFix, Applicative, Functor)
+
+newtype MP a = MP (WriterT [MP ()] Multi a)
+  deriving (Monad, MonadFix, Applicative, Functor, MonadWriter [MP ()])
 
 instance IsString (MP ()) where
-   fromString = MP . Raw
+   fromString = mpRaw
 
 instance Monoid (MP()) where  
-  mempty = MP $ Raw ""
+  mempty = return ()
   mappend = (>>)
 
-mpRawLines :: [String] -> MP ()
-mpRawLines ls = MP $ Raw $ concat $ map (++"\n") ls 
 
-mpRefer l = MP (Refer l) >> return ()
-mpLabel  = MP $ Label
+mpRaw :: String -> MP ()
+mpRaw x = MP $ lift $ Raw x
+
+mpRawLines :: [String] -> MP ()
+mpRawLines ls = mpRaw $ concat $ map (++"\n") ls 
+
+mpRefer l = MP (lift $ Refer l) >> return ()
+mpLabel  = MP $ lift $ Label
 
 sho :: Show a => a -> MP ()
-sho = MP . Raw . show
+sho = mpRaw . show
                              
 
 mpRawTex :: Tex a -> MP a
-mpRawTex (Tex t) = MP (runReaderT t "<in metapost>")
+mpRawTex (Tex t) = MP $ lift (runReaderT t "<in metapost>")
 
 metaPostPreamble :: Tex a -> MP ()
 metaPostPreamble texPreamble =  do
@@ -51,15 +56,24 @@ metaPostEpilogue = mpRawLines ["end"]
     
 
 mkfig :: Label -> MP () -> MP ()
-mkfig lab (MP t) = MP $ do
-  Raw "beginfig(" >> Refer lab >> Raw ")\n"
+mkfig lab t = do
+  mpRaw "beginfig(" >> mpRefer lab >> mpRaw ")\n"
   t
-  Raw "endfig;\n"
+  mpRaw "endfig;\n"
+
+delay :: MP () -> MP ()
+delay x = tell [x]
+
+runDelayed :: MP a -> Multi a
+runDelayed (MP x) = do
+  (x,delayed) <- runWriterT x
+  mapM_ runDelayed delayed
+  return x
 
 inMP :: MP a -> Tex a
-inMP (MP mp) = do
+inMP mp = do
  fname <- ask
- Tex $ lift $ Target (fname <.> "mp") mp
+ Tex $ lift $ Target (fname <.> "mp") $ runDelayed mp
 
 mpQuote :: TeX -> MP ()
 mpQuote t = "\"" <> mpRawTex t <> "\""
@@ -131,5 +145,5 @@ x =-= y = ypart x === ypart y
 x =|= y = xpart x === xpart y
                       
 out :: Expr a -> MP ()                      
-out (Expr x) = MP $ Raw x
+out (Expr x) = mpRaw x
 

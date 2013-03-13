@@ -168,8 +168,8 @@ type Stringize x = x Int -> MP ()
 stringize :: Derivation' Label -> MP ()
 stringize (Node Rule {tag = t, ..} premises) = do
   traverse (traverse stringize) premises
-  MP (Raw "jgm ") <> mpRefer t <> " " <> mpQuote conclusion <> ";\n"
-  MP (Raw "Nfr ") <> mpRefer t <> mkTuple (map link premises) <> " " <>
+  mpRaw "jgm " <> mpRefer t <> " " <> mpQuote conclusion <> ";\n"
+  mpRaw "Nfr " <> mpRefer t <> mkTuple (map link premises) <> " " <>
                      mkTuple [mpQuote ruleLabel,mpQuote delimiter,mpQuote "",sho (fromEnum ruleStyle)] <> ";\n"
 
 stringizeFig :: Figure Label -> MP () 

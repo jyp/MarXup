@@ -93,8 +93,8 @@ textObj t = do
   if_ (unknown (xpart (Baseline ▸ l))) (xpart (Baseline ▸ l) === 0)
   if_ (unknown (ypart (Baseline ▸ l))) (ypart (Baseline ▸ l) === 0)
 
-  "draw " <> out p <> " shifted " <> out (Baseline ▸ l) <> ";\n"
-  "draw " <> out (Center ▸ l) <> ";\n"
+  delay $ do "draw " <> out p <> " shifted " <> out (Baseline ▸ l) <> ";\n"
+             "draw " <> out (Center ▸ l) <> ";\n"
   return $ l
   
 infix 8 ▸ 
