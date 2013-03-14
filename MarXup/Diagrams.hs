@@ -17,94 +17,74 @@ data Anchor = Center | N | NW | W | SW | S | SE | E | NE | Baseline | BaselineC 
 allAnchors = Cons Center (Cons N (Cons NW(Cons W(Cons S
             (Cons SW(Cons SE(Cons E(Cons NE(Cons Baseline(Cons BaselineC(Cons BaselineE Nil)))))))))))
 
-{-
-           
-data Anchor' :: Anchor -> * where
-  Center' :: Anchor' Center
-  Baseline' :: Anchor' Baseline
-  NW' :: Anchor' NW
-  N' :: Anchor' N
-  NE' :: Anchor' NE
-  E' :: Anchor' E 
-  SE' :: Anchor' SE
-  S' :: Anchor' S 
-  SW' :: Anchor' SW
-  W' :: Anchor' W
-  BaselineE' :: Anchor' BaselineE
-  BaselineC' :: Anchor' BaselineC
-  
-forget :: Anchor' a -> Anchor  
-forget Center' = Center
-forget Baseline' = Baseline
-forget NW' = NW
-forget N'  = N
-forget NE' = NE
-forget E'  = E 
-forget SE' = SE
-forget S'  = S 
-forget SW' = SW
-forget W'  = W
-forget BaselineE' =  BaselineE
-forget BaselineC' =  BaselineC
-          -}
 type D a = MP a
-data ObjectRef -- (anchors :: List Anchor)
+data ObjectRef
 data Equation
 
-unknown :: Expr Numeric -> Expr Bool
-unknown (Expr x) = Expr $ "unknown " <> x
-
-if_ :: Expr Bool -> MP () -> MP ()
-if_ cond bod = "if " <> out cond <> ":" <> bod <> "fi;\n"
-
-corner :: --Elem anchor (Cons NW (Cons NE (Cons SE (Cons SW Nil)))) => Anchor' anchor -> 
-          Anchor -> Expr Picture -> Expr Pair
+corner :: Anchor -> Expr Picture -> Expr Pair
 corner NW (Expr p) = Expr $ "ulcorner " <> p 
 corner SW (Expr p) = Expr $ "llcorner " <> p 
 corner NE (Expr p) = Expr $ "urcorner " <> p 
 corner SE (Expr p) = Expr $ "lrcorner " <> p 
    
-textObj :: TeX -> D (Expr ObjectRef)
--- (ObjectRef (Cons Center (Cons N (Cons NW(Cons W(Cons S(Cons SW(Cons SE(Cons E(Cons NE(Cons Baseline(Cons BaselineC(Cons BaselineE Nil))))))))))))))
-textObj t = do
-  l0 <- mpLabel
-  let l = objectRef "p" l0
-      p = Expr $ "q" <> encode l0
-  "picture " <> out p <> ";\n" 
-  out p <> " := " <> mpTex t <> ";\n"
+abstractBox :: D (Expr ObjectRef)
+abstractBox = do
+  l <- mkRef "p" <$> mpLabel
   "pair " <> sequence_ (intersperse ", " $ [out (l <> "." <> Expr (show a)) | a <- toList allAnchors]) <> ";\n"
-  
-  NW ▸ l  =-= NE ▸ l
-  SW ▸ l  =-= SE ▸ l
-  NE ▸ l  =|= SE ▸ l
-  NE ▸ l  =|= BaselineE ▸ l
-
   center [NW ▸ l, NE ▸ l] === N ▸ l
   center [SW ▸ l, SE ▸ l] === S ▸ l
   center [SW ▸ l, NW ▸ l] === W ▸ l
   center [SE ▸ l, NE ▸ l] === E ▸ l
   center [SW  ▸ l, NE ▸ l] === Center ▸ l
+  NW ▸ l  =-= NE ▸ l
+  SW ▸ l  =-= SE ▸ l
+  NE ▸ l  =|= SE ▸ l
+  NW ▸ l  =|= SW ▸ l
+  E ▸ l  =|= BaselineE ▸ l
+  W ▸ l =|= Baseline ▸ l
   center [Baseline ▸ l, BaselineE ▸ l] === BaselineC ▸ l
-  
-  NW ▸ l === Baseline ▸ l + (0 +: ypart (NW `corner` p))
-  SW ▸ l === Baseline ▸ l - (0 +: ypart (SW `corner` p))
-  BaselineE ▸ l === Baseline ▸ l + (xpart  (NE `corner` p) +: 0)
-  
-  if_ (unknown (xpart (Baseline ▸ l))) (xpart (Baseline ▸ l) === 0)
-  if_ (unknown (ypart (Baseline ▸ l))) (ypart (Baseline ▸ l) === 0)
+  return l
 
-  delay $ do "draw " <> out p <> " shifted " <> out (Baseline ▸ l) <> ";\n"
-             "draw " <> out (Center ▸ l) <> ";\n"
-  return $ l
+height o = ypart (N ▸ o - S ▸ o)
+width o = xpart (E ▸ o - W ▸ o)
+
+boxObj :: D (Expr ObjectRef)
+boxObj = do
+  l <- abstractBox
+  delay $ do
+     defaultVal (width l) 20
+     defaultVal (height l) 10
+     defaultVal (ypart (Center ▸ l)) (ypart (Baseline ▸ l))
+     defaultVal (xpart (Baseline ▸ l)) 0
+     defaultVal (ypart (Baseline ▸ l)) 0
+     "draw " <> out (NW ▸ l) <> "--" <> out (NE ▸ l) <> "--" <> out (SE ▸ l) <> "--" <> out (SW ▸ l) <> "-- cycle;\n"
+  return l
+
+textObj :: TeX -> D (Expr ObjectRef)
+textObj t = do
+  p <- mkRef "q" <$> mpLabel
+  "picture " <> out p <> ";\n" 
+  out p <> " := " <> mpTex t <> ";\n"
+  
+  l <- abstractBox
+  
+  ypart (NW ▸ l - Baseline ▸ l - NW `corner` p) === 0
+  ypart (SW ▸ l - Baseline ▸ l + SW `corner` p) === 0
+  xpart (BaselineE ▸ l - Baseline ▸ l - NE `corner` p) === 0
+
+  delay $ do
+     defaultVal (xpart (Baseline ▸ l)) 0
+     defaultVal (ypart (Baseline ▸ l)) 0
+     "draw " <> out p <> " shifted " <> out (Baseline ▸ l) <> ";\n"
+     -- "draw " <> out (Center ▸ l) <> ";\n"
+  return l
   
 infix 8 ▸ 
-(▸) :: -- Elem a anchors => Anchor' a -> 
-       Anchor -> 
-       Expr (ObjectRef) -> Expr Pair
+(▸) :: Anchor -> Expr ObjectRef -> Expr Pair
 a ▸ (Expr x) = Expr $ x <> "." <> show a
 
-objectRef :: String -> Label -> Expr ObjectRef -- (ObjectRef anchors)
-objectRef prefix lab = Expr (prefix ++ encode lab)
+mkRef :: String -> Label -> Expr a
+mkRef prefix lab = Expr (prefix ++ encode lab)
 
 encode :: Label -> String
 encode n = showIntAtBase 16 (\x -> chr (ord 'a' + x)) n []

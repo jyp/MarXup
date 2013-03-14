@@ -58,7 +58,7 @@ metaPostEpilogue = mpRawLines ["end"]
 mkfig :: Label -> MP () -> MP ()
 mkfig lab t = do
   mpRaw "beginfig(" >> mpRefer lab >> mpRaw ")\n"
-  t
+  execDelayed t
   mpRaw "endfig;\n"
 
 delay :: MP () -> MP ()
@@ -69,6 +69,11 @@ runDelayed (MP x) = do
   (x,delayed) <- runWriterT x
   mapM_ runDelayed delayed
   return x
+
+
+execDelayed :: MP a -> MP a 
+execDelayed x = MP $ lift $ runDelayed x
+
 
 inMP :: MP a -> Tex a
 inMP mp = do
@@ -146,4 +151,13 @@ x =|= y = xpart x === xpart y
                       
 out :: Expr a -> MP ()                      
 out (Expr x) = mpRaw x
+
+if_ :: Expr Bool -> MP () -> MP ()
+if_ cond bod = "if " <> out cond <> ":" <> bod <> "fi;\n"
+
+defaultVal expr v = if_ (unknown expr) (expr === v)
+
+unknown :: Expr Numeric -> Expr Bool
+unknown (Expr x) = Expr $ "unknown " <> x
+
 
