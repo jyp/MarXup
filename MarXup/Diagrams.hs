@@ -69,7 +69,7 @@ textObj t = do
   l <- abstractBox
   
   ypart (NW ▸ l - Baseline ▸ l - NW `corner` p) === 0
-  ypart (SW ▸ l - Baseline ▸ l + SW `corner` p) === 0
+  ypart (SW ▸ l - Baseline ▸ l - SW `corner` p) === 0
   xpart (BaselineE ▸ l - Baseline ▸ l - NE `corner` p) === 0
 
   delay $ do

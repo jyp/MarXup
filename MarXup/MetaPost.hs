@@ -100,7 +100,7 @@ includeMetaPostFigure opts l = do
 -- are the options to includegraphics
 mpFigure :: [String] -> MP () -> Tex Label
 mpFigure opts mp = do
-  l <- label
+  l <- newLabel
   createMetaPostFigure l mp
   includeMetaPostFigure opts l
   return l
