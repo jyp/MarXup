@@ -48,16 +48,19 @@ abstractBox = do
 height o = ypart (N ▸ o - S ▸ o)
 width o = xpart (E ▸ o - W ▸ o)
 
-boxObj :: D (Expr ObjectRef)
-boxObj = do
-  l <- abstractBox
-  delay $ do
+drawBounds :: Expr ObjectRef -> D ()
+drawBounds l = delay $ do
      defaultVal (width l) 20
      defaultVal (height l) 10
      defaultVal (ypart (Center ▸ l)) (ypart (Baseline ▸ l))
      defaultVal (xpart (Baseline ▸ l)) 0
      defaultVal (ypart (Baseline ▸ l)) 0
      "draw " <> out (NW ▸ l) <> "--" <> out (NE ▸ l) <> "--" <> out (SE ▸ l) <> "--" <> out (SW ▸ l) <> "-- cycle;\n"
+  
+boxObj :: D (Expr ObjectRef)
+boxObj = do
+  l <- abstractBox
+  drawBounds l
   return l
 
 textObj :: TeX -> D (Expr ObjectRef)
@@ -76,6 +79,8 @@ textObj t = do
      defaultVal (xpart (Baseline ▸ l)) 0
      defaultVal (ypart (Baseline ▸ l)) 0
      "draw " <> out p <> " shifted " <> out (Baseline ▸ l) <> ";\n"
+     "draw " <> out (NW ▸ l) <> "--" <> out (NE ▸ l) <> "--" <> out (SE ▸ l) <> "--" <> out (SW ▸ l) <> "-- cycle withcolor red;\n"
+    
      -- "draw " <> out (Center ▸ l) <> ";\n"
   return l
   
