@@ -20,7 +20,8 @@ newtype Tex a = Tex (ReaderT FilePath Multi a)
 textual :: String -> TeX
 textual s = Tex $ lift (Raw $ concatMap escape s) 
 
-escape '\\' = "\\backslash{}"            
+escape '\\' = "\\ensuremath{\\backslash{}}"            
+escape '~' = "\\ensuremath{\\sim{}}"            
 escape c | c `elem` "{}&" = '\\':c:[]
 escape c = [c]
 

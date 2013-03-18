@@ -79,8 +79,7 @@ textObj t = do
      defaultVal (xpart (Baseline ▸ l)) 0
      defaultVal (ypart (Baseline ▸ l)) 0
      "draw " <> out p <> " shifted " <> out (Baseline ▸ l) <> ";\n"
-     "draw " <> out (NW ▸ l) <> "--" <> out (NE ▸ l) <> "--" <> out (SE ▸ l) <> "--" <> out (SW ▸ l) <> "-- cycle withcolor red;\n"
-    
+     -- "draw " <> out (NW ▸ l) <> "--" <> out (NE ▸ l) <> "--" <> out (SE ▸ l) <> "--" <> out (SW ▸ l) <> "-- cycle withcolor red;\n"
      -- "draw " <> out (Center ▸ l) <> ";\n"
   return l
   
