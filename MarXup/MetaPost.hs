@@ -104,6 +104,7 @@ mpFigure opts mp = do
   createMetaPostFigure l mp
   includeMetaPostFigure opts l
   return l
+  
     
 -----------------------
 -- Typed METAPOST
@@ -119,6 +120,9 @@ constant r = Expr $ show r
 data Numeric 
 data Pair 
 data Picture
+data Path
+data DrawOption
+data DashPattern
 
 instance Num (Expr a) where
   fromInteger x = Expr $ show x
@@ -159,5 +163,30 @@ defaultVal expr v = if_ (unknown expr) (expr === v)
 
 unknown :: Expr Numeric -> Expr Bool
 unknown (Expr x) = Expr $ "unknown " <> x
+
+infixr 4 ...,....,.--,.!
+
+closed :: Expr Path
+closed = Expr "cycle"
+
+(.!) :: Expr Pair -> Expr Path
+(.!) (Expr x) = Expr x
+
+(.--),(...),(....) :: Expr Pair -> Expr Path -> Expr Path
+Expr x .-- Expr y = Expr $ x <> "--" <> y
+Expr x ... Expr y = Expr $ x <> ".." <> y
+Expr x .... Expr y = Expr $ x <> "..." <> y
+
+dashed :: Expr DashPattern -> Expr DrawOption
+dashed (Expr x) = Expr ("dashed " <> x)
+
+evenly :: Expr DashPattern
+evenly = Expr "evenly"
+
+draw :: Expr Path -> [Expr DrawOption] -> MP ()
+draw path opts = "draw " <> out path <> mconcat [" " <> out o | o <- opts] <> ";\n"
+
+
+
 
 

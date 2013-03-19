@@ -48,14 +48,19 @@ abstractBox = do
 height o = ypart (N ▸ o - S ▸ o)
 width o = xpart (E ▸ o - W ▸ o)
 
-drawBounds :: Expr ObjectRef -> D ()
-drawBounds l = delay $ do
+freezeBounds ::  Expr ObjectRef -> D ()
+freezeBounds l = do
      defaultVal (width l) 20
      defaultVal (height l) 10
      defaultVal (ypart (Center ▸ l)) (ypart (Baseline ▸ l))
      defaultVal (xpart (Baseline ▸ l)) 0
      defaultVal (ypart (Baseline ▸ l)) 0
-     "draw " <> out (NW ▸ l) <> "--" <> out (NE ▸ l) <> "--" <> out (SE ▸ l) <> "--" <> out (SW ▸ l) <> "-- cycle;\n"
+
+
+drawBounds :: Expr ObjectRef -> D ()
+drawBounds l = delay $ do
+  freezeBounds l 
+  draw (NW ▸ l .-- NE ▸ l .-- SE ▸ l .-- SW ▸ l .-- closed) []
   
 boxObj :: D (Expr ObjectRef)
 boxObj = do
