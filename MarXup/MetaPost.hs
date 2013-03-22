@@ -159,11 +159,17 @@ out (Expr x) = mpRaw x
 if_ :: Expr Bool -> MP () -> MP ()
 if_ cond bod = "if " <> out cond <> ":" <> bod <> "fi;\n"
 
+if_else :: Expr Bool -> MP () -> MP () -> MP ()
+if_else cond then_ else_ = "if " <> out cond <> ":" <> then_ <> "\nelse: " <> else_ <>  "fi;\n"
+
 defaultVal expr v = if_ (unknown expr) (expr === v)
 
 unknown :: Expr Numeric -> Expr Bool
 unknown (Expr x) = Expr $ "unknown " <> x
 
+(.>.) :: Expr Numeric -> Expr Numeric -> Expr Bool
+(Expr x) .>. (Expr y) = Expr (x <> ">" <> y)
+          
 infixr 4 ...,....,.--,.!
 
 closed :: Expr Path

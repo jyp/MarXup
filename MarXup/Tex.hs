@@ -1,7 +1,8 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies #-}
 
 module MarXup.Tex where
 
+import MarXup
 import Control.Monad.Reader
 import Control.Applicative
 import GHC.Exts( IsString(..) )
@@ -22,14 +23,14 @@ textual s = Tex $ lift (Raw $ concatMap escape s)
 
 escape '\\' = "\\ensuremath{\\backslash{}}"            
 escape '~' = "\\ensuremath{\\sim{}}"            
-escape c | c `elem` "{}&" = '\\':c:[]
+escape c | c `elem` "{}&$" = '\\':c:[]
 escape c = [c]
 
 text = textual 
 
-
-element :: Tex a -> Tex a
-element = id
+instance Element (Tex a) where
+  type Target (Tex a) = Tex a
+  element = id
 
 tex :: String -> TeX
 tex = Tex . lift . Raw

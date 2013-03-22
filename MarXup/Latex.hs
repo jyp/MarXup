@@ -74,28 +74,30 @@ latexDocument docClass options pre body = do
 ----------
 -- Lists
 
-item :: Tex a -> Tex a
-item x = cmdn' "item" [] [] >> x
-
-enumerate :: [Tex a] -> Tex [a]
-enumerate [] = return [] -- latex does not like empty lists.
-enumerate xs = env "enumerate" $ 
-    mapM item xs
+item = cmd0 "item"
+enumerate = env "enumerate" 
+itemize = env "itemize" 
 
 ----------
 -- Fonts
 
-sf, em :: Tex a -> Tex a
-sf = cmd "textsf"
-em = cmd "emph"
+sans, emph, smallcaps :: Tex a -> Tex a
+sans = cmd "textsf"
+emph = cmd "emph"
+
+smallcaps x = braces (cmd0 "sc" >> x)
 
 ----------
 -- Math
 
 align  = env "align*" . mkrows . map mkcols 
 
--- array :: [String] -> [String] -> [[TeX]] -> TeX
--- array opts format body
+array :: [String] -> TeX -> [[TeX]] -> TeX
+array opts format bod = math $ do
+  env' "array" opts $ do
+    braces format
+    mkrows (map mkcols bod)
+  return ()
 
 -- | A block
 block :: [TeX] -> TeX

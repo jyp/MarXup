@@ -1,7 +1,4 @@
 import Text.ParserCombinators.Parsec
--- import Text.PrettyPrint.HughesPJ hiding (char)
--- import qualified Text.PrettyPrint.HughesPJ as O
-
 
 import Data.Char
 import Control.Applicative hiding (many, (<|>))
@@ -17,7 +14,8 @@ instance Applicative (GenParser Char st) where
     (<*>) = ap
     pure = return
 
-----------
+------------------
+-- Simple printing combinators, which do not add nor remove line breaks
     
 type Doc = String -> String
 (<>) = (.)
@@ -115,10 +113,6 @@ pArg [open,close] = do
   char close
   return result
 
-pArg1 [open,close] = do
-  r <- pArg [open,close]
-  return $ oChar open <> r <> oChar close
-
 isIdentChar x = isAlphaNum x || x == '\''
 
 -- | Either @fctName or @result<-fctName
@@ -138,7 +132,7 @@ pFct = (Nothing,) <$> parens <$>
 pElement :: Parser Doc
 pElement = do
   (result,function) <- pFctName <|> pFct
-  args <- many (pArg "()" <|> pTextArg)
+  args <- many (pArg "()" <|> (brackets <$> pArg "[]") <|> pTextArg)
   let binder = maybe oEmpty (<+> text "<-") result
   return $ binder <> text "element" <+> parens (function <+> (hcat $ fmap parens args))
 {-
