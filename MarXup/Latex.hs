@@ -78,6 +78,17 @@ item = cmd0 "item"
 enumerate = env "enumerate" 
 itemize = env "itemize" 
 
+------------------------
+-- Various environments
+
+
+
+figure :: TeX -> TeX -> Tex Label
+figure caption body = env "figure" $ do
+  body
+  cmd "caption" caption
+  label
+
 ----------
 -- Fonts
 
