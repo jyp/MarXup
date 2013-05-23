@@ -47,11 +47,14 @@ instance Monoid (TeX) where
 instance IsString (TeX) where  
   fromString = text
   
-render :: Tex a -> IO ()                   
-render (Tex t) = do
+renderToDisk :: Tex a -> IO ()                   
+renderToDisk (Tex t) = do
   fname <- getProgName
   writeToDisk (Target (fname <.> "tex") $ runReaderT t fname)
                     
+render :: Tex a -> [String]    
+render (Tex t) = renderMainTarget (runReaderT t "<interactive>")
+    
 texLn :: String -> TeX
 texLn s = tex s >> tex "\n"
 

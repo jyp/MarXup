@@ -30,7 +30,7 @@ data Multi a where
   MFix :: (a -> Multi a) -> Multi a -- to be able to refer to future references
 
   -- Target file management
-  Target :: FilePath -> Multi a -> Multi a -- switch to output in another file
+  Target :: FilePath -> Multi a -> Multi a -- locally switch to output in another file
 
 instance MonadFix Multi where
   mfix = MFix
@@ -56,7 +56,7 @@ instance Monoid Outputs where
   mempty = O (M.empty)
   mappend (O m) (O n) = O $ M.unionWith (++) m n
 
-f ==> s = O $ M.singleton f [s]
+-- | Interpret to write into a map from filename to contents.
 newtype Displayer a = Displayer {fromDisplayer :: RWS FilePath Outputs References a }
   deriving (Monad, MonadWriter Outputs, MonadReader FilePath, MonadState References, MonadFix)
 
@@ -71,8 +71,9 @@ display t = case t of
       (Target f x) -> local (const f) $ display x 
   where tell' :: String -> Displayer ()
         tell' s = do fname <- ask; tell (fname ==> s)
+        f ==> s = O $ M.singleton f [s]
 
-                             
+-- | Write the relevant files to disk
 writeToDisk :: Multi a -> IO ()                   
 writeToDisk t = do 
   let (_,O xs) = evalRWS (fromDisplayer $ display t) "" emptyRefs 
@@ -80,3 +81,6 @@ writeToDisk t = do
     unless (null fname) $
       writeFile fname (concat contents)
  
+renderMainTarget :: Multi a -> [String]  
+renderMainTarget t = M.findWithDefault [] "" xs
+  where (_,O xs) = evalRWS (fromDisplayer $ display t) "" emptyRefs 
