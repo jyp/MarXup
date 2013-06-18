@@ -48,10 +48,15 @@ instance IsString (TeX) where
   fromString = text
   
 renderToDisk :: Tex a -> IO ()                   
-renderToDisk (Tex t) = do
+renderToDisk t = do
   fname <- getProgName
-  writeToDisk (Target (fname <.> "tex") $ runReaderT t fname)
+  renderToDisk' fname t
                     
+renderToDisk' :: String -> Tex a -> IO ()                   
+renderToDisk' fname (Tex t) = do
+  writeToDisk (Target (fname <.> "tex") $ runReaderT t fname)
+
+
 render :: Tex a -> [String]    
 render (Tex t) = renderMainTarget (runReaderT t "<interactive>")
     
