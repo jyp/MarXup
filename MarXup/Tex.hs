@@ -106,7 +106,8 @@ cmdm cmd options args = do
 cmdn'_ :: String -> [String] -> [Tex a] -> Tex ()
 cmdn'_ cmd options args = cmdn' cmd options args >> return ()
 
-cmdn cmd args = cmdn' cmd [] args
+cmdn :: String -> [Tex a] -> Tex [a]
+cmdn c args = cmdn' c [] args
 cmdn_ cmd args = cmdn'_ cmd [] args
 
 -- | Environment

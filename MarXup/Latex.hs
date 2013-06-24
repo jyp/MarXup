@@ -2,11 +2,13 @@
 module MarXup.Latex where
 
 import Control.Applicative
+import Control.Monad (forM_)
 import MarXup.Tex
 import MarXup.MetaPost
-import Data.List (intersperse)
+import Data.List (intersperse,groupBy)
 import Data.Monoid
 import MarXup.MultiRef
+import Data.Function (on)
 
 
 -- | Separate the arguments with '\\'
@@ -16,8 +18,9 @@ mkrows ls = sequence_ $ intersperse newline ls
 -- | Separate the arguments with '&'
 mkcols = sequence_ . intersperse newcol
 
-vspace = cmd "vspace"
-hspace = cmd "hspace"
+vspace, hspace :: String -> TeX 
+vspace = cmd "vspace" . textual
+hspace = cmd "hspace" . textual
 
 title :: TeX -> TeX
 title = cmd "title" 
@@ -26,8 +29,19 @@ data AuthorInfoStyle = Plain | LNCS | SIGPlan | IEEE
 
 -- | author info in as triplets name, institution, email
 authorinfo :: AuthorInfoStyle -> [(String,String,String)] -> TeX
-authorinfo Plain as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map author as
-  where author (name,_,institution) = textual name <> newline <> textual institution
+authorinfo Plain as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
+  where oneauthor (name,_,institution) = textual name <> newline <> textual institution
+                                   
+authorinfo SIGPlan as = forM_ (groupBy ((==) `on` thrd) as) $ \ (g@((_,_,institution):_)) -> do
+    let names = map frst g
+        emails = mconcat $ map (textual . scnd) g
+    cmdn "authorinfo" [mconcat $ intersperse (cmd0 "and") $ map textual names, textual institution, emails]
+    return ()
+  where 
+  scnd (_,x,_) = x
+  frst (x,_,_) = x
+  thrd (_,_,x) = x
+  
 
 newline = backslash <> backslash
 newcol = tex "&"
