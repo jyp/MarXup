@@ -17,7 +17,7 @@ Alignment(..), LineStyle(..),defaultLink,Link(..),
 Figure(..),
 
 -- * Engine
-derivationTree
+derivationTree, derivationTreeMP
 
 ) where
 
@@ -25,13 +25,12 @@ derivationTree
 import Data.List
 import Data.Traversable hiding (mapM)
 import Control.Monad.Writer 
-import Control.Monad.State 
 import Control.Applicative 
-import System.IO.Unsafe
 import Data.LabeledTree
 -- import Control.Applicative.State
 import Data.Monoid hiding ((<>))
 import MarXup.Tex hiding (label)
+import MarXup.Latex (math)
 import MarXup.MultiRef
 import MarXup.MetaPost
 
@@ -152,7 +151,7 @@ tagifyTop :: [Figure ()] -> Tex [Figure Int]
 tagifyTop = mapM tagifyFig
 
 ----------------------------------------------------------
--- Phase 4: Texify
+-- Phase 4: Metapostify
 
 
 mkTuple :: [MP ()] -> MP ()
@@ -163,7 +162,7 @@ link (Link {..} ::> Node (Rule{tag}) _)
     | otherwise = "MVD " <> sho tag <> " " <>
                   mkTuple [sho steps,sho "",mpQuote label,sho align,sho (fromEnum linkStyle)]
 
-type Stringize x = x Int -> MP ()
+-- type Stringize x = x Int -> MP ()
 
 stringize :: Derivation' Label -> MP ()
 stringize (Node Rule {tag = t, ..} premises) = do
@@ -176,21 +175,35 @@ stringizeFig :: Figure Label -> MP ()
 stringizeFig (Figure {..}) = mkfig figureTag $ do
   stringize contents
   mpRawLines ["draw drv_tree;"]
-  
-
-------------------------------------------
--- Pipeline
 
 -- | Render a derivation tree. The 1st argument are the options to
 -- pass to the includegraphics command.
-derivationTree :: [String] -> Derivation -> Tex Label
-derivationTree opts j = do 
+derivationTreeMP :: [String] -> Derivation -> Tex Label
+derivationTreeMP opts j = do 
   f <- newLabel
   a <- delayTop <$> detachTop [Figure f j]
   bz <- tagifyTop a   
   mapM_ (inMP . stringizeFig) bz
   includeMetaPostFigure opts f 
   return f
+
+----------------------------------------------------------
+-- Phase 4': TeXify
+  
+-- | Render a derivation tree without using metapost drv package (links will not be rendered properly)
+derivationTree :: Derivation' a -> TeX
+derivationTree = math . stringizeTex
+
+stringizeTex :: Derivation' a -> TeX
+stringizeTex (Node Rule {..} []) = conclusion
+stringizeTex (Node Rule {..} premises) = braces $ do
+  cmd0 "displaystyle" -- so that the text does not get smaller
+  cmdn "frac" [mconcat $ 
+               intersperse (cmd0 "quad") 
+               [ stringizeTex v | _ ::> v <- premises]
+              ,conclusion]
+  braces $ do cmd0 "small"
+              ruleLabel
 
 -----------------------
 

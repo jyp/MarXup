@@ -50,6 +50,7 @@ newpara = texLines ["",""]
 maketitle :: Tex ()
 maketitle = cmd "maketitle" $ return ()
 
+ldots :: TeX
 ldots = cmd "ldots" (return ())
 
 -- | Sectioning
@@ -66,24 +67,26 @@ color col bod = do
 ----------------
 -- Preamble stuff
 
-usepackage opts name = cmd' "usepackage" opts (tex name)
+
+usepackage :: String -> [String] -> Tex ()
+usepackage name opts  = cmd' "usepackage" opts (tex name)
 
 stdPreamble :: TeX
 stdPreamble = do 
-  usepackage [] "graphicx"
-  usepackage ["utf8"] "inputenc"
+  usepackage "graphicx" [] -- used for import of metapost diagrams
+  usepackage "inputenc" ["utf8"] 
   return ()
 
-latexDocument :: String -> [String] -> Tex a -> Tex a -> Tex ()
+latexDocument :: String -> [String] -> (Bool -> TeX) -> Tex a -> Tex ()
 latexDocument docClass options pre body = do
-   preamble
-   inMP $ metaPostPreamble preamble
+   preamble False
+   inMP $ metaPostPreamble (preamble True)
    env "document" body
    inMP $ metaPostEpilogue
  where 
-   preamble = do
+   preamble inMetaPost = do
      cmd' "documentclass" options (tex docClass)
-     pre
+     pre inMetaPost
 
 ----------
 -- Lists
@@ -132,6 +135,7 @@ block  bod = do
     mkrows $ bod
   return ()
 
+displayMath,math,mbox :: Tex a -> Tex a
 math = cmd "ensuremath"
 mbox = cmd "mbox"
 

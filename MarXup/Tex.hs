@@ -78,10 +78,16 @@ backslash = tex ['\\']
 nil :: TeX
 nil = braces (tex "")
 
+-- | Command with no argument
+cmd0 :: String -> Tex ()
 cmd0 c = cmdn' c [] [] >> return ()
 
+-- | Command with one argument
+cmd :: String -> Tex a -> Tex a
 cmd c = cmd' c []
 
+-- | Command with options
+cmd' :: String -> [String] -> Tex b -> Tex b
 cmd' cmd options arg = do
   [x] <- cmdn' cmd options [arg]
   return x
@@ -106,8 +112,10 @@ cmdm cmd options args = do
 cmdn'_ :: String -> [String] -> [Tex a] -> Tex ()
 cmdn'_ cmd options args = cmdn' cmd options args >> return ()
 
+-- | Command with n arguments
 cmdn :: String -> [Tex a] -> Tex [a]
 cmdn c args = cmdn' c [] args
+
 cmdn_ cmd args = cmdn'_ cmd [] args
 
 -- | Environment
