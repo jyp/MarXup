@@ -195,7 +195,7 @@ derivationTree :: Derivation' a -> TeX
 derivationTree = math . stringizeTex
 
 stringizeTex :: Derivation' a -> TeX
-stringizeTex (Node Rule {..} []) = conclusion
+stringizeTex (Node Rule {ruleStyle=None,..} []) = conclusion
 stringizeTex (Node Rule {..} premises) = braces $ do
   cmd0 "displaystyle" -- so that the text does not get smaller
   cmdn "frac" [mconcat $ 

@@ -23,6 +23,8 @@ textual s = Tex $ lift (Raw $ concatMap escape s)
 
 escape '\\' = "\\ensuremath{\\backslash{}}"            
 escape '~' = "\\ensuremath{\\sim{}}"            
+escape '<' = "\\ensuremath{<}"            
+escape '>' = "\\ensuremath{>}"            
 escape c | c `elem` "{}&$" = '\\':c:[]
 escape c = [c]
 
@@ -149,4 +151,5 @@ xref (SortedLabel _ l) = do
 fxref :: SortedLabel -> TeX
 fxref l@(SortedLabel s _) = do
   textual s
+  tex "~" -- non-breakable space here
   xref l
