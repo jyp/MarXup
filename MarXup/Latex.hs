@@ -138,13 +138,16 @@ displayMath,math,mbox :: Tex a -> Tex a
 math = cmd "ensuremath"
 mbox = cmd "mbox"
 
-displayMath body = tex "\\[" *> body <* tex "\\]"
+displayMath = env "displaymath"
+  -- tex "\\[" *> body <* tex "\\]"
 
+paren,brack,brac,bigBrac :: Tex a -> Tex a
 paren = parenthesize (tex "(") (tex ")")
 brack = parenthesize (tex "[") (tex "]")
 brac = parenthesize (backslash >> tex "{") (backslash >> tex "}")
-bigBraces = bigParenthesize (backslash >> tex "{") (backslash >> tex "}")
+bigBrac = bigParenthesize (backslash >> tex "{") (backslash >> tex "}")
 
+parenthesize,bigParenthesize :: TeX -> TeX -> Tex a -> Tex a
 bigParenthesize l r bod = do
   tex "\\left" >> l
   x <- bod
@@ -157,7 +160,7 @@ parenthesize l r bod = do
   r
   return x
 
-
+mathsf :: Tex a -> Tex a
 mathsf = cmd "mathsf"
 
 instance Fractional TeX where

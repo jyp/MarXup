@@ -69,10 +69,11 @@ texLines = mapM_ texLn
 genParen :: String -> Tex a -> Tex a
 genParen [l,r] x = tex [l] *> x <* tex [r]
 
-braces :: Tex a -> Tex a
+braces,brackets :: Tex a -> Tex a
 braces = genParen "{}"
 brackets = genParen "[]"
 
+backslash :: TeX
 backslash = tex ['\\']
 
 nil :: TeX
