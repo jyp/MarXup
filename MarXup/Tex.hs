@@ -109,13 +109,14 @@ cmdm cmd options args = do
   return res
 
 
-cmdn'_ :: String -> [String] -> [Tex a] -> Tex ()
+cmdn'_ :: String -> [String] -> [TeX] -> Tex ()
 cmdn'_ cmd options args = cmdn' cmd options args >> return ()
 
 -- | Command with n arguments
 cmdn :: String -> [Tex a] -> Tex [a]
 cmdn c args = cmdn' c [] args
 
+cmdn_ :: String -> [TeX] -> Tex ()
 cmdn_ cmd args = cmdn'_ cmd [] args
 
 -- | Environment
@@ -131,10 +132,20 @@ env' e opts body = do
   cmd "end" $ tex e
   return x
 
+data SortedLabel =  SortedLabel String Label
 
-label = do
+label :: String -> Tex SortedLabel
+label s = do
   l <- newLabel
   cmd "label" (reference l)
-  
-xref l = do
+  return $ SortedLabel s l
+
+xref :: SortedLabel -> TeX
+xref (SortedLabel _ l) = do
   cmd "ref" (reference l)
+  return ()
+
+fxref :: SortedLabel -> TeX
+fxref l@(SortedLabel s _) = do
+  textual s
+  xref l

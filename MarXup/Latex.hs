@@ -54,10 +54,10 @@ ldots :: TeX
 ldots = cmd "ldots" (return ())
 
 -- | Sectioning
-section,subsection,paragraph :: TeX -> Tex Label
-section s = cmd "section" s >> label
-subsection s = cmd "subsection" s >> label
-paragraph s = cmd "paragraph" s >> label
+section,subsection,paragraph :: TeX -> Tex SortedLabel
+section s = cmd "section" s >> label "Sec."
+subsection s = cmd "subsection" s >> label "Sec."
+paragraph s = cmd "paragraph" s >> label "Sec."
 
 color :: String -> Tex a -> Tex a
 color col bod = do 
@@ -99,12 +99,11 @@ itemize = env "itemize"
 -- Various environments
 
 
-
-figure :: TeX -> TeX -> Tex Label
+figure :: TeX -> TeX -> Tex SortedLabel
 figure caption body = env "figure" $ do
   body
   cmd "caption" caption
-  label
+  label "Fig."
 
 ----------
 -- Fonts
