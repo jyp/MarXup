@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 import Text.ParserCombinators.Parsec
 
 import Data.Char
@@ -113,7 +114,8 @@ pArg [open,close] = do
   char close
   return result
 
-isIdentChar x = isAlphaNum x || x == '\''
+isIdentChar :: Char -> Bool
+isIdentChar x = isAlphaNum x || (x `elem` "\'_")
 
 -- | Either @fctName or @result<-fctName
 pFctName :: Parser (Maybe Doc, Doc)
