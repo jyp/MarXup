@@ -42,16 +42,16 @@ mpRawTex (Tex t) = MP $ lift (runReaderT t "<in metapost>")
 metaPostPreamble :: Tex a -> MP ()
 metaPostPreamble texPreamble =  do
   mpRawLines ["outputtemplate := \"%j-%c.mps\";",
+--              "outputformat := \"svg\";", -- Sadly, not supported by LaTeX
               "verbatimtex%&latex",
               ""]
   mpRawTex texPreamble
-  mpRawLines ["",
-            "\\begin{document}",
-            "etex;",
-            "prologues:=3;",
-            "input drv;"
-            ]  
-  
+  mpRawLines [""
+             ,"\\begin{document}"
+             ,"etex;"
+             ,"prologues:=3;"
+             ,"input drv;"
+             ] 
 metaPostEpilogue = mpRawLines ["end"]
     
 
