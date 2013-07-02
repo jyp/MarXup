@@ -73,14 +73,18 @@ usepackage name opts  = cmd' "usepackage" opts (tex name)
 
 stdPreamble :: TeX
 stdPreamble = do 
-  usepackage "graphicx" [] -- used for import of metapost diagrams
+  fmt <- getMpOutFormat
+  case fmt of
+    SVG -> usepackage "svg" [] 
+    EPS -> usepackage "graphicx" []
   usepackage "inputenc" ["utf8"] 
   return ()
 
 latexDocument :: String -> [String] -> (Bool -> TeX) -> Tex a -> Tex ()
 latexDocument docClass options pre body = do
+   fmt <- getMpOutFormat
    preamble False
-   inMP $ metaPostPreamble (preamble True)
+   inMP $ metaPostPreamble fmt (preamble True)
    env "document" body
    inMP $ metaPostEpilogue
  where 

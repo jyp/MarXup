@@ -12,9 +12,12 @@ import Data.List (intersperse)
 import MarXup.MultiRef
 import Data.Monoid
 
+                             
+data MPOutFormat = SVG | EPS       
+  deriving (Eq,Show)
 
-newtype Tex a = Tex (ReaderT FilePath Multi a)
-  deriving (Monad, MonadFix, Applicative, Functor, MonadReader FilePath)
+newtype Tex a = Tex (ReaderT (FilePath,MPOutFormat) Multi a)
+  deriving (Monad, MonadFix, Applicative, Functor, MonadReader (FilePath,MPOutFormat))
 
 ---------------------------------
 -- MarXup interface
@@ -49,18 +52,24 @@ instance Monoid (TeX) where
 instance IsString (TeX) where  
   fromString = text
   
-renderToDisk :: Tex a -> IO ()                   
-renderToDisk t = do
+renderToDisk :: MPOutFormat -> Tex a -> IO ()                   
+renderToDisk fmt t = do
   fname <- getProgName
-  renderToDisk' fname t
+  renderToDisk' fmt fname t
                     
-renderToDisk' :: String -> Tex a -> IO ()                   
-renderToDisk' fname (Tex t) = do
-  writeToDisk (Target (fname <.> "tex") $ runReaderT t fname)
+renderToDisk' :: MPOutFormat -> String -> Tex a -> IO ()                   
+renderToDisk' fmt fname (Tex t) = do
+  writeToDisk (Target (fname <.> "tex") $ runReaderT t (fname,fmt))
+
+getMpOutFormat :: Tex MPOutFormat
+getMpOutFormat = snd <$> ask
+
+getOutFile :: Tex FilePath
+getOutFile = fst <$> ask
 
 
 render :: Tex a -> [String]    
-render (Tex t) = renderMainTarget (runReaderT t "<interactive>")
+render (Tex t) = renderMainTarget (runReaderT t ("<interactive>",EPS))
     
 texLn :: String -> TeX
 texLn s = tex s >> tex "\n"

@@ -11,6 +11,7 @@ import GHC.Exts( IsString(..) )
 import Data.Monoid
 import System.FilePath
 import Data.Ratio  
+import Data.Char (toLower)
 
 newtype MP a = MP (WriterT [MP ()] Multi a)
   deriving (Monad, MonadFix, Applicative, Functor, MonadWriter [MP ()])
@@ -34,15 +35,18 @@ mpLabel  = MP $ lift $ Label
 
 sho :: Show a => a -> MP ()
 sho = mpRaw . show
-                             
 
 mpRawTex :: Tex a -> MP a
-mpRawTex (Tex t) = MP $ lift (runReaderT t "<in metapost>")
+mpRawTex (Tex t) = MP $ lift (runReaderT t ("<in metapost>",EPS))
 
-metaPostPreamble :: Tex a -> MP ()
-metaPostPreamble texPreamble =  do
-  mpRawLines ["outputtemplate := \"%j-%c.mps\";",
---              "outputformat := \"svg\";", -- Sadly, not supported by LaTeX
+fmtExt fmt = case fmt of
+        SVG -> "svg"
+        EPS -> "mps"
+
+metaPostPreamble :: MPOutFormat -> Tex a -> MP ()
+metaPostPreamble fmt texPreamble =  do
+  mpRawLines ["outputtemplate := \"%j-%c."++fmtExt fmt++"\";",
+              "outputformat := " ++ show (show fmt) ++ ";",
               "verbatimtex%&latex",
               ""]
   mpRawTex texPreamble
@@ -77,7 +81,7 @@ execDelayed x = MP $ lift $ runDelayed x
 
 inMP :: MP a -> Tex a
 inMP mp = do
- fname <- ask
+ fname <- getOutFile
  Tex $ lift $ Target (fname <.> "mp") $ runDelayed mp
 
 mpQuote :: TeX -> MP ()
@@ -92,9 +96,13 @@ createMetaPostFigure lab t = do
 
 includeMetaPostFigure :: [String] -> Label -> TeX
 includeMetaPostFigure opts l = do
-  fname <- ask 
-  let figname = fname ++ "-" ++ show l ++ ".mps"
-  cmd' "includegraphics" opts (tex figname)
+  (fname,format) <- ask 
+  case format of
+    EPS -> let figname = fname ++ "-" ++ show l ++ ".mps"
+           in  cmd' "includegraphics" opts (tex figname)
+    SVG -> do let figname = fname ++ "-" ++ show l
+              tex "\\def\\svgwidth{\\columnwidth}"
+              cmd' "includesvg" opts (tex figname)
 
 -- | Create and include a metapost drawing in one go. The 1st argument
 -- are the options to includegraphics
