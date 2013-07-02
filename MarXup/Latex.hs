@@ -34,7 +34,7 @@ authorinfo Plain as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map on
                                    
 authorinfo SIGPlan as = forM_ (groupBy ((==) `on` thrd) as) $ \ (g@((_,_,institution):_)) -> do
     let names = map frst g
-        emails = mconcat $ map (textual . scnd) g
+        emails = mconcat $ intersperse (cmd0 "and") $ map (textual . scnd) g
     cmdn "authorinfo" [mconcat $ intersperse (cmd0 "and") $ map textual names, textual institution, emails]
     return ()
   where 
