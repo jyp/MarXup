@@ -80,17 +80,16 @@ stdPreamble = do
   usepackage "inputenc" ["utf8"] 
   return ()
 
-latexDocument :: String -> [String] -> (Bool -> TeX) -> Tex a -> Tex ()
-latexDocument docClass options pre body = do
+documentClass :: String -> [String] -> TeX
+documentClass docClass options = cmd' "documentclass" options (tex docClass)
+
+latexDocument :: (Bool -> TeX) -> Tex a -> Tex ()
+latexDocument preamble body = do
    fmt <- getMpOutFormat
    preamble False
    inMP $ metaPostPreamble fmt (preamble True)
    env "document" body
    inMP $ metaPostEpilogue
- where 
-   preamble inMetaPost = do
-     cmd' "documentclass" options (tex docClass)
-     pre inMetaPost
 
 ----------
 -- Lists
