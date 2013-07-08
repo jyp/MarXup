@@ -27,11 +27,10 @@ textual s = Tex $ lift (Raw $ concatMap escape s)
 escape '\\' = "\\ensuremath{\\backslash{}}"            
 escape '~' = "\\ensuremath{\\sim{}}"            
 escape '<' = "\\ensuremath{<}"            
-escape '>' = "\\ensuremath{>}"            
+escape '>' = "\\ensuremath{>}"
+escape '_' = "\\_"
 escape c | c `elem` "{}&$" = '\\':c:[]
 escape c = [c]
-
-text = textual 
 
 instance Element (Tex a) where
   type Target (Tex a) = Tex a
@@ -46,11 +45,11 @@ newLabel = Tex $ lift Label
 reference = Tex . lift . Refer
 
 instance Monoid (TeX) where  
-  mempty = text ""
+  mempty = textual ""
   mappend = (>>)
   
 instance IsString (TeX) where  
-  fromString = text
+  fromString = textual
   
 renderToDisk :: MPOutFormat -> Tex a -> IO ()                   
 renderToDisk fmt t = do
