@@ -23,7 +23,8 @@ executable marxup
   main-is: Main.hs
   build-depends: base>=4.2&&<=5
   build-depends: pretty==1.1.*
-  build-depends: parsec==2.1.*
+  build-depends: parsec==3.1.*
+  build-depends: dlist==0.5.*
   
 library
   extensions: FlexibleInstances, TypeSynonymInstances, GADTs

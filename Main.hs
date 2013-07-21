@@ -7,33 +7,30 @@ import Data.List
 import System.IO
 import System.Environment
 import Control.Monad
+import Data.DList hiding (map,foldr)
+import Data.Monoid
 
 -- todo: parse strings inside haskell code
 -- todo: output line directives.
 
-instance Applicative (GenParser Char st) where
-    (<*>) = ap
-    pure = return
-
 ------------------
 -- Simple printing combinators, which do not add nor remove line breaks
     
-type Doc = String -> String
-(<>) = (.)
-text s = (s ++)
+type Doc = DList Char
+   
+text s = DL (s ++)
 x <+> y =  x <> text " " <> y 
-oChar c = (c:)
+oChar c = DL (c:)
 parens s = oChar '(' <> s <> oChar ')'
 braces s = oChar '{' <> s <> oChar '}'
 brackets s = oChar '[' <> s <> oChar ']'
 doubleQuotes s = oChar '"' <> s <> oChar '"'
 
-oEmpty = id
 int x = text $ show x
 hcat :: [Doc] -> Doc
-hcat = foldr (<>) oEmpty
+hcat = foldr (<>) mempty
 punctuate t = map (<> t)
-render x = x ""
+render x = unDL x ""
 
 ------------------------------------------
 -- Output combinators
@@ -135,7 +132,7 @@ pElement :: Parser Doc
 pElement = do
   (result,function) <- pFctName <|> pFct
   args <- many (pArg "()" <|> (brackets <$> pArg "[]") <|> pTextArg)
-  let binder = maybe oEmpty (<+> text "<-") result
+  let binder = maybe mempty (<+> text "<-") result
   return $ binder <> text "element" <+> parens (function <+> (hcat $ fmap parens args))
 {-
 pTop :: Parser Doc
