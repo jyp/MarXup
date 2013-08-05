@@ -1,13 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module MarXup.Latex where
 
-import Control.Applicative
 import Control.Monad (forM_)
 import MarXup.Tex
 import MarXup.MetaPost
 import Data.List (intersperse,groupBy)
 import Data.Monoid
-import MarXup.MultiRef
 import Data.Function (on)
 
 
@@ -144,11 +142,12 @@ mbox = cmd "mbox"
 displayMath = env "displaymath"
   -- tex "\\[" *> body <* tex "\\]"
 
-paren,brack,brac,bigBrac :: Tex a -> Tex a
+paren,brack,brac,bigBrac,bigParen :: Tex a -> Tex a
 paren = parenthesize (tex "(") (tex ")")
 brack = parenthesize (tex "[") (tex "]")
 brac = parenthesize (backslash >> tex "{") (backslash >> tex "}")
 bigBrac = bigParenthesize (backslash >> tex "{") (backslash >> tex "}")
+bigParen = bigParenthesize (tex "(") (tex ")")
 
 parenthesize,bigParenthesize :: TeX -> TeX -> Tex a -> Tex a
 bigParenthesize l r bod = do
@@ -165,22 +164,4 @@ parenthesize l r bod = do
 
 mathsf :: Tex a -> Tex a
 mathsf = cmd "mathsf"
-
-instance Fractional TeX where
-    a / b = cmdn_ "frac" [a,b]
-
-instance Floating TeX where
-    pi = cmd "pi" nil
-    exp x = "e^" <> braces x
-    sqrt = cmd "sqrt"
-
-instance Num TeX where
-  fromInteger x = textual $ show x
-  (+) = binop $ textual "+"
-  (-) = binop $ textual "-"
-  (*) = binop $ textual "*"
-  negate x = "-" <> x
-
-binop :: TeX -> TeX -> TeX -> TeX
-binop op a b = a <> op <> b
 
