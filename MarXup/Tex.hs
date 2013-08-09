@@ -28,7 +28,7 @@ escape '\\' = "\\ensuremath{\\backslash{}}"
 escape '~' = "\\ensuremath{\\sim{}}"            
 escape '<' = "\\ensuremath{<}"            
 escape '>' = "\\ensuremath{>}"
-escape '_' = "\\_"
+-- escape '_' = "\\_"
 escape c | c `elem` "{}&$" = '\\':c:[]
 escape c = [c]
 
@@ -142,6 +142,16 @@ env' e opts body = do
   x <- body
   cmd "end" $ tex e
   return x
+  
+  -- | Environment with a tex option
+env'' :: String -> TeX -> Tex a -> Tex a
+env'' e opts body = do
+  cmd "begin" $ tex e
+  brackets opts
+  x <- body
+  cmd "end" $ tex e
+  return x
+
 
 data SortedLabel =  SortedLabel String Label
 

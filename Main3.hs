@@ -91,7 +91,6 @@ pHask =
   (hcat <$> many ((brackets <$> pArg "[]") <|> 
                   (parens   <$> pArg "()") <|> 
                   (parens   <$> pTextArg ) <|> pString <|> pHaskChunk <|> pHaskLn))
-  <* endOfFile
 
 -- | Parse a text argument to an element
 pTextArg :: Parser Doc
@@ -101,11 +100,7 @@ pTextArg = label "quoted text" $
   <* char '»'
 
 pArg :: String -> Parser Doc
-pArg [open,close] = do 
-  char open
-  result <- pHask
-  char close
-  return result
+pArg [open,close] = char open *> pHask <*  char close
 
 isIdentChar :: Char -> Bool
 isIdentChar x = isAlphaNum x || (x `elem` "\'_")
@@ -132,7 +127,7 @@ main = do
   putStrLn x
   putStrLn y
   putStrLn z
-  p <- parseFromFile pHask completeResults y
+  p <- parseFromFile (pHask <* endOfFile) completeResults y
   case p of 
     Left e -> handleErr e
     Right [res] -> writeFile z $ render res
@@ -148,20 +143,14 @@ instance Show (DList Char) where
   show x = show $ render x
 
 testHask = parse "<interactive>" pHask completeResults "arst « text @z<-fct[x](y) awft"
-testHask2 = parse "<interactive>" pHask completeResults "arst « text @@z<-fct[x](y) » awft"
+testHask2 = parse "<interactive>" pHask completeResults "ars(t) « text @z<-fct[x](y) » awft"
 testText2 = parse "<interactive>" pTextArg completeResults "« text @fct(x »"
 testText3 = parse "<interactive>" pTextArg completeResults "« 1 @x 2 @y 3 @x 4 »"
 testElem = parse "<interactive>" pElement completeResults "@x<-fct(x « yop »)[y]"
+testChunk = parse "<interactive>" pHaskChunk completeResults "t"
+testArg = parse "<interactive>" (pArg "()") completeResults "()"
 
-terr e  = let Left x = e in handleErr x
+terr e  = case e of 
+    Left x -> handleErr x
+    Right [res] -> putStrLn $ render res
 
-arstarst = 
- many $ 
-   label "box" $ do
-     char '<'
-     label "paren" $ do
-       char '('
-       char ')'
-     char '>'
-arst = parse "<interactive>" arstarst completeResults
-           
