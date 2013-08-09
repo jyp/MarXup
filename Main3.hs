@@ -40,6 +40,7 @@ render x = unDL x ""
 -- Output combinators
     
 oPos :: SourcePos -> Doc
+oPos EOF = mempty
 oPos p = text "{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}"
     
 oText :: String -> Doc

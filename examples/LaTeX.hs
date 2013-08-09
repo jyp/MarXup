@@ -1,65 +1,72 @@
-{-# OPTIONS_GHC -XTypeSynonymInstances -XOverloadedStrings -XDoRec -pgmF marxup -F #-}
+{-# OPTIONS_GHC -XTypeSynonymInstances -XOverloadedStrings -XRecursiveDo -pgmF marxup3 -F #-}
 
+import MarXup
 import MarXup.Latex
+import MarXup.Latex.Math
 import MarXup.Tex
 import MarXup.DerivationTrees
 import Control.Applicative
-
-preamble :: Tex ()
-preamble = do
-  usepackage ["mathletters"] "ucs"
-  usepackage ["utf8x"] "inputenc"
-  usepackage [] "graphicx"
+import Data.Monoid
 
 
-someTree = derivationTree [] $ Node (rule (mbox "modus ponens") "A → B") []
+preamble inMP = do
+  usepackage "inputenc" ["utf8x"] 
+  usepackage "graphicx" []
 
-(∶) = binop ":"
-γ = cmd "Gamma" nil
-(⊢) = binop $ cmd "vdash" nil
+
+someTree = derivationTreeMP [] $ Node (rule (mbox "modus ponens") "A → B") []
+
+(∶) = binop 2 ", "
+γ = Con $ cmd "Gamma" nil
+(⊢) = binop 1 (cmd0 "vdash")
 
 x = text "x"
 y = text "y"
 a = text "a"
 b = text "b"
 
-(≜) = binop "="
+(≜) = binop 1 "="
 
-main = render $ latexDocument "article" ["11pt"] preamble $ @"
-@intro<-section{Intro}
+main = renderToDisk' SVG "test" $ latexDocument preamble $ «
+
+@intro<-section«Intro»
 
 At-syntax is used to call a Haskell function. The result can be bound.
-For example, the @sf{section} command returns a label that can be used
+For example, the @sans«section» command returns a label that can be used
 for references.
 
 This is section @xref(intro). Note that cross-references are checked
 at ``compile-time''. Forward references also work (see
 sec. @xref(concl)).
 
-@section{Markup}
+@section«Markup»
 
-Here comes @sf{some sans-serif text with @em{emphasis}!}
+Here comes @sans«some sans-serif text with @emph«emphasis»!»
 
 Note that arguments put in braces are markup.
 
-@section{Math}
+@section«Math»
 
 Arguments in parenthesis are Haskell. Combined with unicode syntax,
-this can make writing all sorts of mathy stuff rather pleasant. For
-example: @math(γ ⊢ x ∶ a).
+this can make writing all sorts  mathy stuff rather pleasant. For
+example: @(γ ⊢ x ∶ a).
 
 The operators are overloaded to work on text as well:
-@displayMath(b ≜ sqrt (a + (x/y)))
+@display(b ≜ sqrt (a * (b + (x/y))))
 
 There is also special support for derivation trees (via METAPOST)
 
+@section«Derivation Trees»
+
+Here is some derivation tree:
+
 @someTree
 
-@concl<-section{Conclusion}
+@concl<-section«Conclusion»
 
 
 
 Marχup is awesome.
 
-@"
+»
 

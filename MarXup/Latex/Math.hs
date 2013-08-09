@@ -128,9 +128,10 @@ oxford :: Tex a -> Tex a
 oxford = bigParenthesize (textual "⟦") (textual "⟧")
 
 
-(≡) = binop 0 "=" 
+(.=.) = binop 0 "=" 
  
-display = displayMath 
+display :: Math -> TeX      
+display = displayMath . element
 
 multiline' body = env "multline*" $ mkrows body
 
