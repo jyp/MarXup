@@ -1,10 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module MarXup.Latex where
 
 import Control.Monad (forM_)
 import MarXup.Tex
 import MarXup.MetaPost
-import Data.List (intersperse,groupBy)
+import Data.List (intersperse,groupBy,elemIndex,nub)
 import Data.Monoid
 import Data.Function (on)
 
@@ -23,24 +23,31 @@ hspace = cmd "hspace" . textual
 title :: TeX -> TeX
 title = cmd "title" 
 
-data AuthorInfoStyle = Plain | LNCS | SIGPlan | IEEE
+
+data ClassFile = Plain | LNCS | SIGPlan | IEEE 
+  deriving Eq
+type AuthorInfoStyle = ClassFile
+
+data AuthorInfo = AuthorInfo {authorName :: String, authorEmail :: String, authorInst :: String}
 
 -- | author info in as triplets name, institution, email
-authorinfo :: AuthorInfoStyle -> [(String,String,String)] -> TeX
+authorinfo :: AuthorInfoStyle -> [AuthorInfo] -> TeX
 authorinfo Plain as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
-  where oneauthor (name,_,institution) = textual name <> newline <> textual institution
-                                   
-authorinfo SIGPlan as = forM_ (groupBy ((==) `on` thrd) as) $ \ (g@((_,_,institution):_)) -> do
-    let names = map frst g
-        emails = mconcat $ intersperse (cmd0 "and") $ map (textual . scnd) g
+  where oneauthor (AuthorInfo name _ institution) = textual name <> newline <> textual institution
+authorinfo LNCS as = do
+  cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
+  cmd "institute" $ mconcat $ intersperse (cmd0 "and") $ map textual $ insts
+  where oneauthor AuthorInfo{..} = textual authorName <> (if length insts > 1 then cmd "inst" (textual $ show $ 1 + instIdx) else mempty)
+           where Just instIdx = elemIndex authorInst insts
+        insts = nub $ map authorInst as
+          
+authorinfo SIGPlan as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
+    let names = map authorName g
+        emails = mconcat $ intersperse (cmd0 "and") $ map (textual . authorEmail) g
     cmdn "authorinfo" [mconcat $ intersperse (cmd0 "and") $ map textual names, textual institution, emails]
     return ()
   where 
-  scnd (_,x,_) = x
-  frst (x,_,_) = x
-  thrd (_,_,x) = x
   
-
 newline = backslash <> backslash
 newcol = tex "&"
 newpara = texLines ["",""]

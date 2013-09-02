@@ -7,6 +7,7 @@ import MarXup.Tex
 import MarXup
 import Data.Monoid
 import Data.Ratio
+import Control.Monad (unless)
 
 instance Element Math where
   type Target Math = TeX
@@ -31,8 +32,6 @@ preop prec op = UnOp prec (\x -> x <> op) prec
 outop left right = UnOp 100 (parenthesize left right) 0
 fct x = UnOp 6 (x <>) 7
 
-
- 
 instance Num Math where
   (+) = binop 1 "+"
   (-) = binop 1 "-"
@@ -78,19 +77,21 @@ x ^^^ y = braces x <> tex "^" <> braces y
 
 -- Envs
 
-mathpreamble :: TeX
-mathpreamble = do
+
+
+mathpreamble :: ClassFile -> TeX
+mathpreamble sty = do
   usepackage "graphicx" [] 
   usepackage "amsmath"  [] 
-  usepackage "amsthm"   [] 
+  unless (sty == LNCS) $ usepackage "amsthm"   [] 
   usepackage "amssymb"  []   -- extra symbols such as □ 
   usepackage "stmaryrd" [] -- has ⟦ and ⟧
   usepackage "mathpartir" [] -- mathpar environment
   
-  newtheorem "theorem" "Theorem"
-  newtheorem "corollary" "Corollary"
-  newtheorem "lemma" "Lemma"
-  newtheorem "definition" "Definition"
+  unless (sty == LNCS) $ newtheorem "theorem" "Theorem"
+  unless (sty == LNCS) $ newtheorem "corollary" "Corollary"
+  unless (sty == LNCS) $ newtheorem "lemma" "Lemma"
+  unless (sty == LNCS) $ newtheorem "definition" "Definition"
   
 mathpar :: [[TeX]] -> TeX
 mathpar = env "mathpar" . mkrows . map mk . filter (not . null)
@@ -138,3 +139,4 @@ multiline' body = env "multline*" $ mkrows body
 space = tex "\\:"
 
 mkIf str = tex "\\newif" <> tex ("\\if" ++ str)
+

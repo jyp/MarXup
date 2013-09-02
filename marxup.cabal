@@ -48,6 +48,7 @@ library
   exposed-modules: MarXup.MetaPost
   exposed-modules: MarXup.Latex
   exposed-modules: MarXup.Latex.Math
+  exposed-modules: MarXup.Latex.Bib
   exposed-modules: MarXup.Beamer
   exposed-modules: MarXup.DerivationTrees  
   exposed-modules: MarXup.Text

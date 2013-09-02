@@ -24,6 +24,9 @@ newtype Tex a = Tex (ReaderT (FilePath,MPOutFormat) Multi a)
 textual :: String -> TeX
 textual s = Tex $ lift (Raw $ concatMap escape s) 
 
+kern :: String -> TeX
+kern x = braces $ tex $ "\\kern " ++ x
+
 escape '\\' = "\\ensuremath{\\backslash{}}"            
 escape '~' = "\\ensuremath{\\sim{}}"            
 escape '<' = "\\ensuremath{<}"            
@@ -152,6 +155,8 @@ env'' e opts body = do
   cmd "end" $ tex e
   return x
 
+------------------
+-- Sorted labels
 
 data SortedLabel =  SortedLabel String Label
 
@@ -171,3 +176,7 @@ fxref l@(SortedLabel s _) = do
   textual s
   tex "~" -- non-breakable space here
   xref l
+
+instance Element SortedLabel where
+  type Target SortedLabel = TeX
+  element x = fxref x >> return ()
