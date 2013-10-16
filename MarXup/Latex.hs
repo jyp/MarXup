@@ -46,8 +46,19 @@ authorinfo SIGPlan as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((Autho
         emails = mconcat $ intersperse (cmd0 "and") $ map (textual . authorEmail) g
     cmdn "authorinfo" [mconcat $ intersperse (cmd0 "and") $ map textual names, textual institution, emails]
     return ()
-  where 
-  
+authorinfo IEEE as = cmd "author" $ do 
+  cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace "1cm") $ map (textual . authorName) as
+  tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
+  cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
+  where (AuthorInfo {authorInst = inst}:_) = as 
+    
+keywords :: ClassFile -> [String] -> TeX
+keywords LNCS ks = do   
+  cmd0 "keywords"
+keywords IEEE ks = env "IEEEkeywords" $ do
+  mconcat $ intersperse ", " $ map textual ks
+
+        
 newline = backslash <> backslash
 newcol = tex "&"
 newpara = texLines ["",""]
@@ -106,6 +117,11 @@ itemize = env "itemize"
 ------------------------
 -- Various environments
 
+figure_ :: TeX -> TeX -> Tex SortedLabel
+figure_ caption body = env "figure*" $ do
+  body
+  cmd "caption" caption
+  label "Fig."
 
 figure :: TeX -> TeX -> Tex SortedLabel
 figure caption body = env "figure" $ do
@@ -171,4 +187,15 @@ parenthesize l r bod = do
 
 mathsf :: Tex a -> Tex a
 mathsf = cmd "mathsf"
+
+inferrule :: [TeX] -> TeX -> TeX
+inferrule xs y = cmdn "inferrule" [mkrows xs,y] >> return ()
+
+----------------
+-- Text
+
+italic :: Tex a -> Tex a
+italic = cmd "textit"
+
+
 
