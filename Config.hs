@@ -17,9 +17,9 @@ antiQuoteStrings :: [String]
 quotesStrings :: [(String,String)]
 
 (antiQuoteStrings,quotesStrings) = unsafePerformIO $ do
-    cfg <- load [Required ".marxup"]
+    cfg <- load [Optional ".marxup"]
 
-    L aq <- require cfg "antiQuotes"
-    L q <- require cfg "quotes"
+    L aq <- lookupDefault (L ["@"]) cfg "antiQuotes"
+    L q  <- lookupDefault (L [("«","»")]) cfg "quotes"
 
     return (aq,q)
