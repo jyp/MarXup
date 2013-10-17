@@ -1,9 +1,7 @@
 {-# LANGUAGE TupleSections, FlexibleInstances, TransformListComp #-}
 import Text.ParserCombinators.Parsek.Position
-import Text.ParserCombinators.Class
 
 import Data.Char
-import Control.Applicative
 import Data.List
 import System.IO
 import System.Environment
@@ -11,10 +9,9 @@ import Control.Monad
 import Data.DList hiding (map,foldr)
 import Data.Monoid
 import GHC.Exts (the,groupWith)
+import Config
 
--- todo: parse strings inside haskell code
--- todo: output line directives.
--- todo: haskell comments
+-- todo: parse haskell comments
 
 ------------------
 -- Simple printing combinators, which do not add nor remove line breaks
@@ -53,18 +50,41 @@ oMappend l = text "do" <+> braces (text "rec" <+> braces (hcat (punctuate (text 
   where binds = init l
         ret = last l
              
-oBraces :: Doc -> Doc
-oBraces x = oText "{" <> text "*>" <> x <> text "<*" <>  oText "}"
-
 ----------------------------------------------
--- Parsing combinators
+-- Parsing helpers
+
+satisfy' :: (String -> Bool) -> Parser Char
+satisfy' p = do 
+  l <- look
+  unless (p l) $
+    fail "Unexpected leading string"
+  anySymbol
+
+munch',munch1' :: (String -> Bool) -> Parser String
+munch' p = scan =<< look
+ where
+  scan (c:cs) | p (c:cs) = (:) <$> anySymbol <*> scan cs
+  scan _            = pure []
+
+munch1' p = (:) <$> satisfy' p <*> munch' p
+
+-- | A chunck not containing some strings
+pChunk' :: [String] -> Parser String
+pChunk' stops = munch1' (\l -> not $ any (`isPrefixOf` l) stops)
+
 
 -- | A chunk not containing some chars.
 pChunk :: [Char] -> Parser String
 pChunk stops = munch1 (not . (`elem` stops)) 
 
-pTextChunk = oText <$> pChunk "@\n«»" <?> "Text chunk"
-pHaskChunk = text <$> pChunk "\n\"«»[]()" <?> "Haskell chunk"
+----------------------------------------------
+-- Parsing combinators
+
+anyQuoteStrings :: [String]
+anyQuoteStrings = concatMap (\(x,y) -> [x,y]) quoteStrings
+  
+pTextChunk = oText <$> pChunk' ("\n" : antiQuoteStrings ++ anyQuoteStrings) <?> "Text chunk"
+pHaskChunk = text <$> pChunk' (map box "\n\"[]()" ++ map fst quoteStrings) <?> "Haskell chunk"
     -- we keep track of balancing
 
 pWPos :: Parser Doc 
@@ -94,11 +114,14 @@ pHask =
                   (parens   <$> pTextArg ) <|> pString <|> pHaskChunk <|> pHaskLn))
 
 -- | Parse a text argument to an element
+pTextArg' :: String -> String -> Parser Doc
+pTextArg' open close = label "quoted text" $
+  string open *>
+  (oMappend <$> many (pElement <|> pTextChunk <|> pTextLn))
+  <* string close
+  
 pTextArg :: Parser Doc
-pTextArg = label "quoted text" $
-  char '«' *>
-  (oMappend <$> many (pElement <|> pTextChunk <|> pTextLn <|> pEscape))
-  <* char '»'
+pTextArg = choice $ map (uncurry pTextArg') quoteStrings 
 
 pArg :: String -> Parser Doc
 pArg [open,close] = char open *> pHask <*  char close
@@ -111,13 +134,9 @@ pIdent = text <$> munch1 isIdentChar <?> "identifier"
 
 pArgument = (pArg "()" <|> (brackets <$> pArg "[]") <|> pTextArg) <?> "argument"
 
-pEscape = do
-  string "@@"
-  return $ oText "@"
-
 pElement :: Parser Doc
 pElement = label "Haskell element" $ do
-  char '@'
+  choice $ map string $ antiQuoteStrings
   var <- ((<+> text "<-") <$> (pIdent <* string "<-")) <<|> pure mempty
   val <- ((:) <$> pIdent <*> manyGreedy pArgument) <|> (box <$> pArg "()")
   return $ var <> text "element" <+> parens (hcat $ fmap parens val)
@@ -143,6 +162,8 @@ handleErr e =
 instance Show (DList Char) where
   show x = show $ render x
 
+
+-- Tests
 testHask = parse "<interactive>" pHask completeResults "arst « text @z<-fct[x](y) awft"
 testHask2 = parse "<interactive>" pHask completeResults "ars(t) « text @z<-fct[x](y) » awft"
 testText2 = parse "<interactive>" pTextArg completeResults "« text @fct(x »"

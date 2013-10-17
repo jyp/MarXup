@@ -14,9 +14,9 @@ instance Configured a => Configured (List a) where
    convert _ = Nothing
 
 antiQuoteStrings :: [String]
-quotesStrings :: [(String,String)]
+quoteStrings :: [(String,String)]
 
-(antiQuoteStrings,quotesStrings) = unsafePerformIO $ do
+(antiQuoteStrings,quoteStrings) = unsafePerformIO $ do
     cfg <- load [Optional ".marxup"]
 
     L aq <- lookupDefault (L ["@"]) cfg "antiQuotes"

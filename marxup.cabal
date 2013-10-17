@@ -29,7 +29,8 @@ executable marxup
 executable marxup3
   extensions: FlexibleInstances, TupleSections
   main-is: Main3.hs
-  build-depends: base>=4.2&&<=5
+  build-depends: configurator>=0.2&&<2
+  build-depends: base>=4.2&&<=58
   build-depends: pretty==1.1.*
   build-depends: parsek==1.*
   build-depends: dlist==0.5.*
