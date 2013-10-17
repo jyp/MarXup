@@ -12,8 +12,8 @@ import Data.List (intersperse)
 import MarXup.MultiRef
 import Data.Monoid
 
-                             
-data MPOutFormat = SVG | EPS       
+
+data MPOutFormat = SVG | EPS
   deriving (Eq,Show)
 
 newtype Tex a = Tex (ReaderT (FilePath,MPOutFormat) Multi a)
@@ -22,14 +22,14 @@ newtype Tex a = Tex (ReaderT (FilePath,MPOutFormat) Multi a)
 ---------------------------------
 -- MarXup interface
 textual :: String -> TeX
-textual s = Tex $ lift (Raw $ concatMap escape s) 
+textual s = Tex $ lift (Raw $ concatMap escape s)
 
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
 
-escape '\\' = "\\ensuremath{\\backslash{}}"            
-escape '~' = "\\ensuremath{\\sim{}}"            
-escape '<' = "\\ensuremath{<}"            
+escape '\\' = "\\ensuremath{\\backslash{}}"
+escape '~' = "\\ensuremath{\\sim{}}"
+escape '<' = "\\ensuremath{<}"
 escape '>' = "\\ensuremath{>}"
 -- escape '_' = "\\_"
 escape c | c `elem` "{}&$" = '\\':c:[]
@@ -44,22 +44,22 @@ tex = Tex . lift . Raw
 type TeX = Tex ()
 
 newLabel :: Tex Label
-newLabel = Tex $ lift Label  
+newLabel = Tex $ lift Label
 reference = Tex . lift . Refer
 
-instance Monoid (TeX) where  
+instance Monoid (TeX) where
   mempty = textual ""
   mappend = (>>)
-  
-instance IsString (TeX) where  
+
+instance IsString (TeX) where
   fromString = textual
-  
-renderToDisk :: MPOutFormat -> Tex a -> IO ()                   
+
+renderToDisk :: MPOutFormat -> Tex a -> IO ()
 renderToDisk fmt t = do
   fname <- getProgName
   renderToDisk' fmt fname t
-                    
-renderToDisk' :: MPOutFormat -> String -> Tex a -> IO ()                   
+
+renderToDisk' :: MPOutFormat -> String -> Tex a -> IO ()
 renderToDisk' fmt fname (Tex t) = do
   writeToDisk (Target (fname <.> "tex") $ runReaderT t (fname,fmt))
 
@@ -70,9 +70,9 @@ getOutFile :: Tex FilePath
 getOutFile = fst <$> ask
 
 
-render :: Tex a -> [String]    
+render :: Tex a -> [String]
 render (Tex t) = renderMainTarget (runReaderT t ("<interactive>",EPS))
-    
+
 texLn :: String -> TeX
 texLn s = tex s >> tex "\n"
 
@@ -107,7 +107,7 @@ cmd' cmd options arg = do
   return x
 
 cmdn' :: String -> [String] -> [Tex a] -> Tex [a]
-cmdn' cmd options args = do 
+cmdn' cmd options args = do
   backslash >> tex cmd
   when (not $ null options) $ brackets $ sequence_ $ map tex $ intersperse "," options
   res <- sequence $ map braces args
@@ -115,7 +115,7 @@ cmdn' cmd options args = do
   return res
 
 cmdm :: String -> [Tex a] -> [Tex a] -> Tex [a]
-cmdm cmd options args = do 
+cmdm cmd options args = do
   backslash >> tex cmd
   when (not $ null options) $ sequence_ $ map brackets $ options
   res <- sequence $ map braces args
@@ -145,8 +145,8 @@ env' e opts body = do
   x <- body
   cmd "end" $ tex e
   return x
-  
-  -- | Environment with a tex option
+
+-- | Environment with a tex option
 env'' :: String -> TeX -> Tex a -> Tex a
 env'' e opts body = do
   cmd "begin" $ tex e
