@@ -4,9 +4,13 @@ import MarXup.Tex
 -------------
 -- Bib
 
-bibliographystyle x = cmd "bibliographystyle" $ textual x
-bibliography x = cmd "bibliography" x 
 
-citet,citep :: TeX -> TeX
-[citet,citep] = map cmd ["citet","cite"]
+bibliographystyle :: String -> TeX
+bibliographystyle x = cmd "bibliographystyle" $ tex x
+
+bibliography :: String -> TeX
+bibliography x = cmd "bibliography" $ tex x
+
+citet,citep :: String -> TeX
+[citet,citep] = map (\c -> cmd c . tex) ["citet","citep"]
 

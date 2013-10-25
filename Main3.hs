@@ -132,7 +132,8 @@ isIdentChar x = isAlphaNum x || (x `elem` "\'_")
 pIdent :: Parser Doc
 pIdent = text <$> munch1 isIdentChar <?> "identifier"
 
-pArgument = (pArg "()" <|> (brackets <$> pArg "[]") <|> pTextArg) <?> "argument"
+pArgument :: Parser Doc
+pArgument = (pArg "()" <|> (brackets <$> pArg "[]") <|> pTextArg <|> pString) <?> "argument" 
 
 pElement :: Parser Doc
 pElement = label "Haskell element" $ do
