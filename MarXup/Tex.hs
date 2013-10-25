@@ -31,7 +31,7 @@ escape '\\' = "\\ensuremath{\\backslash{}}"
 escape '~' = "\\ensuremath{\\sim{}}"
 escape '<' = "\\ensuremath{<}"
 escape '>' = "\\ensuremath{>}"
--- escape '_' = "\\_"
+escape '_' = "\\_"
 escape c | c `elem` "{}&$" = '\\':c:[]
 escape c = [c]
 
