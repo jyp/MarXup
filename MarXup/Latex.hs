@@ -51,14 +51,14 @@ authorinfo IEEE as = cmd "author" $ do
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
   cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
   where (AuthorInfo {authorInst = inst}:_) = as 
-    
+
 keywords :: ClassFile -> [String] -> TeX
-keywords LNCS ks = do   
-  cmd0 "keywords"
+keywords LNCS ks = do
+  cmd "keywords" $ mconcat $ intersperse ", " $ map textual ks
 keywords IEEE ks = env "IEEEkeywords" $ do
   mconcat $ intersperse ", " $ map textual ks
 
-        
+
 newline = backslash <> backslash
 newcol = tex "&"
 newpara = texLines ["",""]
