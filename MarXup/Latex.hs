@@ -24,7 +24,7 @@ title :: TeX -> TeX
 title = cmd "title" 
 
 
-data ClassFile = Plain | LNCS | SIGPlan | IEEE 
+data ClassFile = Plain | LNCS | SIGPlan | IEEE | Beamer
   deriving Eq
 type AuthorInfoStyle = ClassFile
 
@@ -32,8 +32,6 @@ data AuthorInfo = AuthorInfo {authorName :: String, authorEmail :: String, autho
 
 -- | author info in as triplets name, institution, email
 authorinfo :: AuthorInfoStyle -> [AuthorInfo] -> TeX
-authorinfo Plain as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
-  where oneauthor (AuthorInfo name _ institution) = textual name <> newline <> textual institution
 authorinfo LNCS as = do
   cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
   cmd "institute" $ mconcat $ intersperse (cmd0 "and") $ map textual $ insts
@@ -50,7 +48,9 @@ authorinfo IEEE as = cmd "author" $ do
   cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace "1cm") $ map (textual . authorName) as
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
   cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
-  where (AuthorInfo {authorInst = inst}:_) = as 
+  where (AuthorInfo {authorInst = inst}:_) = as
+authorinfo _ {- Plain, Beamer -} as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
+  where oneauthor (AuthorInfo name _ institution) = textual name <> newline <> textual institution
 
 keywords :: ClassFile -> [String] -> TeX
 keywords LNCS ks = do
