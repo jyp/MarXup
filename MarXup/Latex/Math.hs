@@ -87,12 +87,12 @@ mathpreamble sty = do
   usepackage "amssymb"  []   -- extra symbols such as □ 
   usepackage "stmaryrd" [] -- has ⟦ and ⟧
   usepackage "mathpartir" [] -- mathpar environment
-  
-  unless (sty == LNCS) $ newtheorem "theorem" "Theorem"
-  unless (sty == LNCS) $ newtheorem "corollary" "Corollary"
-  unless (sty == LNCS) $ newtheorem "lemma" "Lemma"
-  unless (sty == LNCS) $ newtheorem "definition" "Definition"
-  
+
+  unless (sty == LNCS || sty == Beamer) $ newtheorem "theorem" "Theorem"
+  unless (sty == LNCS || sty == Beamer) $ newtheorem "corollary" "Corollary"
+  unless (sty == LNCS || sty == Beamer) $ newtheorem "lemma" "Lemma"
+  unless (sty == LNCS || sty == Beamer) $ newtheorem "definition" "Definition"
+
 mathpar :: [[TeX]] -> TeX
 mathpar = env "mathpar" . mkrows . map mk . filter (not . null)
  where mk = foldr1 (\x y -> x <> cmd0 "and" <> y) 
