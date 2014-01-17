@@ -37,8 +37,8 @@ import MarXup.MetaPost
 ------------------
 --- Basics
 
-data LineStyle = None | Simple | Double | Dotted | Dashed | Waved | TeXDotted 
-  deriving (Enum,Show)
+data LineStyle = None | Simple | Double | Dotted | Dashed | Waved | TeXDotted
+  deriving (Enum,Show,Eq,Ord)
 
 data Link = Link {label :: Tex (), linkStyle :: LineStyle, align :: Alignment, steps :: Int}  -- ^ Regular link
           | Detached {label :: Tex ()}               -- ^ Detach the derivation as another figure
@@ -49,6 +49,8 @@ defaultLink :: Link
 defaultLink = Link mempty Dotted CenterA 0
 
 data Alignment = LeftA | CenterA | RightA
+  deriving (Eq,Ord)
+           
 instance Show Alignment where    
     show LeftA = "l"
     show CenterA = "c"
