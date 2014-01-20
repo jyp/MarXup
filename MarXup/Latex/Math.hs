@@ -11,7 +11,7 @@ import Control.Monad (unless)
 
 instance Element Math where
   type Target Math = TeX
-  element = mRender 0
+  element = cmd "ensuremath" . mRender 0
 
 data Math = BinOp Int (TeX -> TeX -> TeX) Int Int Math Math 
           | UnOp Int (TeX -> TeX) Int Math

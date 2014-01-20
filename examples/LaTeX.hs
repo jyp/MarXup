@@ -10,6 +10,7 @@ import Data.Monoid
 
 
 preamble inMP = do
+  documentClass "article" []
   usepackage "inputenc" ["utf8x"] 
   usepackage "graphicx" []
 
@@ -20,14 +21,14 @@ someTree = derivationTreeMP [] $ Node (rule (mbox "modus ponens") "A → B") []
 γ = Con $ cmd "Gamma" nil
 (⊢) = binop 1 (cmd0 "vdash")
 
-x = text "x"
-y = text "y"
-a = text "a"
-b = text "b"
+x = Con "x"
+y = Con "y"
+a = Con "a"
+b = Con "b"
 
 (≜) = binop 1 "="
 
-main = renderToDisk' SVG "test" $ latexDocument preamble $ «
+main = renderToDisk' EPS "LaTeX" $ latexDocument preamble $ «
 
 @intro<-section«Intro»
 
@@ -66,7 +67,7 @@ Here is some derivation tree:
 
 
 
-Marχup is awesome.
+Mar@math«@cmd0"chi"»up is awesome.
 
 »
 
