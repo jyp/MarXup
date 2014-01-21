@@ -143,10 +143,10 @@ smallcaps x = braces (cmd0 "sc" >> x)
 
 align  = env "align*" . mkrows . map mkcols 
 
-array :: [String] -> TeX -> [[TeX]] -> TeX
+array :: [String] -> String -> [[TeX]] -> TeX
 array opts format bod = math $ do
   env' "array" opts $ do
-    braces format
+    braces (tex format)
     mkrows (map mkcols bod)
   return ()
 
