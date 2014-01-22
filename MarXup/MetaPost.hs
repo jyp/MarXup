@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings, EmptyDataDecls #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings, EmptyDataDecls, FlexibleInstances #-}
 
 module MarXup.MetaPost where
 
@@ -12,6 +12,7 @@ import Data.Monoid
 import System.FilePath
 import Data.Ratio  
 import Data.Char (toLower)
+import Data.List (transpose)
 
 newtype MP a = MP (WriterT [MP ()] Multi a)
   deriving (Monad, MonadFix, Applicative, Functor, MonadWriter [MP ()])
@@ -134,10 +135,10 @@ data DashPattern
 
 instance Num (Expr a) where
   fromInteger x = Expr $ show x
-  x + y = parens (x <> "+" <> y) 
+  x + y = parens (x <> "+" <> y)
   x - y = parens (x <> "-" <> y)
   x * y = parens (x <> "*" <> y)
-  
+
 (+:) :: Expr Numeric -> Expr Numeric -> Expr Pair
 (Expr x) +: (Expr y) = Expr $ parens (x<>","<>y)
 xpart,ypart :: Expr Pair -> Expr Numeric
@@ -157,11 +158,23 @@ infix 4 === , =-= , =|=
 (===) :: Expr a -> Expr a -> MP ()
 (=-=),(=|=)  :: Expr Pair -> Expr Pair -> MP ()
 
+alignHoriz :: [Expr Pair] -> MP ()
+alignHoriz (x:xs) = sequence_ $ zipWith (=-=) xs (x:xs)
+
+alignVert :: [Expr Pair] -> MP ()
+alignVert (x:xs) = sequence_ $ zipWith (=|=) xs (x:xs)
+
+alignMatrix :: [[Expr Pair]] -> MP ()
+alignMatrix ls = do
+  forM_ ls alignHoriz
+  forM_ (transpose ls) alignVert
+  
 x === y = out (x <> "=" <> y <> ";\n")
 x =-= y = ypart x === ypart y
 x =|= y = xpart x === xpart y
-                      
-out :: Expr a -> MP ()                      
+
+-- | Output an expression
+out :: Expr a -> MP ()
 out (Expr x) = mpRaw x
 
 if_ :: Expr Bool -> MP () -> MP ()
@@ -177,7 +190,7 @@ unknown (Expr x) = Expr $ "unknown " <> x
 
 (.>.) :: Expr Numeric -> Expr Numeric -> Expr Bool
 (Expr x) .>. (Expr y) = Expr (x <> ">" <> y)
-          
+
 infixr 4 ...,....,.--,.!
 
 closed :: Expr Path

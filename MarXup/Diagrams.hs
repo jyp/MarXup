@@ -26,23 +26,44 @@ corner NW (Expr p) = Expr $ "ulcorner " <> p
 corner SW (Expr p) = Expr $ "llcorner " <> p 
 corner NE (Expr p) = Expr $ "urcorner " <> p 
 corner SE (Expr p) = Expr $ "lrcorner " <> p 
-   
+
+hdist,vdist :: Expr ObjectRef -> Expr ObjectRef -> Expr Numeric
+hdist x y = xpart (W ▸ y - E ▸ x)
+vdist x y = ypart (S ▸ y - N ▸ x)
+
+boundingZone :: Expr ObjectRef -> Expr Path
+boundingZone l = (NW ▸ l ... NE ▸ l ... SE ▸ l ... SW ▸ l ... closed) 
+
+arrow :: Expr ObjectRef -> Expr ObjectRef -> MP (Expr Pair)
+arrow source target = do
+  c <- mkRef "z" <$> mpLabel
+  mpRaw "pair " <> out c <>";\n" 
+  delay $ mpRaw "drawarrow " <> out (Center ▸ source) <> "..." <> out (Center ▸ target) <> 
+          " cutafter (" <> out (boundingZone target) <>  ")" <> 
+          " cutbefore (" <> out (boundingZone source) <>  ")" <> 
+          ";\n"
+  c === center [Center ▸ source,Center ▸ target]
+  return c
+
+labelPt :: TeX -> Anchor -> Expr Pair -> MP (Expr ObjectRef)
+labelPt labell anchor labeled  = do
+  t <- textObj labell
+  anchor ▸ t === labeled
+  return t
+
 abstractBox :: D (Expr ObjectRef)
 abstractBox = do
   l <- mkRef "p" <$> mpLabel
   "pair " <> sequence_ (intersperse ", " $ [out (l <> "." <> Expr (show a)) | a <- toList allAnchors]) <> ";\n"
-  center [NW ▸ l, NE ▸ l] === N ▸ l
-  center [SW ▸ l, SE ▸ l] === S ▸ l
-  center [SW ▸ l, NW ▸ l] === W ▸ l
-  center [SE ▸ l, NE ▸ l] === E ▸ l
-  center [SW  ▸ l, NE ▸ l] === Center ▸ l
-  NW ▸ l  =-= NE ▸ l
-  SW ▸ l  =-= SE ▸ l
-  NE ▸ l  =|= SE ▸ l
-  NW ▸ l  =|= SW ▸ l
-  E ▸ l  =|= BaselineE ▸ l
-  W ▸ l =|= Baseline ▸ l
-  center [Baseline ▸ l, BaselineE ▸ l] === BaselineC ▸ l
+  alignMatrix $ (map (map (▸ l))) 
+      [[NW, N, NE]
+      ,[W, Center, E]
+      ,[Baseline, BaselineC, BaselineE]
+      ,[SW, S, SE]
+      ]
+  ypart (N ▸ l - Center ▸ l) === ypart (Center ▸ l - S ▸ l)
+  xpart (W ▸ l - Center ▸ l) === xpart (Center ▸ l - E ▸ l)
+  
   return l
 
 height o = ypart (N ▸ o - S ▸ o)
@@ -61,7 +82,7 @@ drawBounds :: Expr ObjectRef -> D ()
 drawBounds l = delay $ do
   freezeBounds l 
   draw (NW ▸ l .-- NE ▸ l .-- SE ▸ l .-- SW ▸ l .-- closed) []
-  
+
 boxObj :: D (Expr ObjectRef)
 boxObj = do
   l <- abstractBox
@@ -73,7 +94,6 @@ textObj t = do
   p <- mkRef "q" <$> mpLabel
   "picture " <> out p <> ";\n" 
   out p <> " := " <> mpTex t <> ";\n"
-  
   l <- abstractBox
   
   ypart (NW ▸ l - Baseline ▸ l - NW `corner` p) === 0
@@ -84,10 +104,9 @@ textObj t = do
      defaultVal (xpart (Baseline ▸ l)) 0
      defaultVal (ypart (Baseline ▸ l)) 0
      "draw " <> out p <> " shifted " <> out (Baseline ▸ l) <> ";\n"
-     -- "draw " <> out (NW ▸ l) <> "--" <> out (NE ▸ l) <> "--" <> out (SE ▸ l) <> "--" <> out (SW ▸ l) <> "-- cycle withcolor red;\n"
      -- "draw " <> out (Center ▸ l) <> ";\n"
   return l
-  
+
 infix 8 ▸ 
 (▸) :: Anchor -> Expr ObjectRef -> Expr Pair
 a ▸ (Expr x) = Expr $ x <> "." <> show a
@@ -100,7 +119,7 @@ encode n = showIntAtBase 16 (\x -> chr (ord 'a' + x)) n []
 
 data List a = Nil | Cons a (List a)
   
-toList Nil = []                    
+toList Nil = []
 toList (Cons x xs) =  x : (toList xs)
 
 class Elem (a :: Anchor) (as :: List Anchor) where
