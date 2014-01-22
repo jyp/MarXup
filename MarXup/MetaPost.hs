@@ -191,10 +191,14 @@ unknown (Expr x) = Expr $ "unknown " <> x
 (.>.) :: Expr Numeric -> Expr Numeric -> Expr Bool
 (Expr x) .>. (Expr y) = Expr (x <> ">" <> y)
 
-infixr 4 ...,....,.--,.!
+infixr 4 ...,....,.--
+infixr 3 .!
 
 closed :: Expr Path
 closed = Expr "cycle"
+
+open :: Expr Pair -> Expr Path
+open  (Expr x) = Expr x
 
 (.!) :: Expr Pair -> Expr Path
 (.!) (Expr x) = Expr x
@@ -207,11 +211,19 @@ Expr x .... Expr y = Expr $ x <> "..." <> y
 dashed :: Expr DashPattern -> Expr DrawOption
 dashed (Expr x) = Expr ("dashed " <> x)
 
+cutAfter,cutBefore :: Expr Path -> Expr DrawOption
+
+cutAfter (Expr path) = Expr $ "cutafter " <> parens path
+cutBefore (Expr path) = Expr $ "cutbefore " <> parens path
+
 evenly :: Expr DashPattern
 evenly = Expr "evenly"
 
 draw :: Expr Path -> [Expr DrawOption] -> MP ()
 draw path opts = "draw " <> out path <> mconcat [" " <> out o | o <- opts] <> ";\n"
+
+drawArrow :: Expr Path -> [Expr DrawOption] -> MP ()
+drawArrow path opts = "drawarrow " <> out path <> mconcat [" " <> out o | o <- opts] <> ";\n"
 
 
 

@@ -34,21 +34,31 @@ vdist x y = ypart (S ▸ y - N ▸ x)
 boundingZone :: Expr ObjectRef -> Expr Path
 boundingZone l = (NW ▸ l ... NE ▸ l ... SE ▸ l ... SW ▸ l ... closed) 
 
-arrow :: Expr ObjectRef -> Expr ObjectRef -> MP (Expr Pair)
-arrow source target = do
+arrow :: [Expr DrawOption] -> Expr ObjectRef -> Expr ObjectRef -> MP (Expr Pair)
+arrow opts source target = do
   c <- mkRef "z" <$> mpLabel
-  mpRaw "pair " <> out c <>";\n" 
-  delay $ mpRaw "drawarrow " <> out (Center ▸ source) <> "..." <> out (Center ▸ target) <> 
-          " cutafter (" <> out (boundingZone target) <>  ")" <> 
-          " cutbefore (" <> out (boundingZone source) <>  ")" <> 
-          ";\n"
+  mpRaw "pair " <> out c <>";\n"
+  delay $ drawArrow (Center ▸ source ... open (Center ▸ target))
+    (opts ++ [cutAfter $ boundingZone target,
+              cutBefore $ boundingZone source])
   c === center [Center ▸ source,Center ▸ target]
   return c
+
+shiftInDir :: Anchor -> Expr Numeric -> Expr Pair
+shiftInDir N d = 0 +: d
+shiftInDir S d = 0 +: negate d
+shiftInDir W d = negate d +: 0
+shiftInDir E d = d +: 0
+shiftInDir NW d = negate d +: d
+shiftInDir SE d = d +: negate d
+shiftInDir SW d = negate d +: negate d
+shiftInDir NE d = d +: d
+shiftInDir _ _ = 0 +: 0
 
 labelPt :: TeX -> Anchor -> Expr Pair -> MP (Expr ObjectRef)
 labelPt labell anchor labeled  = do
   t <- textObj labell
-  anchor ▸ t === labeled
+  shiftInDir anchor 2 + (anchor ▸ t) === labeled
   return t
 
 abstractBox :: D (Expr ObjectRef)
