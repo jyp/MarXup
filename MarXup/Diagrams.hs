@@ -22,10 +22,10 @@ data ObjectRef
 data Equation
 
 corner :: Anchor -> Expr Picture -> Expr Pair
-corner NW (Expr p) = Expr $ "ulcorner " <> p 
-corner SW (Expr p) = Expr $ "llcorner " <> p 
-corner NE (Expr p) = Expr $ "urcorner " <> p 
-corner SE (Expr p) = Expr $ "lrcorner " <> p 
+corner NW (Expr p) = Expr $ "ulcorner " <> p
+corner SW (Expr p) = Expr $ "llcorner " <> p
+corner NE (Expr p) = Expr $ "urcorner " <> p
+corner SE (Expr p) = Expr $ "lrcorner " <> p
 
 hdist,vdist :: Expr ObjectRef -> Expr ObjectRef -> Expr Numeric
 hdist x y = xpart (W ▸ y - E ▸ x)
@@ -42,10 +42,10 @@ line renderer opts source target = do
   delay $ renderer (Center ▸ source ... open (Center ▸ target))
     (opts ++ [cutAfter $ boundingZone target,
               cutBefore $ boundingZone source])
-  c === center [Center ▸ source,Center ▸ target]
+  c === barycenter [Center ▸ source,Center ▸ target]
   return c
 
--- | Makes a shift of size 'd' in the given direction. 
+-- | Makes a shift of size 'd' in the given direction.
 -- TODO: divide d by sqrt 2 for the diagonals
 shiftInDir :: Anchor -> Expr Numeric -> Expr Pair
 shiftInDir N d = 0 +: d
@@ -71,7 +71,7 @@ abstractBox :: D (Expr ObjectRef)
 abstractBox = do
   l <- mkRef "p" <$> mpLabel
   "pair " <> sequence_ (intersperse ", " $ [out (l <> "." <> Expr (show a)) | a <- toList allAnchors]) <> ";\n"
-  alignMatrix $ (map (map (▸ l))) 
+  alignMatrix $ (map (map (▸ l)))
       [[NW, N, NE]
       ,[W, Center, E]
       ,[Baseline, BaselineC, BaselineE]
@@ -79,7 +79,7 @@ abstractBox = do
       ]
   ypart (N ▸ l - Center ▸ l) === ypart (Center ▸ l - S ▸ l)
   xpart (W ▸ l - Center ▸ l) === xpart (Center ▸ l - E ▸ l)
-  
+
   return l
 
 height o = ypart (N ▸ o - S ▸ o)
@@ -96,7 +96,7 @@ freezeBounds l = do
 
 drawBounds :: Expr ObjectRef -> D ()
 drawBounds l = delay $ do
-  freezeBounds l 
+  freezeBounds l
   draw (NW ▸ l .-- NE ▸ l .-- SE ▸ l .-- SW ▸ l .-- closed) []
 
 boxObj :: D (Expr ObjectRef)
@@ -108,10 +108,10 @@ boxObj = do
 textObj :: TeX -> D (Expr ObjectRef)
 textObj t = do
   p <- mkRef "q" <$> mpLabel
-  "picture " <> out p <> ";\n" 
+  "picture " <> out p <> ";\n"
   out p <> " := " <> mpTex t <> ";\n"
   l <- abstractBox
-  
+
   ypart (NW ▸ l - Baseline ▸ l - NW `corner` p) === 0
   ypart (SW ▸ l - Baseline ▸ l - SW `corner` p) === 0
   xpart (BaselineE ▸ l - Baseline ▸ l - NE `corner` p) === 0
@@ -123,7 +123,7 @@ textObj t = do
      -- "draw " <> out (Center ▸ l) <> ";\n"
   return l
 
-infix 8 ▸ 
+infix 8 ▸
 (▸) :: Anchor -> Expr ObjectRef -> Expr Pair
 a ▸ (Expr x) = Expr $ x <> "." <> show a
 
@@ -135,12 +135,12 @@ encode :: Label -> String
 encode n = showIntAtBase 16 (\x -> chr (ord 'a' + x)) n []
 
 data List a = Nil | Cons a (List a)
-  
+
 toList Nil = []
 toList (Cons x xs) =  x : (toList xs)
 
 class Elem (a :: Anchor) (as :: List Anchor) where
 
-instance Elem a (Cons a as) 
-instance Elem a as => Elem a (Cons b as) 
+instance Elem a (Cons a as)
+instance Elem a as => Elem a (Cons b as)
 
