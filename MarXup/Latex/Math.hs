@@ -81,10 +81,10 @@ x ^^^ y = braces x <> tex "^" <> braces y
 
 mathpreamble :: ClassFile -> TeX
 mathpreamble sty = do
-  usepackage "graphicx" [] 
-  usepackage "amsmath"  [] 
-  unless (sty == LNCS) $ usepackage "amsthm"   [] 
-  usepackage "amssymb"  []   -- extra symbols such as □ 
+  usepackage "graphicx" []
+  usepackage "amsmath"  []
+  unless (sty == LNCS) $ usepackage "amsthm"   []
+  usepackage "amssymb"  []   -- extra symbols such as □
   usepackage "stmaryrd" [] -- has ⟦ and ⟧
   usepackage "mathpartir" [] -- mathpar environment
 
@@ -92,6 +92,7 @@ mathpreamble sty = do
   unless (sty == LNCS || sty == Beamer) $ newtheorem "corollary" "Corollary"
   unless (sty == LNCS || sty == Beamer) $ newtheorem "lemma" "Lemma"
   unless (sty == LNCS || sty == Beamer) $ newtheorem "definition" "Definition"
+  unless (sty == LNCS || sty == Beamer) $ newtheorem "proposition" "Proposition"
 
 mathpar :: [[TeX]] -> TeX
 mathpar = env "mathpar" . mkrows . map mk . filter (not . null)
@@ -123,6 +124,7 @@ text = Con . cmd "text"
 definition,corollary :: TeX -> TeX -> Tex SortedLabel
 definition = deflike "Def." "definition"
 corollary = deflike "Cor." "corollary"
+proposition = deflike "Prop." "proposition"
 
 -- Other stuff
 oxford :: Tex a -> Tex a

@@ -31,19 +31,22 @@ hdist,vdist :: Expr ObjectRef -> Expr ObjectRef -> Expr Numeric
 hdist x y = xpart (W ▸ y - E ▸ x)
 vdist x y = ypart (S ▸ y - N ▸ x)
 
-boundingZone :: Expr ObjectRef -> Expr Path
-boundingZone l = (NW ▸ l ... NE ▸ l ... SE ▸ l ... SW ▸ l ... closed) 
 
-arrow :: [Expr DrawOption] -> Expr ObjectRef -> Expr ObjectRef -> MP (Expr Pair)
-arrow opts source target = do
+boundingZone :: Expr ObjectRef -> Expr Path
+boundingZone l = foldr (...) closed $ map (\a -> shiftedAnchor 2 a l) [NW,NE,SE,SW]
+
+line :: (Expr Path -> [Expr DrawOption] -> MP ()) -> [Expr DrawOption] -> Expr ObjectRef -> Expr ObjectRef -> MP (Expr Pair)
+line renderer opts source target = do
   c <- mkRef "z" <$> mpLabel
   mpRaw "pair " <> out c <>";\n"
-  delay $ drawArrow (Center ▸ source ... open (Center ▸ target))
+  delay $ renderer (Center ▸ source ... open (Center ▸ target))
     (opts ++ [cutAfter $ boundingZone target,
               cutBefore $ boundingZone source])
   c === center [Center ▸ source,Center ▸ target]
   return c
 
+-- | Makes a shift of size 'd' in the given direction. 
+-- TODO: divide d by sqrt 2 for the diagonals
 shiftInDir :: Anchor -> Expr Numeric -> Expr Pair
 shiftInDir N d = 0 +: d
 shiftInDir S d = 0 +: negate d
@@ -55,11 +58,14 @@ shiftInDir SW d = negate d +: negate d
 shiftInDir NE d = d +: d
 shiftInDir _ _ = 0 +: 0
 
+-- | Label a point by a given TeX expression, at the given anchor.
 labelPt :: TeX -> Anchor -> Expr Pair -> MP (Expr ObjectRef)
 labelPt labell anchor labeled  = do
   t <- textObj labell
-  shiftInDir anchor 2 + (anchor ▸ t) === labeled
+  shiftedAnchor 4 anchor t === labeled
   return t
+
+shiftedAnchor delta anchor obj = shiftInDir anchor delta + (anchor ▸ obj)
 
 abstractBox :: D (Expr ObjectRef)
 abstractBox = do
@@ -120,6 +126,7 @@ textObj t = do
 infix 8 ▸ 
 (▸) :: Anchor -> Expr ObjectRef -> Expr Pair
 a ▸ (Expr x) = Expr $ x <> "." <> show a
+
 
 mkRef :: String -> Label -> Expr a
 mkRef prefix lab = Expr (prefix ++ encode lab)

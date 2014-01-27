@@ -150,9 +150,9 @@ parens x = "(" <> x <> ")"
 (.*) :: Expr Numeric -> Expr Pair -> Expr Pair
 Expr x .* Expr y = Expr $ x <> y
 
-center :: [Expr Pair] -> Expr Pair
-center [] = error "center of empty list of points"
-center xs = Expr $ (show (1.0 / fromIntegral(length xs))) <> fromExpr (foldr1 (+) xs)
+barycenter :: [Expr Pair] -> Expr Pair
+barycenter [] = error "center of empty list of points"
+barycenter xs = Expr $ (show (1.0 / fromIntegral(length xs))) <> fromExpr (foldr1 (+) xs)
 
 infix 4 === , =-= , =|=
 (===) :: Expr a -> Expr a -> MP ()
@@ -216,8 +216,9 @@ cutAfter,cutBefore :: Expr Path -> Expr DrawOption
 cutAfter (Expr path) = Expr $ "cutafter " <> parens path
 cutBefore (Expr path) = Expr $ "cutbefore " <> parens path
 
-evenly :: Expr DashPattern
+evenly,withdots :: Expr DashPattern
 evenly = Expr "evenly"
+withdots = Expr "withdots"
 
 draw :: Expr Path -> [Expr DrawOption] -> MP ()
 draw path opts = "draw " <> out path <> mconcat [" " <> out o | o <- opts] <> ";\n"
