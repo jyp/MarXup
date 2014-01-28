@@ -146,7 +146,7 @@ env'' :: String -> [String] -> [TeX] -> Tex a -> Tex a
 env'' e opts args body = do
   cmd "begin" $ tex e
   when (not $ null opts) $ brackets $ sequence_ $ map tex $ intersperse "," opts
-  mapM_ brackets args
+  mapM_ braces args
   x <- body
   cmd "end" $ tex e
   return x
