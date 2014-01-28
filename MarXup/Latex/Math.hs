@@ -13,21 +13,21 @@ instance Element Math where
   type Target Math = TeX
   element = cmd "ensuremath" . mRender 0
 
-data Math = BinOp Int (TeX -> TeX -> TeX) Int Int Math Math 
+data Math = BinOp Int (TeX -> TeX -> TeX) Int Int Math Math
           | UnOp Int (TeX -> TeX) Int Math
           | Con TeX
           | Invisible (TeX -> TeX) Math
-      
+
 parp p p' = if p' < p then bigParen else id
 
 mRender :: Int -> Math -> TeX
 mRender _ (Con x) = x
 mRender p (BinOp p' f pl pr l r) = parp p p' $ f (mRender pl l) (mRender pr r)
 mRender p (UnOp p' f px x) = parp p p' $ f (mRender px x)
-mRender p (Invisible f x) = f $ mRender p x 
- 
-binop :: Int -> TeX -> Math -> Math -> Math                       
-binop prec op = BinOp prec (\x y -> x <> op <> y) prec prec 
+mRender p (Invisible f x) = f $ mRender p x
+
+binop :: Int -> TeX -> Math -> Math -> Math
+binop prec op = BinOp prec (\x y -> x <> op <> y) prec prec
 preop prec op = UnOp prec (\x -> x <> op) prec
 outop left right = UnOp 100 (parenthesize left right) 0
 fct x = UnOp 6 (x <>) 7
@@ -37,10 +37,10 @@ instance Num Math where
   (-) = binop 1 "-"
   (*) = binop 2 "*"
   abs = outop (cmd0 "mid") (cmd0 "mid")
-  signum = preop 10 $ cmd0 "delta" 
+  signum = preop 10 $ cmd0 "delta"
   fromInteger x = Con $ textual $ show x
   negate = preop 1  "-"
-  
+
 instance Fractional Math where
     (/) = BinOp 10 (\a b -> cmdn_ "frac" [a,b]) 0 0
     fromRational r = fromInteger (numerator r) / fromInteger (denominator r)
@@ -96,7 +96,7 @@ mathpreamble sty = do
 
 mathpar :: [[TeX]] -> TeX
 mathpar = env "mathpar" . mkrows . map mk . filter (not . null)
- where mk = foldr1 (\x y -> x <> cmd0 "and" <> y) 
+ where mk = foldr1 (\x y -> x <> cmd0 "and" <> y)
 
 mathbox = mbox . math
 
@@ -104,10 +104,10 @@ newtheorem :: String -> TeX -> TeX
 newtheorem ident txt = cmd "newtheorem" (tex ident) >> braces txt
 
 deflike :: String -> String -> TeX -> TeX -> Tex SortedLabel
-deflike reference nv name statement = env'' nv name $ do
+deflike reference nv name statement = env'' nv [] [name] $ do
   statement
   label reference
-  
+
 thmlike :: String -> String -> TeX -> TeX -> TeX -> Tex SortedLabel
 thmlike reference nv name statement proof = do
   x <- deflike reference nv name statement
@@ -131,9 +131,9 @@ oxford :: Tex a -> Tex a
 oxford = bigParenthesize (textual "⟦") (textual "⟧")
 
 
-(.=.) = binop 0 "=" 
- 
-display :: Math -> TeX      
+(.=.) = binop 0 "="
+
+display :: Math -> TeX
 display = displayMath . element
 
 multiline' body = env "multline*" $ mkrows body
@@ -141,4 +141,3 @@ multiline' body = env "multline*" $ mkrows body
 space = tex "\\:"
 
 mkIf str = tex "\\newif" <> tex ("\\if" ++ str)
-

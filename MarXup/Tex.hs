@@ -139,18 +139,14 @@ env x = env' x []
 
 -- | Environment with options
 env' :: String -> [String] -> Tex a -> Tex a
-env' e opts body = do
-  cmd "begin" $ tex e
-  when (not $ null opts) $ brackets $ sequence_ $ map tex $ intersperse "," opts
-  x <- body
-  cmd "end" $ tex e
-  return x
+env' e opts body = env'' e opts [] body
 
 -- | Environment with a tex option
-env'' :: String -> TeX -> Tex a -> Tex a
-env'' e opts body = do
+env'' :: String -> [String] -> [TeX] -> Tex a -> Tex a
+env'' e opts args body = do
   cmd "begin" $ tex e
-  brackets opts
+  when (not $ null opts) $ brackets $ sequence_ $ map tex $ intersperse "," opts
+  mapM_ brackets args
   x <- body
   cmd "end" $ tex e
   return x
