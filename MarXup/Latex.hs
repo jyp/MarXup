@@ -57,6 +57,9 @@ keywords LNCS ks = do
   cmd "keywords" $ mconcat $ intersperse ", " $ map textual ks
 keywords IEEE ks = env "IEEEkeywords" $ do
   mconcat $ intersperse ", " $ map textual ks
+keywords SIGPlan ks = do
+  cmd0 "keywords"
+  mconcat $ intersperse ", " $ map textual ks
 
 
 newline = backslash <> backslash
