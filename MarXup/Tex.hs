@@ -12,7 +12,8 @@ import System.Environment
 import Data.List (intersperse)
 import MarXup.MultiRef
 import Data.Monoid
-
+-- import Graphics.DVI
+-- import System.Process
 
 data MPOutFormat = SVG | EPS
   deriving (Eq,Show)
@@ -201,5 +202,22 @@ generateBoxes (Tex t) = shipoutMacros ++ mconcat (map inShipout bxs)
 \      \\else \\vrule width1sp height1sp depth0sp\\relax                   \n\
 \      \\fi\\egroup                                                        \n\
 \    \\ht0=0pt \\dp0=0pt \\box0 \\egroup}                                  \n\
-\"
+\ "
 
+renderWithBoxes :: [BoxSpec] -> Tex a -> String
+renderWithBoxes bs (Tex t) = doc
+  where (_,_,doc) = runRWS (fromDisplay'er $ display' $ runReaderT t ("<no filepath>",EPS) ) () (0,bs)
+
+{-renderTex :: Tex a -> IO String
+renderTex t = do
+  let bxsTex = generateBoxes t
+  writeFile "boxes.tex" bxsTex
+  system "latex boxes"
+  boxes <- withDVI "boxes.dvi" (\_ _ -> return emptyFont) () getPg
+  return $ renderWithBoxes boxes t
+
+getPg :: () -> Page -> IO (Maybe ((), BoxSpec))
+getPg () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
+  where ((width,descent),Rule _ ascent) = last objs
+        dims = BoxSpec (fromIntegral width) (fromIntegral ascent) (fromIntegral descent)
+-}

@@ -13,6 +13,7 @@ import Data.List (intersperse)
 import Data.Map (Map)
 import qualified Data.Map as M
 import System.FilePath
+import Control.Arrow (first,second)
 
 -----------------------------------
 -- Basic datatype and semantics
@@ -30,7 +31,7 @@ data Multi a where
 
   -- Reference management
   Label :: Multi Label -- create a new label
-  Refer :: Label -> Multi Label -- a reference, currently yielding exactly the text of the label
+  Refer :: Label -> Multi Label -- a reference, currently yielding exactly the text of the label TODO: remove this.
   MFix :: (a -> Multi a) -> Multi a -- to be able to refer to future references
 
   -- Target file management
@@ -77,7 +78,26 @@ display t = case t of
         tell' s = do fname <- ask; tell (fname ==> s)
         f ==> s = O $ M.singleton f [s]
 
+-- | Interpret to write into a map from filename to contents.
+newtype Display'er a = Display'er {fromDisplay'er :: RWS () String (References,[BoxSpec]) a }
+  deriving (Functor, Monad, MonadWriter String, MonadState (References,[BoxSpec]), MonadFix)
+
+display' :: Multi a -> Display'er a
+display' t = case t of
+      (Raw s) -> tell s
+      (Return a) -> return a
+      (Bind k f) -> display' k >>= (display' . f)
+      Label -> do x <- fst <$> get;  modify (first (+1)); return x
+      (Refer x) -> do tell (show x); return x
+      (MFix f) -> mfix (display' . f)
+      (Target _ x) -> display' x
+      (Box x) -> do
+        a <- display' x
+        (b:_) <- snd <$> get
+        return (a,b)
+
 data Boxes = Boxes {completeBoxes :: [String], currentBox :: [String]}
+finishBox :: Boxes -> Boxes
 finishBox (Boxes bxs bx) = Boxes (mconcat bx:bxs) []
 instance Monoid Boxes where
   mappend (Boxes bxs bx) (Boxes axs ax) = Boxes (bxs ++ axs) (bx ++ ax)
@@ -93,7 +113,7 @@ getBoxes t = case t of
       Label -> do x <- get; put $ x + 1; return x
       (Refer x) -> do tell' (show x); return x
       (MFix f) -> mfix (getBoxes . f)
-      (Target f x) -> getBoxes x
+      (Target _f x) -> getBoxes x
       (Box x) -> do
         inBox <- ask
         when inBox $ error "nested boxes not supported!"
@@ -111,7 +131,7 @@ writeToDisk t = do
   forM_ (M.assocs xs) $ \ (fname,contents) ->
     unless (null fname) $
       writeFile fname (concat contents)
- 
-renderMainTarget :: Multi a -> [String]  
+
+renderMainTarget :: Multi a -> [String]
 renderMainTarget t = M.findWithDefault [] "" xs
   where (_,O xs) = evalRWS (fromDisplayer $ display t) "" emptyRefs 
