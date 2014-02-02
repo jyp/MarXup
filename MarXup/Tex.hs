@@ -1,9 +1,10 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies,TypeSynonymInstances,FlexibleInstances #-}
 
 module MarXup.Tex where
 
 import MarXup
 import Control.Monad.Reader
+import Control.Monad.RWS
 import Control.Applicative
 import GHC.Exts( IsString(..) )
 import System.FilePath
@@ -16,7 +17,7 @@ import Data.Monoid
 data MPOutFormat = SVG | EPS
   deriving (Eq,Show)
 
-newtype Tex a = Tex (ReaderT (FilePath,MPOutFormat) Multi a)
+newtype Tex a = Tex {fromTex :: ReaderT (FilePath,MPOutFormat) Multi a}
   deriving (Monad, MonadFix, Applicative, Functor, MonadReader (FilePath,MPOutFormat))
 
 ---------------------------------
@@ -60,7 +61,7 @@ renderToDisk fmt t = do
   renderToDisk' fmt fname t
 
 renderToDisk' :: MPOutFormat -> String -> Tex a -> IO ()
-renderToDisk' fmt fname (Tex t) = do
+renderToDisk' fmt fname (Tex t) = 
   writeToDisk (Target (fname <.> "tex") $ runReaderT t (fname,fmt))
 
 getMpOutFormat :: Tex MPOutFormat
@@ -180,3 +181,25 @@ fxref l@(SortedLabel s _) = do
 instance Element SortedLabel where
   type Target SortedLabel = TeX
   element x = fxref x >> return ()
+
+
+-----------------
+-- Generate boxes
+
+generateBoxes :: Tex a -> String
+generateBoxes (Tex t) = shipoutMacros ++ mconcat (map inShipout bxs) 
+  where (_,_,Boxes bxs _) = runRWS (fromBoxer $ getBoxes $ runReaderT t ("<no filepath>",EPS) ) False 0
+        inShipout x = "\\mpxshipout%\n" ++ x ++ "\n\\stopmpxshipout\n"
+        shipoutMacros = "\
+\  \\gdef\\mpxshipout{\\shipout\\hbox\\bgroup                              \n\
+\    \\setbox0=\\hbox\\bgroup}                                             \n\
+\  \\gdef\\stopmpxshipout{\\egroup  \\dimen0=\\ht0 \\advance\\dimen0\\dp0  \n\
+\    \\dimen1=\\ht0 \\dimen2=\\dp0                                         \n\
+\    \\setbox0=\\hbox\\bgroup                                              \n\
+\      \\box0                                                              \n\
+\      \\ifnum\\dimen0>0 \\vrule width1sp height\\dimen1 depth\\dimen2     \n\
+\      \\else \\vrule width1sp height1sp depth0sp\\relax                   \n\
+\      \\fi\\egroup                                                        \n\
+\    \\ht0=0pt \\dp0=0pt \\box0 \\egroup}                                  \n\
+\"
+
