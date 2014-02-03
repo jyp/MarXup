@@ -12,8 +12,8 @@ import System.Environment
 import Data.List (intersperse)
 import MarXup.MultiRef
 import Data.Monoid
--- import Graphics.DVI
--- import System.Process
+import Graphics.DVI
+import System.Process
 
 data MPOutFormat = SVG | EPS
   deriving (Eq,Show)
@@ -188,10 +188,11 @@ instance Element SortedLabel where
 -- Generate boxes
 
 generateBoxes :: Tex a -> String
-generateBoxes (Tex t) = shipoutMacros ++ mconcat (map inShipout bxs) 
+generateBoxes (Tex t) = mconcat (map inShipout bxs) 
   where (_,_,Boxes bxs _) = runRWS (fromBoxer $ getBoxes $ runReaderT t ("<no filepath>",EPS) ) False 0
         inShipout x = "\\mpxshipout%\n" ++ x ++ "\n\\stopmpxshipout\n"
-        shipoutMacros = "\
+
+shipoutMacros = tex "\
 \  \\gdef\\mpxshipout{\\shipout\\hbox\\bgroup                              \n\
 \    \\setbox0=\\hbox\\bgroup}                                             \n\
 \  \\gdef\\stopmpxshipout{\\egroup  \\dimen0=\\ht0 \\advance\\dimen0\\dp0  \n\
@@ -208,16 +209,17 @@ renderWithBoxes :: [BoxSpec] -> Tex a -> String
 renderWithBoxes bs (Tex t) = doc
   where (_,_,doc) = runRWS (fromDisplay'er $ display' $ runReaderT t ("<no filepath>",EPS) ) () (0,bs)
 
-{-renderTex :: Tex a -> IO String
-renderTex t = do
-  let bxsTex = generateBoxes t
-  writeFile "boxes.tex" bxsTex
-  system "latex boxes"
-  boxes <- withDVI "boxes.dvi" (\_ _ -> return emptyFont) () getPg
-  return $ renderWithBoxes boxes t
+renderTex :: (TeX -> TeX) -> TeX -> IO String
+renderTex salamalecs t = do
+  let bxsTex = generateBoxes (salamalecs $ shipoutMacros >> t)
+      boxesName = "mpboxes"
+  writeFile (boxesName ++ ".tex") bxsTex
+  system $ "latex " ++ boxesName
+  boxes <- withDVI (boxesName ++ ".dvi") (\_ _ -> return emptyFont) () getBoxInfo
+  return $ renderWithBoxes boxes $ salamalecs t
 
-getPg :: () -> Page -> IO (Maybe ((), BoxSpec))
-getPg () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
+getBoxInfo :: () -> Page -> IO (Maybe ((), BoxSpec))
+getBoxInfo () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
   where ((width,descent),Rule _ ascent) = last objs
         dims = BoxSpec (fromIntegral width) (fromIntegral ascent) (fromIntegral descent)
--}
+
