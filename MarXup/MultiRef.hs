@@ -20,13 +20,14 @@ import Control.Arrow (first,second)
 type Label = Int
 data BoxSpec = BoxSpec {boxWidth, boxAscent, boxDescent :: Int}
                -- unit is (probably) the scaled point, one 65536th of a point
+             deriving (Show)
 nilBoxSpec = BoxSpec 0 0 0
 
 data Multi a where
   Return :: a -> Multi a
   Bind :: Multi a -> (a -> Multi b) -> Multi b
 
-  Raw :: String -> Multi () -- raw TeX code
+  Raw :: Mode -> String -> Multi () -- raw TeX code
   Box :: Multi a -> Multi (a, BoxSpec)
 
   -- Reference management
@@ -67,7 +68,7 @@ newtype Displayer a = Displayer {fromDisplayer :: RWS FilePath Outputs Reference
 
 display :: Multi a -> Displayer a
 display t = case t of
-      (Raw s) -> tell' s
+      (Raw _ s) -> tell' s
       (Return a) -> return a
       (Bind k f) -> display k >>= (display . f)
       Label -> do x <- get;  put $ x + 1; return x
@@ -78,13 +79,31 @@ display t = case t of
         tell' s = do fname <- ask; tell (fname ==> s)
         f ==> s = O $ M.singleton f [s]
 
+-- data Selection = Sel {selJustBoxes :: Bool, selRegular :: Bool}
+data Mode = Normal | BoxOnly | Always
+data InterpretMode = OutsideBox | InsideBox | Regular deriving Eq
+
+moveInsideBox OutsideBox = InsideBox
+moveInsideBox x = x
+
+shouldShow :: Mode -> InterpretMode -> Bool
+shouldShow Always _ = True
+shouldShow BoxOnly Regular = False
+shouldShow BoxOnly OutsideBox = True
+shouldShow BoxOnly InsideBox = True
+shouldShow Normal Regular = True
+shouldShow Normal OutsideBox = False
+shouldShow Normal InsideBox = True
+  
 -- | Interpret to write into a map from filename to contents.
-newtype Display'er a = Display'er {fromDisplay'er :: RWS () String (References,[BoxSpec]) a }
-  deriving (Functor, Monad, MonadWriter String, MonadState (References,[BoxSpec]), MonadFix)
+newtype Display'er a = Display'er {fromDisplay'er :: RWS InterpretMode String (References,[BoxSpec]) a }
+  deriving (Functor, Monad, MonadWriter String, MonadState (References,[BoxSpec]), MonadFix, MonadReader InterpretMode)
 
 display' :: Multi a -> Display'er a
 display' t = case t of
-      (Raw s) -> tell s
+      (Raw mode s) -> do
+          interpretMode <- ask
+          when (shouldShow mode interpretMode) $ tell s
       (Return a) -> return a
       (Bind k f) -> display' k >>= (display' . f)
       Label -> do x <- fst <$> get;  modify (first (+1)); return x
@@ -92,37 +111,38 @@ display' t = case t of
       (MFix f) -> mfix (display' . f)
       (Target _ x) -> display' x
       (Box x) -> do
-        a <- display' x
+        a <- local moveInsideBox $ display' x
         (b:_) <- snd <$> get
         return (a,b)
 
-data Boxes = Boxes {completeBoxes :: [String], currentBox :: [String]}
-finishBox :: Boxes -> Boxes
-finishBox (Boxes bxs bx) = Boxes (mconcat bx:bxs) []
-instance Monoid Boxes where
-  mappend (Boxes bxs bx) (Boxes axs ax) = Boxes (bxs ++ axs) (bx ++ ax)
-  mempty = Boxes [] []
-newtype Boxer a = Boxer {fromBoxer :: RWS Bool Boxes References a }
-  deriving (Monad, MonadWriter Boxes, MonadReader Bool, MonadState References, MonadFix)
+-- data Boxes = Boxes {completeBoxes :: [String], currentBox :: [String]}
+-- finishBox :: Boxes -> Boxes
+-- finishBox (Boxes bxs bx) = Boxes (mconcat bx:bxs) []
+-- instance Monoid Boxes where
+--   mappend (Boxes bxs bx) (Boxes axs ax) = Boxes (bxs ++ axs) (bx ++ ax)
+--   mempty = Boxes [] []
+-- newtype Boxer a = Boxer {fromBoxer :: RWS Bool Boxes References a }
+--   deriving (Monad, MonadWriter Boxes, MonadReader Bool, MonadState References, MonadFix)
 
-getBoxes :: Multi a -> Boxer a
-getBoxes t = case t of
-      (Raw s) -> tell' s
-      (Return a) -> return a
-      (Bind k f) -> getBoxes k >>= (getBoxes . f)
-      Label -> do x <- get; put $ x + 1; return x
-      (Refer x) -> do tell' (show x); return x
-      (MFix f) -> mfix (getBoxes . f)
-      (Target _f x) -> getBoxes x
-      (Box x) -> do
-        inBox <- ask
-        when inBox $ error "nested boxes not supported!"
-        bx <- censor finishBox $ local (\_ -> True) $ getBoxes x
-        return (bx,nilBoxSpec)
-  where tell' :: String -> Boxer ()
-        tell' s = do
-          inBox <- ask
-          when inBox $ tell (Boxes [] [s])
+-- getBoxes :: Multi a -> Boxer a
+-- getBoxes t = case t of
+--       (Raw s) -> tell' s
+--       (Return a) -> return a
+--       (Bind k f) -> getBoxes k >>= (getBoxes . f)
+--       Label -> do x <- get; put $ x + 1; return x
+--       (Refer x) -> do tell' (show x); return x
+--       (MFix f) -> mfix (getBoxes . f)
+--       (Target _f x) -> getBoxes x
+--       (Box x) -> do
+--         inBox <- ask
+--         when inBox $ error "nested boxes not supported!"
+--         bx <- censor finishBox $ local (\_ -> True) $ getBoxes x
+--         return (bx,nilBoxSpec)
+--   where tell' :: String -> Boxer ()
+--         tell' s = do
+--           inBox <- ask
+--           when inBox $ tell (Boxes [] [s])
+
 
 -- | Write the relevant files to disk
 writeToDisk :: Multi a -> IO ()

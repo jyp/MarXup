@@ -24,7 +24,7 @@ newtype Tex a = Tex {fromTex :: ReaderT (FilePath,MPOutFormat) Multi a}
 ---------------------------------
 -- MarXup interface
 textual :: String -> TeX
-textual s = Tex $ lift (Raw $ concatMap escape s)
+textual s = Tex $ lift (Raw Normal $ concatMap escape s)
 
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
@@ -41,8 +41,12 @@ instance Element (Tex a) where
   type Target (Tex a) = Tex a
   element = id
 
+texInMode ::  Mode -> String ->TeX
+texInMode mode = Tex . lift . Raw mode
+
 tex :: String -> TeX
-tex = Tex . lift . Raw
+tex = texInMode Normal
+
 type TeX = Tex ()
 
 newLabel :: Tex Label
@@ -70,7 +74,6 @@ getMpOutFormat = snd <$> ask
 
 getOutFile :: Tex FilePath
 getOutFile = fst <$> ask
-
 
 render :: Tex a -> [String]
 render (Tex t) = renderMainTarget (runReaderT t ("<interactive>",EPS))
@@ -187,12 +190,21 @@ instance Element SortedLabel where
 -----------------
 -- Generate boxes
 
-generateBoxes :: Tex a -> String
-generateBoxes (Tex t) = mconcat (map inShipout bxs) 
-  where (_,_,Boxes bxs _) = runRWS (fromBoxer $ getBoxes $ runReaderT t ("<no filepath>",EPS) ) False 0
-        inShipout x = "\\mpxshipout%\n" ++ x ++ "\n\\stopmpxshipout\n"
+outputAlsoInBoxMode :: Tex a -> Tex (a,BoxSpec)
+outputAlsoInBoxMode (Tex a) = do
+  q <- ask
+  Tex $ lift $ MarXup.MultiRef.Box $ runReaderT a q
+  
+-- generateBoxes :: Tex a -> String
+-- generateBoxes (Tex t) = mconcat (map inShipout bxs) 
+--   where (_,_,Boxes bxs _) = runRWS (fromBoxer $ getBoxes $ runReaderT t ("<no filepath>",EPS) ) False 0
 
-shipoutMacros = tex "\
+inBox x = outputAlsoInBoxMode $ do
+  texInMode BoxOnly "\\mpxshipout%\n"
+  x
+  texInMode BoxOnly "%\n\\stopmpxshipout\n"
+
+shipoutMacros = texInMode BoxOnly "\
 \  \\gdef\\mpxshipout{\\shipout\\hbox\\bgroup                              \n\
 \    \\setbox0=\\hbox\\bgroup}                                             \n\
 \  \\gdef\\stopmpxshipout{\\egroup  \\dimen0=\\ht0 \\advance\\dimen0\\dp0  \n\
@@ -205,18 +217,25 @@ shipoutMacros = tex "\
 \    \\ht0=0pt \\dp0=0pt \\box0 \\egroup}                                  \n\
 \ "
 
-renderWithBoxes :: [BoxSpec] -> Tex a -> String
-renderWithBoxes bs (Tex t) = doc
-  where (_,_,doc) = runRWS (fromDisplay'er $ display' $ runReaderT t ("<no filepath>",EPS) ) () (0,bs)
 
-renderTex :: (TeX -> TeX) -> TeX -> IO String
-renderTex salamalecs t = do
-  let bxsTex = generateBoxes (salamalecs $ shipoutMacros >> t)
+renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
+renderWithBoxes bs mode (Tex t) = doc
+  where (_,_,doc) = runRWS (fromDisplay'er $ display' $ runReaderT t ("<no filepath>",EPS) ) mode (0,bs)
+
+renderTex :: TeX -> TeX -> IO String
+renderTex preamble body = do
+  let bxsTex = renderWithBoxes (repeat nilBoxSpec) OutsideBox wholeDoc
       boxesName = "mpboxes"
+      wholeDoc = do
+        outputAlsoInBoxMode preamble
+        shipoutMacros
+        texInMode Always "\\begin{document}"
+        body
+        texInMode Always "\\end{document}"
   writeFile (boxesName ++ ".tex") bxsTex
   system $ "latex " ++ boxesName
   boxes <- withDVI (boxesName ++ ".dvi") (\_ _ -> return emptyFont) () getBoxInfo
-  return $ renderWithBoxes boxes $ salamalecs t
+  return $ renderWithBoxes boxes Regular $ wholeDoc
 
 getBoxInfo :: () -> Page -> IO (Maybe ((), BoxSpec))
 getBoxInfo () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
