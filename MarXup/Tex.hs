@@ -23,8 +23,8 @@ newtype Tex a = Tex {fromTex :: ReaderT (FilePath,MPOutFormat) Multi a}
 
 ---------------------------------
 -- MarXup interface
-textual :: String -> TeX
-textual s = Tex $ lift (Raw $ concatMap escape s)
+instance Textual Tex where
+    textual s = Tex $ lift (Raw $ concatMap escape s)
 
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x

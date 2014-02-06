@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module MarXup.Latex where
 
+import MarXup
 import Control.Monad (forM_)
 import MarXup.Tex
 import MarXup.MetaPost
