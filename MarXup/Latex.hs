@@ -12,17 +12,17 @@ import Data.Function (on)
 
 -- | Separate the arguments with '\\'
 mkrows,mkcols :: [TeX] -> TeX
-mkrows ls = sequence_ $ intersperse newline ls 
+mkrows ls = sequence_ $ intersperse newline ls
 
 -- | Separate the arguments with '&'
 mkcols = sequence_ . intersperse newcol
 
-vspace, hspace :: String -> TeX 
+vspace, hspace :: String -> TeX
 vspace = cmd "vspace" . textual
 hspace = cmd "hspace" . textual
 
 title :: TeX -> TeX
-title = cmd "title" 
+title = cmd "title"
 
 
 data ClassFile = Plain | LNCS | SIGPlan | IEEE | Beamer
@@ -39,13 +39,13 @@ authorinfo LNCS as = do
   where oneauthor AuthorInfo{..} = textual authorName <> (if length insts > 1 then cmd "inst" (textual $ show $ 1 + instIdx) else mempty)
            where Just instIdx = elemIndex authorInst insts
         insts = nub $ map authorInst as
-          
+
 authorinfo SIGPlan as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
     let names = map authorName g
         emails = mconcat $ intersperse (cmd0 "and") $ map (textual . authorEmail) g
     cmdn "authorinfo" [mconcat $ intersperse (cmd0 "and") $ map textual names, textual institution, emails]
     return ()
-authorinfo IEEE as = cmd "author" $ do 
+authorinfo IEEE as = cmd "author" $ do
   cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace "1cm") $ map (textual . authorName) as
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
   cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
@@ -80,7 +80,7 @@ subsection s = cmd "subsection" s >> label "Sec."
 paragraph s = cmd "paragraph" s >> label "Sec."
 
 color :: String -> Tex a -> Tex a
-color col bod = do 
+color col bod = do
   [_,x] <- cmdn' "textcolor" [] [tex col >> return undefined, bod]
   return x
 
@@ -92,12 +92,12 @@ usepackage :: String -> [String] -> Tex ()
 usepackage name opts  = cmd' "usepackage" opts (tex name)
 
 stdPreamble :: TeX
-stdPreamble = do 
+stdPreamble = do
   fmt <- getMpOutFormat
   case fmt of
-    SVG -> usepackage "svg" [] 
+    SVG -> usepackage "svg" []
     EPS -> usepackage "graphicx" []
-  usepackage "inputenc" ["utf8"] 
+  usepackage "inputenc" ["utf8"]
   return ()
 
 documentClass :: String -> [String] -> TeX
@@ -115,8 +115,8 @@ latexDocument preamble body = do
 -- Lists
 
 item = cmd0 "item"
-enumerate = env "enumerate" 
-itemize = env "itemize" 
+enumerate = env "enumerate"
+itemize = env "itemize"
 
 ------------------------
 -- Various environments
@@ -145,7 +145,7 @@ smallcaps x = braces (cmd0 "sc" >> x)
 ----------
 -- Math
 
-align  = env "align*" . mkrows . map mkcols 
+align  = env "align*" . mkrows . map mkcols
 
 array :: [String] -> String -> [[TeX]] -> TeX
 array opts format bod = math $ do
@@ -158,7 +158,7 @@ array opts format bod = math $ do
 block :: [TeX] -> TeX
 block  bod = do
   env "array" $ do
-    braces (tex "l") 
+    braces (tex "l")
     mkrows $ bod
   return ()
 
@@ -182,7 +182,7 @@ bigParenthesize l r bod = do
   x <- bod
   tex "\\right" >> r
   return x
-  
+
 parenthesize l r bod = do
   l
   x <- bod
@@ -200,6 +200,3 @@ inferrule xs y = cmdn "inferrule" [mkrows xs,y] >> return ()
 
 italic :: Tex a -> Tex a
 italic = cmd "textit"
-
-
-
