@@ -15,11 +15,11 @@ import Config
 
 ------------------
 -- Simple printing combinators, which do not add nor remove line breaks
-    
+
 type Doc = DList Char
-   
+
 text s = DL (s ++)
-x <+> y =  x <> text " " <> y 
+x <+> y =  x <> text " " <> y
 oChar c = DL (c:)
 parens s = oChar '(' <> s <> oChar ')'
 braces s = oChar '{' <> s <> oChar '}'
@@ -35,11 +35,11 @@ render x = unDL x ""
 
 ------------------------------------------
 -- Output combinators
-    
+
 oPos :: SourcePos -> Doc
 oPos EOF = mempty
 oPos p = text "{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}"
-    
+
 oText :: String -> Doc
 oText x = text "textual" <+> text (show x)
 
@@ -49,12 +49,12 @@ oMappend [x] = parens x
 oMappend l = text "do" <+> braces (text "rec" <+> braces (hcat (punctuate (text ";") binds)) <> text ";" <> ret)
   where binds = init l
         ret = last l
-             
+
 ----------------------------------------------
 -- Parsing helpers
 
 satisfy' :: (String -> Bool) -> Parser Char
-satisfy' p = do 
+satisfy' p = do
   l <- look
   unless (p l) $
     fail "Unexpected leading string"
@@ -75,26 +75,26 @@ pChunk' stops = munch1' (\l -> not $ any (`isPrefixOf` l) stops)
 
 -- | A chunk not containing some chars.
 pChunk :: [Char] -> Parser String
-pChunk stops = munch1 (not . (`elem` stops)) 
+pChunk stops = munch1 (not . (`elem` stops))
 
 ----------------------------------------------
 -- Parsing combinators
 
 anyQuoteStrings :: [String]
 anyQuoteStrings = concatMap (\(x,y) -> [x,y]) quoteStrings
-  
+
 pTextChunk = oText <$> pChunk' ("\n" : antiQuoteStrings ++ anyQuoteStrings) <?> "Text chunk"
 pHaskChunk = text <$> pChunk' (map box "\n\"[]()" ++ map fst quoteStrings) <?> "Haskell chunk"
     -- we keep track of balancing
 
-pWPos :: Parser Doc 
-pWPos = do 
+pWPos :: Parser Doc
+pWPos = do
   char '\n'
   pos <- getPosition
   return $ oPos pos <> text "\n"
 
 pHaskLn = pWPos -- before each newline, tell GHC where we are.
-pTextLn = (oText "\n" <>) <$> pWPos 
+pTextLn = (oText "\n" <>) <$> pWPos
   -- add code to output a newline; and insert a newline in the code.
 
 box = (:[])
@@ -106,11 +106,11 @@ pString = do
   char '"'
   return $ doubleQuotes . hcat . map text $ result
 
--- | Parse some Haskell code with markup inside. 
+-- | Parse some Haskell code with markup inside.
 pHask :: Parser Doc
-pHask =  
-  (hcat <$> many ((brackets <$> pArg "[]") <|> 
-                  (parens   <$> pArg "()") <|> 
+pHask =
+  (hcat <$> many ((brackets <$> pArg "[]") <|>
+                  (parens   <$> pArg "()") <|>
                   (parens   <$> pTextArg ) <|> pString <|> pHaskChunk <|> pHaskLn))
 
 -- | Parse a text argument to an element
@@ -119,9 +119,9 @@ pTextArg' open close = label "quoted text" $
   string open *>
   (oMappend <$> many (pElement <|> pTextChunk <|> pTextLn))
   <* string close
-  
+
 pTextArg :: Parser Doc
-pTextArg = choice $ map (uncurry pTextArg') quoteStrings 
+pTextArg = choice $ map (uncurry pTextArg') quoteStrings
 
 pArg :: String -> Parser Doc
 pArg [open,close] = char open *> pHask <*  char close
@@ -133,7 +133,7 @@ pIdent :: Parser Doc
 pIdent = text <$> munch1 isIdentChar <?> "identifier"
 
 pArgument :: Parser Doc
-pArgument = (pArg "()" <|> (brackets <$> pArg "[]") <|> pTextArg <|> pString) <?> "argument" 
+pArgument = (pArg "()" <|> (brackets <$> pArg "[]") <|> pTextArg <|> pString) <?> "argument"
 
 pElement :: Parser Doc
 pElement = label "Haskell element" $ do
@@ -149,13 +149,13 @@ main = do
   putStrLn y
   putStrLn z
   p <- parseFromFile (pHask <* endOfFile) completeResults y
-  case p of 
+  case p of
     Left e -> handleErr e
     Right [res] -> writeFile z $ render res
     Right _ -> hPutStrLn stderr "Amibiguous input!"
 
-handleErr e = 
-   sequence_ 
+handleErr e =
+   sequence_
           [ hPutStrLn stderr (show $ maybePosToPos $ the pos) >>
             hPutStrLn stderr ("  Expected:" ++ (intercalate " or " $ nub what))
            | (exps,_why) <- e, (what,pos) <- exps, then group by pos using groupWith, then reverse ]
@@ -173,7 +173,6 @@ testElem = parse "<interactive>" pElement completeResults "@x<-fct(x « yop »)[
 testChunk = parse "<interactive>" pHaskChunk completeResults "t"
 testArg = parse "<interactive>" (pArg "()") completeResults "()"
 
-terr e  = case e of 
+terr e  = case e of
     Left x -> handleErr x
     Right [res] -> putStrLn $ render res
-
