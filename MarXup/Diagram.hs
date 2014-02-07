@@ -14,15 +14,6 @@ import Numeric (showIntAtBase)
 data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
   deriving Show
 
-type Expr = LinFunc Variable Constant
-
-type Point = Point {xpart :: Expr, ypart :: Expr}
-
-
-instance Num Expr where
-instance Num Point where
-
-  
 type Object = Anchor -> Point
 
 hdist,vdist :: Object -> Object -> Expr Numeric
@@ -66,7 +57,7 @@ shiftedAnchor delta anchor obj = shiftInDir anchor delta + (anchor ▸ obj)
 
 abstractBox :: D Object
 abstractBox = do
-  [n,s,e,w,base,midx,midy] <- newVars
+  [n,s,e,w,base,midx,midy] <- newVars 7
   assert $ midx === avg [w,e]
   assert $ midy === avg [n,s]
   let pt = flip point
@@ -103,7 +94,7 @@ boxObj = do
 textObj :: TeX -> D Object
 textObj t = do
   l <- abstractBox
-  BoxSpec wid asc desc <- drawNode (l NW) t
+  BoxSpec wid asc desc <- drawText (l NW) t
 
   width o === wid
   descent o === desc

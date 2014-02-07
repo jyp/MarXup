@@ -199,11 +199,14 @@ outputAlsoInBoxMode (Tex a) = do
 -- generateBoxes (Tex t) = mconcat (map inShipout bxs) 
 --   where (_,_,Boxes bxs _) = runRWS (fromBoxer $ getBoxes $ runReaderT t ("<no filepath>",EPS) ) False 0
 
+inBox :: Tex a -> Tex (a,BoxSpec)
 inBox x = outputAlsoInBoxMode $ do
   texInMode BoxOnly "\\mpxshipout%\n"
-  x
+  r <- x
   texInMode BoxOnly "%\n\\stopmpxshipout\n"
+  return r
 
+shipoutMacros :: TeX
 shipoutMacros = texInMode BoxOnly "\
 \  \\gdef\\mpxshipout{\\shipout\\hbox\\bgroup                              \n\
 \    \\setbox0=\\hbox\\bgroup}                                             \n\
