@@ -45,6 +45,7 @@ library
   build-depends: containers>=0.4 &&<1
   build-depends: process==1.1.*
   build-depends: dvi-processing==0.3.1
+  build-depends: glpk-hs>=0.3.4
 
   exposed-modules: MarXup
   exposed-modules: MarXup.Tex
@@ -55,7 +56,9 @@ library
   exposed-modules: MarXup.Beamer
   exposed-modules: MarXup.DerivationTrees  
   exposed-modules: MarXup.Text
+  exposed-modules: MarXup.Diagram
   exposed-modules: MarXup.Diagrams
   exposed-modules: MarXup.MultiRef
+  exposed-modules: MarXup.Tikz
 --  exposed-modules: MarXup.Pandoc (broken)
 

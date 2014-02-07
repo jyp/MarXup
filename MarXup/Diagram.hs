@@ -2,10 +2,14 @@
 
 module MarXup.Diagram where
 
+import Data.List
+import Data.LinearProgram.Common
+import MarXup
 import MarXup.Tex
 import MarXup.Tikz
-import MarXup.MultiRef (Label,Multi(Raw))
+import MarXup.MultiRef (Label,Multi(Raw),BoxSpec(..))
 import Data.Monoid
+import Control.Monad
 import Control.Applicative
 import Data.List (intersperse)
 import Data.Char (ord,chr)
@@ -16,10 +20,11 @@ data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
 
 type Object = Anchor -> Point
 
-hdist,vdist :: Object -> Object -> Expr Numeric
+hdist,vdist :: Object -> Object -> Expr
 hdist x y = xpart (y W - x E)
 vdist x y = ypart (y S - x N)
 
+{-
 boundingZone :: Expr ObjectRef -> Expr Path
 boundingZone l = foldr (...) closed $ map (\a -> shiftedAnchor 2 a l) [NW,NE,SE,SW]
 
@@ -54,13 +59,15 @@ labelPt labell anchor labeled  = do
   return t
 
 shiftedAnchor delta anchor obj = shiftInDir anchor delta + (anchor ▸ obj)
+-}
 
-abstractBox :: D Object
+
+abstractBox :: Diagram Object
 abstractBox = do
-  [n,s,e,w,base,midx,midy] <- newVars 7
-  assert $ midx === avg [w,e]
-  assert $ midy === avg [n,s]
-  let pt = flip point
+  [n,s,e,w,base,midx,midy] <- newVars (replicate 7 ContVar)
+  midx === avg [w,e]
+  midy === avg [n,s]
+  let pt = flip Point
   return $ \anch -> case anch of
     NW     -> pt n    w
     N      -> pt n    midx
@@ -76,29 +83,37 @@ abstractBox = do
     BaseW  -> pt base w
 
 anch ▸ o = o anch
-
 height o = ypart (N ▸ o - S ▸ o)
 width o = xpart (E ▸ o - W ▸ o)
 ascent o = ypart (N ▸ o - Base ▸ o)
 descent o = ypart (Base ▸ o - S ▸ o)
 
-drawBounds :: Object -> D ()
-drawBounds l = draw (NW ▸ l .-- NE ▸ l .-- SE ▸ l .-- SW ▸ l .-- closed) []
+drawBounds :: Object -> Diagram ()
+drawBounds l = do
+  diaRaw $ "\\draw "
+  forM [NW,NE,SE,SW] $ \a -> do
+    element $ l a
+    diaRaw "--"
+    
+  diaRaw "cycle ;"
+  
 
+{-
 boxObj :: D Object
 boxObj = do
   l <- abstractBox
   drawBounds l
   return l
+-}
 
-textObj :: TeX -> D Object
-textObj t = do
+texObj :: TeX -> Diagram Object
+texObj t = do
   l <- abstractBox
   BoxSpec wid asc desc <- drawText (l NW) t
 
-  width o === wid
-  descent o === desc
-  ascent o === asc
+  width   l === constant wid
+  descent l === constant desc
+  ascent  l === constant asc
 
   return l
 

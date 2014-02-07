@@ -1,10 +1,12 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies #-}
 
 module MarXup.Tikz where
 
+import Data.String
 import Control.Monad.RWS
 import Control.Monad.Reader
 import Control.Applicative
+import MarXup
 import MarXup.MultiRef
 import MarXup.Tex
 import Control.Monad.LPMonad
@@ -12,8 +14,8 @@ import qualified Data.Map as M
 import Data.Map (Map)
 import Data.LinearProgram
 import Data.LinearProgram.LinExpr
-import Control.Arrow (first,second)
 import System.IO.Unsafe
+
 
 type LPState = LP Var Constant
 
@@ -31,6 +33,28 @@ type Constant = Double
 type Expr = LinExpr Var Constant
 data Point = Point {xpart :: Expr, ypart :: Expr}
 
+instance Element (Diagram ()) where
+  type Target (Diagram ()) = TeX
+  element d = env "tikzpicture" $
+      Tex $ lift $ runDiagram d
+
+instance Monoid (Diagram ()) where
+  mempty = return ()
+  mappend = (>>)
+
+tikzUnit :: String
+tikzUnit = "sp"
+
+instance Element Point where
+  type Target Point = Diagram ()
+  element (Point x y) = do
+     x' <- valueOf x
+     y' <- valueOf y
+     diaRawTex $ tex $ "(" ++ show x' ++ tikzUnit ++ "," ++ show y' ++ tikzUnit ++ ")"
+
+instance IsString (Diagram ()) where
+  fromString = diaRawTex . tex
+
 runDiagram :: Diagram a -> Multi a
 runDiagram (Dia diag) = do
   rec (a,(_,problem),_) <- runRWST diag solution (Var 0,LP Min M.empty [] M.empty M.empty)
@@ -39,8 +63,11 @@ runDiagram (Dia diag) = do
             (retcode,Nothing) -> error $  "ret code = " ++ show retcode
   return a
 
-embed :: Var -> Expr
-embed v = LinExpr (var v) 0
+variable :: Var -> Expr
+variable v = LinExpr (var v) 0
+
+constant :: Constant -> Expr
+constant c = LinExpr M.empty c
 
 instance Num Expr where
   fromInteger x = LinExpr M.empty (fromInteger x)
@@ -70,21 +97,34 @@ rawNewVar = Dia $ do
       put $ (Var (x+1),y)
       return $ Var x
 
-newVars :: [VarKind] -> Diagram [Var]
+newVars :: [VarKind] -> Diagram [Expr]
 newVars kinds = forM kinds $ \k -> do
   v <- rawNewVar
   setVarKind v k
-  return v
+  return $ variable v
 
 
 diaRawTex :: Tex a -> Diagram a
 diaRawTex (Tex t) = Dia $ lift (runReaderT t ("<in diagra>",EPS))
 
+diaRaw = diaRawTex . tex
+
 drawText :: Point -> TeX -> Diagram BoxSpec
-drawText (Point x y) t = do
-  x' <- valueOf x
-  y' <- valueOf y
-  diaRawTex $ tex $ "\\path (" ++ show x' ++ "," ++ show y' ++ ")"
+drawText point t = do
+  diaRawTex $ tex $ "\\node[anchor=north west] "
+  element point
   (_,box) <- diaRawTex $ inBox $ braces $ t
   diaRawTex $ tex ";"
   return box
+
+
+
+(===) :: Expr -> Expr -> Diagram ()
+e1 === e2 = do
+  let LinExpr f c = e1 - e2
+  equalTo f (negate c)
+
+-- scale :: Constant -> Expr -> Expr
+-- scale sc (LinExpr f c) = 
+avg :: [Expr] -> Expr
+avg xs = (1/fromIntegral (length xs) :: Double) *^ sum xs

@@ -18,8 +18,8 @@ import Control.Arrow (first,second)
 -----------------------------------
 -- Basic datatype and semantics
 type Label = Int
-data BoxSpec = BoxSpec {boxWidth, boxAscent, boxDescent :: Int}
-               -- unit is (probably) the scaled point, one 65536th of a point
+data BoxSpec = BoxSpec {boxWidth, boxAscent, boxDescent :: Double}
+               -- unit is (probably) the point
              deriving (Show)
 nilBoxSpec = BoxSpec 0 0 0
 
@@ -80,7 +80,7 @@ display t = case t of
         f ==> s = O $ M.singleton f [s]
 
 -- data Selection = Sel {selJustBoxes :: Bool, selRegular :: Bool}
-data Mode = Normal | BoxOnly | Always
+data Mode = Normal | BoxOnly | NotBoxOnly | Always
 data InterpretMode = OutsideBox | InsideBox | Regular deriving Eq
 
 moveInsideBox OutsideBox = InsideBox
@@ -88,12 +88,14 @@ moveInsideBox x = x
 
 shouldShow :: Mode -> InterpretMode -> Bool
 shouldShow Always _ = True
-shouldShow BoxOnly Regular = False
-shouldShow BoxOnly OutsideBox = True
-shouldShow BoxOnly InsideBox = True
 shouldShow Normal Regular = True
 shouldShow Normal OutsideBox = False
 shouldShow Normal InsideBox = True
+shouldShow BoxOnly Regular = False
+shouldShow BoxOnly OutsideBox = True
+shouldShow BoxOnly InsideBox = True
+shouldShow NotBoxOnly Regular = True
+shouldShow NotBoxOnly _ = False
   
 -- | Interpret to write into a map from filename to contents.
 newtype Display'er a = Display'er {fromDisplay'er :: RWS InterpretMode String (References,[BoxSpec]) a }

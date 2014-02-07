@@ -220,6 +220,8 @@ shipoutMacros = texInMode BoxOnly "\
 \    \\ht0=0pt \\dp0=0pt \\box0 \\egroup}                                  \n\
 \ "
 
+tikzpackage :: TeX
+tikzpackage = texInMode NotBoxOnly "\\usepackage{tikz}"
 
 renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
 renderWithBoxes bs mode (Tex t) = doc
@@ -243,5 +245,6 @@ renderTex preamble body = do
 getBoxInfo :: () -> Page -> IO (Maybe ((), BoxSpec))
 getBoxInfo () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
   where ((width,descent),Rule _ ascent) = last objs
-        dims = BoxSpec (fromIntegral width) (fromIntegral ascent) (fromIntegral descent)
+        dims = BoxSpec (scale width) (scale ascent) (scale descent)
+        scale x = fromIntegral x -- / 65536
 
