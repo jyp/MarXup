@@ -127,11 +127,11 @@ boxObj = do
 texObj :: TeX -> Diagram Object
 texObj t = do
   l <- abstractBox
-  BoxSpec wid asc desc <- drawText (l NW) t
+  BoxSpec wid h desc <- drawText (l NW) t
 
   width   l === constant wid
   descent l === constant desc
-  height  l === constant asc
+  height  l === constant h
   drawBounds l -- for debugging
   return l
 

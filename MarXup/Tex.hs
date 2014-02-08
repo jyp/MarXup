@@ -246,7 +246,7 @@ renderTex preamble body = do
 
 getBoxInfo :: () -> Page -> IO (Maybe ((), BoxSpec))
 getBoxInfo () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
-  where ((width,descent),Rule _ ascent) = last objs
-        dims = BoxSpec (scale width) (scale ascent) (negate $ scale descent)
-        scale x = {-1.5 *-} fromIntegral x / 65536
+  where ((width,descent),Rule _ height) = last objs
+        dims = BoxSpec (scale width) (scale height) (negate $ scale descent)
+        scale x = fromIntegral x / 65536
 

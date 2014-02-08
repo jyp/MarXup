@@ -18,7 +18,7 @@ import Control.Arrow (first,second)
 -----------------------------------
 -- Basic datatype and semantics
 type Label = Int
-data BoxSpec = BoxSpec {boxWidth, boxAscent, boxDescent :: Double}
+data BoxSpec = BoxSpec {boxWidth, boxHeight, boxDescent :: Double}
                -- unit is (probably) the point
              deriving (Show)
 nilBoxSpec = BoxSpec 0 0 0
