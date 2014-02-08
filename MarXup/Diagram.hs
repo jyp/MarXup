@@ -2,18 +2,14 @@
 
 module MarXup.Diagram where
 
-import Data.List
 import Data.LinearProgram.Common
 import MarXup
 import MarXup.Tex
 import MarXup.Tikz
-import MarXup.MultiRef (Label,Multi(Raw),BoxSpec(..))
-import Data.Monoid
+import MarXup.MultiRef (BoxSpec(..))
 import Control.Monad
 import Control.Applicative
 import Data.List (intersperse)
-import Data.Char (ord,chr)
-import Numeric (showIntAtBase)
 
 data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
   deriving Show
@@ -114,7 +110,40 @@ drawLine ps = do
   diaRaw "\\draw "
   sequence_ $ intersperse (diaRaw "--") ps'
   diaRaw ";\n"
+
+taller :: Object -> Object -> Diagram ()
+taller o o' = do
+  o N `northOf` o' N
+  o S `southOf` o' S
+
+smallest :: Object -> Diagram ()
+smallest o = do
+  southwards $ o N
+  northwards $ o S
+
+wider :: Object -> Object -> Diagram ()
+wider o o' = do
+  o W `westOf` o' W
+  o E `eastOf` o' E
   
+thinest :: Object -> Diagram ()
+thinest o = do
+  eastwards $ o W
+  westwards $ o E
+
+chainBases :: Expr -> [Object] -> Diagram Object
+chainBases _ [] = abstractBox
+chainBases spacing ls = do
+  group <- abstractBox
+  align ypart $ map ($ Base) ls
+  forM_ (zip ls (tail ls)) $ \(x,y) ->
+    westOf (x E + Point spacing 0) (y W)
+  forM_ ls $ \l -> group `taller` l
+  smallest group
+  group W .=. head ls W
+  group E .=. last ls E
+  group Base .=. head ls Base
+  return group
 
 {-
 boxObj :: Diagram Object
@@ -136,3 +165,5 @@ texObj t = do
   return l
 
 infix 8 ▸
+
+  
