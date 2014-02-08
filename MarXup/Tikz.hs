@@ -43,7 +43,7 @@ instance Monoid (Diagram ()) where
   mappend = (>>)
 
 tikzUnit :: String
-tikzUnit = "sp"
+tikzUnit = "pt"
 
 instance Element Point where
   type Target Point = Diagram ()
@@ -60,7 +60,8 @@ runDiagram (Dia diag) = do
   rec (a,(_,problem),_) <- runRWST diag solution (Var 0,LP Min M.empty [] M.empty M.empty)
       let solution = case unsafePerformIO $ glpSolveVars simplexDefaults problem of
             (_retcode,Just (_objFunc,s)) -> s
-            (retcode,Nothing) -> error $  "ret code = " ++ show retcode
+            (retcode,Nothing) -> error $ "ret code = " ++ show retcode
+  Raw Normal $ "%" ++ show problem ++ "\n"
   return a
 
 variable :: Var -> Expr
@@ -90,7 +91,7 @@ valueOf (LinExpr m c) = do
   vs <- forM (M.assocs m) $ \(v,scale) ->
     (scale *) <$> varValue v
   return $ sum $ c:vs
-           
+
 rawNewVar :: Diagram Var
 rawNewVar = Dia $ do
       (Var x,y) <- get
@@ -111,10 +112,10 @@ diaRaw = diaRawTex . tex
 
 drawText :: Point -> TeX -> Diagram BoxSpec
 drawText point t = do
-  diaRawTex $ tex $ "\\node[anchor=north west] "
+  diaRawTex $ tex $ "\\node[anchor=north west,inner sep=0] at "
   element point
   (_,box) <- diaRawTex $ inBox $ braces $ t
-  diaRawTex $ tex ";"
+  diaRawTex $ tex ";\n"
   return box
 
 
@@ -123,6 +124,11 @@ drawText point t = do
 e1 === e2 = do
   let LinExpr f c = e1 - e2
   equalTo f (negate c)
+
+(.=.) :: Point -> Point -> Diagram ()
+Point x1 y1 .=. Point x2 y2 = do
+  x1 === x2
+  y1 === y2
 
 -- scale :: Constant -> Expr -> Expr
 -- scale sc (LinExpr f c) = 

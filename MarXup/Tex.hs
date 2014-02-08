@@ -240,11 +240,13 @@ renderTex preamble body = do
   writeFile (boxesName ++ ".tex") bxsTex
   system $ "latex " ++ boxesName
   boxes <- withDVI (boxesName ++ ".dvi") (\_ _ -> return emptyFont) () getBoxInfo
-  return $ renderWithBoxes boxes Regular $ wholeDoc
+  putStrLn $ "Number of boxes found: " ++ show (length boxes)
+  return $ renderWithBoxes (nilBoxSpec:boxes) Regular $ wholeDoc
+  -- ???? Hack???? I cannot figure out why an extra nil box is needed here.
 
 getBoxInfo :: () -> Page -> IO (Maybe ((), BoxSpec))
 getBoxInfo () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
   where ((width,descent),Rule _ ascent) = last objs
-        dims = BoxSpec (scale width) (scale ascent) (scale descent)
-        scale x = fromIntegral x -- / 65536
+        dims = BoxSpec (scale width) (scale ascent) (negate $ scale descent)
+        scale x = {-1.5 *-} fromIntegral x / 65536
 

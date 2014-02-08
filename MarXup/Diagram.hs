@@ -90,16 +90,34 @@ descent o = ypart (Base ▸ o - S ▸ o)
 
 drawBounds :: Object -> Diagram ()
 drawBounds l = do
+  drawPoly (map l [NW,NE,SE,SW])
+  -- drawLine (map l [N,S])
+  drawLine (map l [BaseE,BaseW])
+
+drawPoint :: Point -> Diagram ()
+drawPoint p = do
+  diaRaw $ "\\circle "
+  element p
+  diaRaw "cycle ;\n"
+
+drawPoly :: [Point] -> Diagram ()
+drawPoly ps = do
   diaRaw $ "\\draw "
-  forM [NW,NE,SE,SW] $ \a -> do
-    element $ l a
+  forM ps $ \p -> do
+    element p
     diaRaw "--"
-    
-  diaRaw "cycle ;"
+  diaRaw "cycle ;\n"
+
+drawLine :: [Point] -> Diagram ()
+drawLine ps = do
+  let ps' = map element ps
+  diaRaw "\\draw "
+  sequence_ $ intersperse (diaRaw "--") ps'
+  diaRaw ";\n"
   
 
 {-
-boxObj :: D Object
+boxObj :: Diagram Object
 boxObj = do
   l <- abstractBox
   drawBounds l
@@ -113,8 +131,8 @@ texObj t = do
 
   width   l === constant wid
   descent l === constant desc
-  ascent  l === constant asc
-
+  height  l === constant asc
+  drawBounds l -- for debugging
   return l
 
 infix 8 ▸

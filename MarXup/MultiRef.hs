@@ -113,8 +113,13 @@ display' t = case t of
       (MFix f) -> mfix (display' . f)
       (Target _ x) -> display' x
       (Box x) -> do
+        (refs,bs) <- get
+        b <- case bs of
+          [] -> error "display': ran out of boxes!"
+          (b:bs') -> do
+            put (refs,bs')
+            return b
         a <- local moveInsideBox $ display' x
-        (b:_) <- snd <$> get
         return (a,b)
 
 -- data Boxes = Boxes {completeBoxes :: [String], currentBox :: [String]}
