@@ -32,7 +32,9 @@ import Data.Monoid hiding ((<>))
 import MarXup.Tex hiding (label)
 import MarXup.Latex (math)
 import MarXup.MultiRef
-import MarXup.MetaPost
+import MarXup.MetaPost hiding ((===), alignVert)
+import MarXup.Diagram
+import MarXup.Tikz
 
 ------------------
 --- Basics
@@ -41,7 +43,7 @@ data LineStyle = None | Simple | Double | Dotted | Dashed | Waved | TeXDotted
   deriving (Enum,Show,Eq,Ord)
 
 data Link = Link {label :: Tex (), linkStyle :: LineStyle, align :: Alignment, steps :: Int}  -- ^ Regular link
-          | Detached {label :: Tex ()}               -- ^ Detach the derivation as another figure
+          | Detached {label :: Tex ()}   -- ^ Detach the derivation as another figure
           | Delayed {align :: Alignment} -- ^ automatic delaying
 -- deriving Show
 
@@ -62,14 +64,8 @@ instance Show Alignment where
 data Rule tag = Rule {tag :: tag, ruleStyle :: LineStyle, delimiter :: Tex (), ruleLabel :: Tex (), conclusion :: Tex ()}
 --  deriving Show
 
-{-
-instance Monoid t => Applicative (Writer t) where
-    pure = return
-    (<*>) = ap
--}
-
 type Premise = Link ::> Derivation' ()
-type Derivation' tag = Tree Link (Rule tag) 
+type Derivation' tag = Tree Link (Rule tag)
 type Derivation = Derivation' ()
 
 data Figure tag = Figure {figureTag :: Label, contents :: Derivation' tag}
@@ -206,6 +202,29 @@ stringizeTex (Node Rule {..} premises) = braces $ do
               ,conclusion]
   braces $ do cmd0 "small"
               ruleLabel
+
+----------------------------------------------------------
+-- Phase 4': Tikzify
+  
+-- | Render a derivation tree without using metapost drv package (links will not be rendered properly)
+-- derivationTreeD :: Derivation' a -> Diagram a
+-- derivationTreeD = 
+
+toDiagram :: Derivation' a -> Diagram (Tree () Object)
+toDiagram (Node Rule {..} premises) = do
+  ps <- mapM toDiagram [p | _::>p <- premises]
+  concl <- texObj conclusion
+  psGroup <- chainBases 10 $ map rootLabel ps
+  separ <- abstractBox
+  separ N .=. psGroup S
+  concl N .=. separ S
+  height separ === 3
+  thinest separ
+  separ `wider` psGroup
+  separ `wider` concl
+  alignVert [separ Center,concl Center] 
+  drawLine [separ W,separ E]
+  return $ Node concl $ map (()::>) ps
 
 -----------------------
 
