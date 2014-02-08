@@ -124,7 +124,7 @@ Point x1 y1 .=. Point x2 y2 = do
   x1 === x2
   y1 === y2
 
-northOf (Point _ y1) (Point _ y2) = y1 <== y2
+northOf (Point _ y1) (Point _ y2) = y2 <== y1
 southOf = flip northOf
 westOf (Point x1 _) (Point x2 _) = x1 <== x2
 eastOf = flip westOf

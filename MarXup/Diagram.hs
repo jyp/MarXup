@@ -61,6 +61,10 @@ shiftedAnchor delta anchor obj = shiftInDir anchor delta + (anchor ▸ obj)
 abstractBox :: Diagram Object
 abstractBox = do
   [n,s,e,w,base,midx,midy] <- newVars (replicate 7 ContVar)
+  n >== base
+  base >== s
+  w <== e
+  
   midx === avg [w,e]
   midy === avg [n,s]
   let pt = flip Point
@@ -135,14 +139,13 @@ chainBases :: Expr -> [Object] -> Diagram Object
 chainBases _ [] = abstractBox
 chainBases spacing ls = do
   group <- abstractBox
-  align ypart $ map ($ Base) ls
-  forM_ (zip ls (tail ls)) $ \(x,y) ->
-    westOf (x E + Point spacing 0) (y W)
+  align ypart $ map ($ Base) (group:ls)
+  forM_ (zip ls (tail ls)) $ \(x,y) -> (x E + Point spacing 0) `westOf` (y W)
   forM_ ls $ \l -> group `taller` l
   smallest group
-  group W .=. head ls W
-  group E .=. last ls E
-  group Base .=. head ls Base
+  align xpart [group W,head ls W]
+  align xpart [group E,last ls E]
+  -- drawBounds group
   return group
 
 {-
@@ -161,7 +164,7 @@ texObj t = do
   width   l === constant wid
   descent l === constant desc
   height  l === constant h
-  drawBounds l -- for debugging
+  -- drawBounds l -- for debugging
   return l
 
 infix 8 ▸

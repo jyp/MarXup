@@ -17,7 +17,7 @@ Alignment(..), LineStyle(..),defaultLink,Link(..),
 Figure(..),
 
 -- * Engine
-derivationTree, derivationTreeMP
+derivationTree, derivationTreeMP, derivationTreeD
 
 ) where
 
@@ -207,17 +207,24 @@ stringizeTex (Node Rule {..} premises) = braces $ do
 -- Phase 4': Tikzify
   
 -- | Render a derivation tree without using metapost drv package (links will not be rendered properly)
--- derivationTreeD :: Derivation' a -> Diagram a
--- derivationTreeD = 
+derivationTreeD :: Derivation' a -> Diagram ()
+derivationTreeD d = do
+  Node n _ <- toDiagram d
+  n Center .=. Point 0 0
 
 toDiagram :: Derivation' a -> Diagram (Tree () Object)
+toDiagram (Node Rule {ruleStyle=None,..} []) = do
+  concl <- texObj conclusion
+  return $ Node concl []
 toDiagram (Node Rule {..} premises) = do
   ps <- mapM toDiagram [p | _::>p <- premises]
   concl <- texObj conclusion
+  lab <- texObj ruleLabel
   psGroup <- chainBases 10 $ map rootLabel ps
   separ <- abstractBox
   separ N .=. psGroup S
   concl N .=. separ S
+  lab W .=. separ E + Point 3 0
   height separ === 3
   thinest separ
   separ `wider` psGroup
