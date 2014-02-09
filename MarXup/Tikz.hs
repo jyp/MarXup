@@ -58,9 +58,13 @@ rawNewVar = Dia $ do
       return $ Var x
 
 newVars :: [VarKind] -> Diagram [Expr]
-newVars kinds = forM kinds $ \k -> do
+newVars kinds = newVars' (zip kinds (repeat Free))
+
+newVars' :: [(VarKind,Bounds Constant)] -> Diagram [Expr]
+newVars' kinds = forM kinds $ \(k,b) -> do
   v <- rawNewVar
   setVarKind v k
+  setVarBounds v b
   return $ variable v
 
 infix 4 .=.,<==,===,>==
@@ -93,12 +97,28 @@ variable v = LinExpr (var v) 0
 constant :: Constant -> Expr
 constant c = LinExpr M.empty c
 
-(*-) :: Constant -> Expr -> Expr
+(*-) :: Module Constant a => Constant -> a -> a
 (*-) = (*^)
 infixr 6 *-
 
-avg :: [Expr] -> Expr
-avg xs = (1/fromIntegral (length xs)) *- sum xs
+avg :: Module Constant a => [a] -> a
+avg xs = (1/fromIntegral (length xs)) *- gsum xs
+
+absoluteValue :: Expr -> Diagram Expr
+absoluteValue x = do
+  [t1,t2] <- newVars' [(ContVar,LBound 0),(ContVar,LBound 0)]
+  t1 - t2 === x
+  return $ t1 + t2
+
+satAll :: (Expr -> a -> Diagram b) -> [a] -> Diagram Expr
+satAll p xs = do
+  [m] <- newVars [ContVar]
+  mapM_ (p m) xs
+  return m
+
+maximVar, minimVar :: [Expr] -> Diagram Expr
+maximVar = satAll (>==)
+minimVar = satAll (<==)
 
 --------------
 -- Expression constraints
@@ -113,6 +133,10 @@ e1 <== e2 = do
 e1 === e2 = do
   let LinExpr f c = e1 - e2
   equalTo f (negate c)
+
+-- | minimize the distance between expressions
+(=~=) :: Expr -> Expr -> Diagram ()
+x =~= y = minimize =<< absoluteValue (x-y)
 
 -------------------------
 -- Expression objectives

@@ -230,6 +230,7 @@ toDiagPart layerHeight (Link{..} ::> rul)
     let pt = ptObj Center
     pt `eastOf` concl W
     pt `westOf` concl E
+    xpart pt =~= xpart (concl Center)
     let top = ypart (concl S)
     ypart pt + (fromIntegral steps *- layerHeight) === top
     drawLine [pt,Point (xpart pt) top]
