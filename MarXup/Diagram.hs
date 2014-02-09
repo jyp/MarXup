@@ -2,7 +2,6 @@
 
 module MarXup.Diagram where
 
-import Data.LinearProgram.Common
 import MarXup
 import MarXup.Tex
 import MarXup.Tikz
@@ -20,9 +19,8 @@ hdist,vdist :: Object -> Object -> Expr
 hdist x y = xpart (y W - x E)
 vdist x y = ypart (y S - x N)
 
-{-
-boundingZone :: Expr ObjectRef -> Expr Path
-boundingZone l = foldr (...) closed $ map (\a -> shiftedAnchor 2 a l) [NW,NE,SE,SW]
+extend :: Expr -> Object -> Object
+extend e o = \a -> o a + shiftInDir a e
 
 -- line :: (Expr Path -> [Expr DrawOption] -> MP ()) -> [Expr DrawOption] -> Expr ObjectRef -> Expr ObjectRef -> MP (Expr Pair)
 -- line renderer opts source target = do
@@ -37,25 +35,29 @@ boundingZone l = foldr (...) closed $ map (\a -> shiftedAnchor 2 a l) [NW,NE,SE,
 -- | Makes a shift of size 'd' in the given direction.
 -- TODO: divide d by sqrt 2 for the diagonals
 shiftInDir :: Anchor -> Expr -> Point
-shiftInDir N d = 0 +: d
-shiftInDir S d = 0 +: negate d
-shiftInDir W d = negate d +: 0
-shiftInDir E d = d +: 0
-shiftInDir NW d = negate d +: d
-shiftInDir SE d = d +: negate d
-shiftInDir SW d = negate d +: negate d
-shiftInDir NE d = d +: d
-shiftInDir _ _ = 0 +: 0
+shiftInDir N d = 0 `Point` d
+shiftInDir S d = 0 `Point` negate d
+shiftInDir W d = negate d `Point` 0
+shiftInDir E d  = d `Point` 0
+shiftInDir NW d = negate d `Point` d
+shiftInDir SE d = d `Point` negate d
+shiftInDir SW d = negate d `Point` negate d
+shiftInDir NE d = d `Point` d
+shiftInDir _ _  = 0 `Point` 0
+
 
 -- | Label a point by a given TeX expression, at the given anchor.
-labelPt :: TeX -> Anchor -> Expr Pair -> MP (Expr ObjectRef)
+labelPt :: TeX -> Anchor -> Point -> Diagram Object
 labelPt labell anchor labeled  = do
-  t <- textObj labell
-  shiftedAnchor 4 anchor t === labeled
+  t <- extend 4 <$> texObj labell
+  t anchor .=. labeled
   return t
 
-shiftedAnchor delta anchor obj = shiftInDir anchor delta + (anchor ▸ obj)
--}
+abstractPoint :: Diagram Object
+abstractPoint = do
+  [x,y] <- newVars (replicate 2 ContVar)
+  return $ \a -> case a of
+    _ -> Point x y
 
 
 abstractBox :: Diagram Object
@@ -135,26 +137,12 @@ thinest o = do
   eastwards $ o W
   westwards $ o E
 
-chainBases :: Expr -> [Object] -> Diagram Object
-chainBases _ [] = abstractBox
-chainBases spacing ls = do
-  group <- abstractBox
-  align ypart $ map ($ Base) (group:ls)
-  forM_ (zip ls (tail ls)) $ \(x,y) -> (x E + Point spacing 0) `westOf` (y W)
-  forM_ ls $ \l -> group `taller` l
-  smallest group
-  align xpart [group W,head ls W]
-  align xpart [group E,last ls E]
-  -- drawBounds group
-  return group
 
-{-
-boxObj :: Diagram Object
-boxObj = do
+rectangleObj :: Diagram Object
+rectangleObj = do
   l <- abstractBox
   drawBounds l
   return l
--}
 
 texObj :: TeX -> Diagram Object
 texObj t = do

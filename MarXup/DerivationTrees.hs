@@ -7,7 +7,7 @@ module Data.LabeledTree,
 
 -- * Derivation' building
 -- axiom, rule, etc, aborted, 
-emptyDrv, haltDrv, haltDrv', abortDrv, delayPre, 
+emptyDrv, haltDrv, haltDrv', abortDrv, delayPre,
 dummy, rule, Derivation, Premise, Rule(..), 
 
 -- * Links
@@ -32,9 +32,10 @@ import Data.Monoid hiding ((<>))
 import MarXup.Tex hiding (label)
 import MarXup.Latex (math)
 import MarXup.MultiRef
-import MarXup.MetaPost hiding ((===), alignVert)
+-- import MarXup.MetaPost hiding ((===), alignVert, xpart, ypart, Expr)
+import MarXup.MetaPost (MP(..),sho,mpRefer,mpRaw,mpQuote,mkfig,inMP,mpRawLines,includeMetaPostFigure)
 import MarXup.Diagram
-import MarXup.Tikz
+import MarXup.Tikz as D
 
 ------------------
 --- Basics
@@ -64,7 +65,8 @@ instance Show Alignment where
 data Rule tag = Rule {tag :: tag, ruleStyle :: LineStyle, delimiter :: Tex (), ruleLabel :: Tex (), conclusion :: Tex ()}
 --  deriving Show
 
-type Premise = Link ::> Derivation' ()
+type Premise = Premise' ()
+type Premise' a = Link ::> Derivation' a
 type Derivation' tag = Tree Link (Rule tag)
 type Derivation = Derivation' ()
 
@@ -204,33 +206,61 @@ stringizeTex (Node Rule {..} premises) = braces $ do
               ruleLabel
 
 ----------------------------------------------------------
--- Phase 4': Tikzify
+-- Phase 4'': Tikzify
   
--- | Render a derivation tree without using metapost drv package (links will not be rendered properly)
 derivationTreeD :: Derivation' a -> Diagram ()
 derivationTreeD d = do
-  Node n _ <- toDiagram d
+  [h] <- newVars [ContVar]
+  minimize h
+  h >== 1
+  Node n _ <- toDiagram h d
   n Center .=. Point 0 0
 
-toDiagram :: Derivation' a -> Diagram (Tree () Object)
-toDiagram (Node Rule {ruleStyle=None,..} []) = do
-  concl <- texObj conclusion
-  return $ Node concl []
-toDiagram (Node Rule {..} premises) = do
-  ps <- mapM toDiagram [p | _::>p <- premises]
-  concl <- texObj conclusion
+toDiagPart :: Expr -> Premise' a -> Diagram (Tree () Object)
+toDiagPart layerHeight (Link{..} ::> rul)
+  | steps == 0 = toDiagram layerHeight rul
+  | otherwise = do
+    above@(Node concl _) <- toDiagram layerHeight rul
+    ptObj <- abstractPoint
+    let pt = ptObj Center
+    pt `eastOf` concl W
+    pt `westOf` concl E
+    let top = ypart (concl S)
+    ypart pt + (fromIntegral steps *- layerHeight) === top
+    drawLine [pt,Point (xpart pt) top]
+    let embedPt 0 x = x
+        embedPt n x = Node ptObj [() ::> embedPt (n-1) x]
+    return $ embedPt steps above
+
+chainBases :: Expr -> [Object] -> Diagram Object
+chainBases _ [] = abstractBox
+chainBases spacing ls = do
+  grp <- abstractBox
+  D.align ypart $ map ($ Base) (grp:ls)
+  forM_ (zip ls (tail ls)) $ \(x,y) -> (x E + Point spacing 0) `westOf` (y W)
+  forM_ ls $ \l -> grp `taller` l
+  D.align xpart [grp W,head ls W]
+  D.align xpart [grp E,last ls E]
+  -- drawBounds grp
+  return grp
+
+toDiagram :: Expr -> Derivation' a -> Diagram (Tree () Object)
+toDiagram layerHeight (Node Rule{..} premises) = do
+  ps <- mapM (toDiagPart layerHeight) premises
+  concl <- extend 1.5 <$> texObj conclusion
   lab <- texObj ruleLabel
-  psGroup <- chainBases 10 $ map rootLabel ps
+  psGrp <- chainBases 10 $ map (rootLabel) ps
+  layerHeight === height psGrp
   separ <- abstractBox
-  separ N .=. psGroup S
+  separ N .=. psGrp S
   concl N .=. separ S
-  lab W .=. separ E + Point 3 0
-  height separ === 3
+  lab BaseW .=. separ E + Point 3 (negate 2)
+  height separ === 0
   thinest separ
-  separ `wider` psGroup
+  separ `wider` psGrp
   separ `wider` concl
-  alignVert [separ Center,concl Center] 
-  drawLine [separ W,separ E]
+  alignVert [separ Center,concl Center]
+  when (ruleStyle /= None) $ drawLine [separ W,separ E]
   return $ Node concl $ map (()::>) ps
 
 -----------------------

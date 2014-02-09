@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies #-}
 
-module MarXup.Tikz where
+module MarXup.Tikz (module MarXup.Tikz) where
 
 import Data.String
 import Control.Monad.RWS
@@ -13,8 +13,10 @@ import Control.Monad.LPMonad
 import qualified Data.Map as M
 import Data.Map (Map)
 import Data.LinearProgram
+import Data.LinearProgram.Common as MarXup.Tikz (VarKind(..)) 
 import Data.LinearProgram.LinExpr
 import System.IO.Unsafe
+import Numeric (showFFloat)
 
 
 type LPState = LP Var Constant
@@ -49,12 +51,6 @@ askSol = ask
 varValue :: Var -> Diagram Double
 varValue v = M.findWithDefault 0 v <$> askSol
 
-valueOf :: Expr -> Diagram Double
-valueOf (LinExpr m c) = do
-  vs <- forM (M.assocs m) $ \(v,scale) ->
-    (scale *) <$> varValue v
-  return $ sum $ c:vs
-
 rawNewVar :: Diagram Var
 rawNewVar = Dia $ do
       (Var x,y) <- get
@@ -71,11 +67,25 @@ infix 4 .=.,<==,===,>==
 
 ----------------
 -- Expressions
+instance Fractional Expr where
+  fromRational ratio = constant (fromRational ratio)
+    
 instance Num Expr where
   fromInteger x = LinExpr M.empty (fromInteger x)
   negate = neg
   (+) = (^+^)
   (-) = (^-^)
+
+valueOf :: Expr -> Diagram Double
+valueOf (LinExpr m c) = do
+  vs <- forM (M.assocs m) $ \(v,scale) ->
+    (scale *) <$> varValue v
+  return $ sum $ c:vs
+
+valueOfAsText :: Expr -> Diagram String
+valueOfAsText x  = (($ tikzUnit) . showFFloat (Just 4)) <$> valueOf x
+  where tikzUnit = "pt"
+
 
 variable :: Var -> Expr
 variable v = LinExpr (var v) 0
@@ -83,8 +93,12 @@ variable v = LinExpr (var v) 0
 constant :: Constant -> Expr
 constant c = LinExpr M.empty c
 
+(*-) :: Constant -> Expr -> Expr
+(*-) = (*^)
+infixr 6 *-
+
 avg :: [Expr] -> Expr
-avg xs = (1/fromIntegral (length xs) :: Double) *^ sum xs
+avg xs = (1/fromIntegral (length xs)) *- sum xs
 
 --------------
 -- Expression constraints
@@ -163,9 +177,9 @@ drawText point t = do
 instance Element Point where
   type Target Point = Diagram ()
   element (Point x y) = do
-     x' <- valueOf x
-     y' <- valueOf y
-     diaRawTex $ tex $ "(" ++ show x' ++ tikzUnit ++ "," ++ show y' ++ tikzUnit ++ ")"
+     x' <- valueOfAsText x
+     y' <- valueOfAsText y
+     diaRawTex $ tex $ "(" ++ x' ++ "," ++ y' ++ ")"
 
 
 instance Element (Diagram ()) where
@@ -176,9 +190,6 @@ instance Element (Diagram ()) where
 instance Monoid (Diagram ()) where
   mempty = return ()
   mappend = (>>)
-
-tikzUnit :: String
-tikzUnit = "pt"
 
 instance IsString (Diagram ()) where
   fromString = diaRawTex . tex
