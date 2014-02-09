@@ -36,7 +36,7 @@ import MarXup.MultiRef
 import MarXup.MetaPost (MP(..),sho,mpRefer,mpRaw,mpQuote,mkfig,inMP,mpRawLines,includeMetaPostFigure)
 import MarXup.Diagram
 import MarXup.Tikz as D
-
+import qualified Data.Tree as T
 ------------------
 --- Basics
 
@@ -213,14 +213,19 @@ derivationTreeD d = do
   [h] <- newVars [ContVar]
   minimize h
   h >== 1
-  Node n _ <- toDiagram h d
+  tree@(T.Node (_,n,_) _) <- toDiagram h d
+  forM_ (T.levels tree) $ \ls ->
+    case ls of
+      [] -> return ()
+      (_:ls') -> forM_ (zip ls ls') $ \((_,_,l),(r,_,_)) ->
+        (l + Point 4 0) `westOf` r
   n Center .=. Point 0 0
 
-toDiagPart :: Expr -> Premise' a -> Diagram (Tree () Object)
+toDiagPart :: Expr -> Premise' a -> Diagram (T.Tree (Point,Object,Point))
 toDiagPart layerHeight (Link{..} ::> rul)
   | steps == 0 = toDiagram layerHeight rul
   | otherwise = do
-    above@(Node concl _) <- toDiagram layerHeight rul
+    above@(T.Node (_,concl,_) _) <- toDiagram layerHeight rul
     ptObj <- abstractPoint
     let pt = ptObj Center
     pt `eastOf` concl W
@@ -228,8 +233,8 @@ toDiagPart layerHeight (Link{..} ::> rul)
     let top = ypart (concl S)
     ypart pt + (fromIntegral steps *- layerHeight) === top
     drawLine [pt,Point (xpart pt) top]
-    let embedPt 0 x = x
-        embedPt n x = Node ptObj [() ::> embedPt (n-1) x]
+    let embedPt 1 x = T.Node (concl W,ptObj,concl E) [x]
+        embedPt n x = T.Node (pt,ptObj,pt) [embedPt (n-1) x]
     return $ embedPt steps above
 
 chainBases :: Expr -> [Object] -> Diagram Object
@@ -244,12 +249,12 @@ chainBases spacing ls = do
   -- drawBounds grp
   return grp
 
-toDiagram :: Expr -> Derivation' a -> Diagram (Tree () Object)
+toDiagram :: Expr -> Derivation' a -> Diagram (T.Tree (Point,Object,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
   concl <- extend 1.5 <$> texObj conclusion
   lab <- texObj ruleLabel
-  psGrp <- chainBases 10 $ map (rootLabel) ps
+  psGrp <- chainBases 10 $ [p | T.Node (_,p,_) _ <- ps]
   layerHeight === height psGrp
   separ <- abstractBox
   separ N .=. psGrp S
@@ -261,7 +266,7 @@ toDiagram layerHeight (Node Rule{..} premises) = do
   separ `wider` concl
   alignVert [separ Center,concl Center]
   when (ruleStyle /= None) $ drawLine [separ W,separ E]
-  return $ Node concl $ map (()::>) ps
+  return $ T.Node (separ W, concl, lab E) ps
 
 -----------------------
 
