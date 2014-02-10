@@ -33,7 +33,6 @@ extend e o = \a -> o a + shiftInDir a e
 --   return c
 
 -- | Makes a shift of size 'd' in the given direction.
--- TODO: divide d by sqrt 2 for the diagonals
 shiftInDir :: Anchor -> Expr -> Point
 shiftInDir N d = 0 `Point` d
 shiftInDir S d = 0 `Point` negate d
@@ -90,32 +89,10 @@ width o = xpart (E ▸ o - W ▸ o)
 ascent o = ypart (N ▸ o - Base ▸ o)
 descent o = ypart (Base ▸ o - S ▸ o)
 
-drawBounds :: Object -> Diagram ()
-drawBounds l = do
-  drawPoly (map l [NW,NE,SE,SW])
-  -- drawLine (map l [N,S])
-  drawLine (map l [BaseE,BaseW])
-
-drawPoint :: Point -> Diagram ()
-drawPoint p = do
-  diaRaw $ "\\circle "
-  element p
-  diaRaw "cycle ;\n"
-
-drawPoly :: [Point] -> Diagram ()
-drawPoly ps = do
-  diaRaw $ "\\draw "
-  forM ps $ \p -> do
-    element p
-    diaRaw "--"
-  diaRaw "cycle ;\n"
-
-drawLine :: [Point] -> Diagram ()
-drawLine ps = do
-  let ps' = map element ps
-  diaRaw "\\draw "
-  sequence_ $ intersperse (diaRaw "--") ps'
-  diaRaw ";\n"
+boundingRect :: Object -> Path
+boundingRect l = 
+  polygon (map l [NW,NE,SE,SW])
+  -- polyline (map l [BaseE,BaseW])
 
 taller :: Object -> Object -> Diagram ()
 taller o o' = do
@@ -131,7 +108,7 @@ wider :: Object -> Object -> Diagram ()
 wider o o' = do
   o W `westOf` o' W
   o E `eastOf` o' E
-  
+
 thinest :: Object -> Diagram ()
 thinest o = do
   eastwards $ o W
@@ -141,7 +118,7 @@ thinest o = do
 rectangleObj :: Diagram Object
 rectangleObj = do
   l <- abstractBox
-  drawBounds l
+  draw $ boundingRect l
   return l
 
 texObj :: TeX -> Diagram Object

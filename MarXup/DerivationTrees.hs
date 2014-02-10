@@ -35,7 +35,7 @@ import MarXup.MultiRef
 -- import MarXup.MetaPost hiding ((===), alignVert, xpart, ypart, Expr)
 import MarXup.MetaPost (MP(..),sho,mpRefer,mpRaw,mpQuote,mkfig,inMP,mpRawLines,includeMetaPostFigure)
 import MarXup.Diagram
-import MarXup.Tikz as D
+import MarXup.Tikz as D hiding (None)
 import qualified Data.Tree as T
 ------------------
 --- Basics
@@ -233,11 +233,15 @@ toDiagPart layerHeight (Link{..} ::> rul)
     xpart pt =~= xpart (concl Center)
     let top = ypart (concl S)
     ypart pt + (fromIntegral steps *- layerHeight) === top
-    drawLine [pt,Point (xpart pt) top]
+    draw $ polyline [pt,Point (xpart pt) top]
     let embedPt 1 x = T.Node (concl W,ptObj,concl E) [x]
         embedPt n x = T.Node (pt,ptObj,pt) [embedPt (n-1) x]
     return $ embedPt steps above
 
+-- | chainBases distance objects
+-- - Ensures that all the objects have the same baseline.
+-- - Separates the objects by the given distance
+-- - Returns an object encompassing the group, with a correctly set baseline.
 chainBases :: Expr -> [Object] -> Diagram Object
 chainBases _ [] = abstractBox
 chainBases spacing ls = do
@@ -266,7 +270,7 @@ toDiagram layerHeight (Node Rule{..} premises) = do
   separ `wider` psGrp
   separ `wider` concl
   alignVert [separ Center,concl Center]
-  when (ruleStyle /= None) $ drawLine [separ W,separ E]
+  when (ruleStyle /= None) $ draw $ polyline [separ W,separ E]
   return $ T.Node (separ W, concl, lab E) ps
 
 -----------------------
