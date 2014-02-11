@@ -7,7 +7,7 @@ module Data.LabeledTree,
 
 -- * Derivation' building
 -- axiom, rule, etc, aborted, 
-emptyDrv, haltDrv, haltDrv', abortDrv, delayPre, 
+emptyDrv, haltDrv, haltDrv', abortDrv, delayPre,
 dummy, rule, Derivation, Premise, Rule(..), 
 
 -- * Links
@@ -17,7 +17,7 @@ Alignment(..), LineStyle(..),defaultLink,Link(..),
 Figure(..),
 
 -- * Engine
-derivationTree, derivationTreeMP
+derivationTree, derivationTreeMP, derivationTreeD
 
 ) where
 
@@ -32,8 +32,11 @@ import Data.Monoid hiding ((<>))
 import MarXup.Tex hiding (label)
 import MarXup.Latex (math)
 import MarXup.MultiRef
-import MarXup.MetaPost
-
+-- import MarXup.MetaPost hiding ((===), alignVert, xpart, ypart, Expr)
+import MarXup.MetaPost (MP(..),sho,mpRefer,mpRaw,mpQuote,mkfig,inMP,mpRawLines,includeMetaPostFigure)
+import MarXup.Diagram
+import MarXup.Tikz as D hiding (None)
+import qualified Data.Tree as T
 ------------------
 --- Basics
 
@@ -41,7 +44,7 @@ data LineStyle = None | Simple | Double | Dotted | Dashed | Waved | TeXDotted
   deriving (Enum,Show,Eq,Ord)
 
 data Link = Link {label :: Tex (), linkStyle :: LineStyle, align :: Alignment, steps :: Int}  -- ^ Regular link
-          | Detached {label :: Tex ()}               -- ^ Detach the derivation as another figure
+          | Detached {label :: Tex ()}   -- ^ Detach the derivation as another figure
           | Delayed {align :: Alignment} -- ^ automatic delaying
 -- deriving Show
 
@@ -62,14 +65,9 @@ instance Show Alignment where
 data Rule tag = Rule {tag :: tag, ruleStyle :: LineStyle, delimiter :: Tex (), ruleLabel :: Tex (), conclusion :: Tex ()}
 --  deriving Show
 
-{-
-instance Monoid t => Applicative (Writer t) where
-    pure = return
-    (<*>) = ap
--}
-
-type Premise = Link ::> Derivation' ()
-type Derivation' tag = Tree Link (Rule tag) 
+type Premise = Premise' ()
+type Premise' a = Link ::> Derivation' a
+type Derivation' tag = Tree Link (Rule tag)
 type Derivation = Derivation' ()
 
 data Figure tag = Figure {figureTag :: Label, contents :: Derivation' tag}
@@ -206,6 +204,74 @@ stringizeTex (Node Rule {..} premises) = braces $ do
               ,conclusion]
   braces $ do cmd0 "small"
               ruleLabel
+
+----------------------------------------------------------
+-- Phase 4'': Tikzify
+  
+derivationTreeD :: Derivation' a -> Diagram ()
+derivationTreeD d = do
+  [h] <- newVars [ContVar]
+  minimize h
+  h >== 1
+  tree@(T.Node (_,n,_) _) <- toDiagram h d
+  forM_ (T.levels tree) $ \ls ->
+    case ls of
+      [] -> return ()
+      (_:ls') -> forM_ (zip ls ls') $ \((_,_,l),(r,_,_)) ->
+        (l + Point 4 0) `westOf` r
+  n Center .=. Point 0 0
+
+toDiagPart :: Expr -> Premise' a -> Diagram (T.Tree (Point,Object,Point))
+toDiagPart layerHeight (Link{..} ::> rul)
+  | steps == 0 = toDiagram layerHeight rul
+  | otherwise = do
+    above@(T.Node (_,concl,_) _) <- toDiagram layerHeight rul
+    ptObj <- abstractPoint
+    let pt = ptObj Center
+    pt `eastOf` concl W
+    pt `westOf` concl E
+    xpart pt =~= xpart (concl Center)
+    let top = ypart (concl S)
+    ypart pt + (fromIntegral steps *- layerHeight) === top
+    draw $ polyline [pt,Point (xpart pt) top]
+    let embedPt 1 x = T.Node (concl W,ptObj,concl E) [x]
+        embedPt n x = T.Node (pt,ptObj,pt) [embedPt (n-1) x]
+    return $ embedPt steps above
+
+-- | chainBases distance objects
+-- - Ensures that all the objects have the same baseline.
+-- - Separates the objects by the given distance
+-- - Returns an object encompassing the group, with a correctly set baseline.
+chainBases :: Expr -> [Object] -> Diagram Object
+chainBases _ [] = abstractBox
+chainBases spacing ls = do
+  grp <- abstractBox
+  D.align ypart $ map ($ Base) (grp:ls)
+  forM_ (zip ls (tail ls)) $ \(x,y) -> (x E + Point spacing 0) `westOf` (y W)
+  forM_ ls $ \l -> grp `taller` l
+  D.align xpart [grp W,head ls W]
+  D.align xpart [grp E,last ls E]
+  -- drawBounds grp
+  return grp
+
+toDiagram :: Expr -> Derivation' a -> Diagram (T.Tree (Point,Object,Point))
+toDiagram layerHeight (Node Rule{..} premises) = do
+  ps <- mapM (toDiagPart layerHeight) premises
+  concl <- extend 1.5 <$> texObj conclusion
+  lab <- texObj ruleLabel
+  psGrp <- chainBases 10 $ [p | T.Node (_,p,_) _ <- ps]
+  layerHeight === height psGrp
+  separ <- abstractBox
+  separ N .=. psGrp S
+  concl N .=. separ S
+  lab BaseW .=. separ E + Point 3 (negate 2)
+  height separ === 0
+  thinest separ
+  separ `wider` psGrp
+  separ `wider` concl
+  alignVert [separ Center,concl Center]
+  when (ruleStyle /= None) $ draw $ polyline [separ W,separ E]
+  return $ T.Node (separ W, concl, lab E) ps
 
 -----------------------
 

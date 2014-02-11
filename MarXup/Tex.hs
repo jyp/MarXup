@@ -12,8 +12,8 @@ import System.Environment
 import Data.List (intersperse)
 import MarXup.MultiRef
 import Data.Monoid
--- import Graphics.DVI
--- import System.Process
+import Graphics.DVI
+import System.Process
 
 data MPOutFormat = SVG | EPS
   deriving (Eq,Show)
@@ -24,7 +24,7 @@ newtype Tex a = Tex {fromTex :: ReaderT (FilePath,MPOutFormat) Multi a}
 ---------------------------------
 -- MarXup interface
 instance Textual Tex where
-    textual s = Tex $ lift (Raw $ concatMap escape s)
+    textual s = Tex $ lift (Raw Normal $ concatMap escape s)
 
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
@@ -41,8 +41,12 @@ instance Element (Tex a) where
   type Target (Tex a) = Tex a
   element = id
 
+texInMode ::  Mode -> String ->TeX
+texInMode mode = Tex . lift . Raw mode
+
 tex :: String -> TeX
-tex = Tex . lift . Raw
+tex = texInMode Normal
+
 type TeX = Tex ()
 
 newLabel :: Tex Label
@@ -70,7 +74,6 @@ getMpOutFormat = snd <$> ask
 
 getOutFile :: Tex FilePath
 getOutFile = fst <$> ask
-
 
 render :: Tex a -> [String]
 render (Tex t) = renderMainTarget (runReaderT t ("<interactive>",EPS))
@@ -183,11 +186,24 @@ instance Element SortedLabel where
 -----------------
 -- Generate boxes
 
-generateBoxes :: Tex a -> String
-generateBoxes (Tex t) = shipoutMacros ++ mconcat (map inShipout bxs) 
-  where (_,_,Boxes bxs _) = runRWS (fromBoxer $ getBoxes $ runReaderT t ("<no filepath>",EPS) ) False 0
-        inShipout x = "\\mpxshipout%\n" ++ x ++ "\n\\stopmpxshipout\n"
-        shipoutMacros = "\
+outputAlsoInBoxMode :: Tex a -> Tex (a,BoxSpec)
+outputAlsoInBoxMode (Tex a) = do
+  q <- ask
+  Tex $ lift $ MarXup.MultiRef.Box $ runReaderT a q
+  
+-- generateBoxes :: Tex a -> String
+-- generateBoxes (Tex t) = mconcat (map inShipout bxs) 
+--   where (_,_,Boxes bxs _) = runRWS (fromBoxer $ getBoxes $ runReaderT t ("<no filepath>",EPS) ) False 0
+
+inBox :: Tex a -> Tex (a,BoxSpec)
+inBox x = outputAlsoInBoxMode $ do
+  texInMode BoxOnly "\\mpxshipout%\n"
+  r <- x
+  texInMode BoxOnly "%\n\\stopmpxshipout\n"
+  return r
+
+shipoutMacros :: TeX
+shipoutMacros = texInMode BoxOnly "\
 \  \\gdef\\mpxshipout{\\shipout\\hbox\\bgroup                              \n\
 \    \\setbox0=\\hbox\\bgroup}                                             \n\
 \  \\gdef\\stopmpxshipout{\\egroup  \\dimen0=\\ht0 \\advance\\dimen0\\dp0  \n\
@@ -200,20 +216,33 @@ generateBoxes (Tex t) = shipoutMacros ++ mconcat (map inShipout bxs)
 \    \\ht0=0pt \\dp0=0pt \\box0 \\egroup}                                  \n\
 \ "
 
-renderWithBoxes :: [BoxSpec] -> Tex a -> String
-renderWithBoxes bs (Tex t) = doc
-  where (_,_,doc) = runRWS (fromDisplay'er $ display' $ runReaderT t ("<no filepath>",EPS) ) () (0,bs)
+tikzpackage :: TeX
+tikzpackage = texInMode NotBoxOnly "\\usepackage{tikz}"
 
-{-renderTex :: Tex a -> IO String
-renderTex t = do
-  let bxsTex = generateBoxes t
-  writeFile "boxes.tex" bxsTex
-  system "latex boxes"
-  boxes <- withDVI "boxes.dvi" (\_ _ -> return emptyFont) () getPg
-  return $ renderWithBoxes boxes t
+renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
+renderWithBoxes bs mode (Tex t) = doc
+  where (_,_,doc) = runRWS (fromDisplay'er $ display' $ runReaderT t ("<no filepath>",EPS) ) mode (0,bs)
 
-getPg :: () -> Page -> IO (Maybe ((), BoxSpec))
-getPg () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
-  where ((width,descent),Rule _ ascent) = last objs
-        dims = BoxSpec (fromIntegral width) (fromIntegral ascent) (fromIntegral descent)
--}
+renderTex :: TeX -> TeX -> IO String
+renderTex preamble body = do
+  let bxsTex = renderWithBoxes (repeat nilBoxSpec) OutsideBox wholeDoc
+      boxesName = "mpboxes"
+      wholeDoc = do
+        outputAlsoInBoxMode preamble
+        shipoutMacros
+        texInMode Always "\\begin{document}"
+        body
+        texInMode Always "\\end{document}"
+  writeFile (boxesName ++ ".tex") bxsTex
+  system $ "latex " ++ boxesName
+  boxes <- withDVI (boxesName ++ ".dvi") (\_ _ -> return emptyFont) () getBoxInfo
+  putStrLn $ "Number of boxes found: " ++ show (length boxes)
+  return $ renderWithBoxes (nilBoxSpec:boxes) Regular $ wholeDoc
+  -- ???? Hack???? I cannot figure out why an extra nil box is needed here.
+
+getBoxInfo :: () -> Page -> IO (Maybe ((), BoxSpec))
+getBoxInfo () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
+  where ((width,descent),Rule _ height) = last objs
+        dims = BoxSpec (scale width) (scale height) (negate $ scale descent)
+        scale x = fromIntegral x / 65536
+

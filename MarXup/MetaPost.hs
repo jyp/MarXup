@@ -26,7 +26,7 @@ instance Monoid (MP()) where
 
 
 mpRaw :: String -> MP ()
-mpRaw x = MP $ lift $ Raw x
+mpRaw x = MP $ lift $ Raw Normal x
 
 mpRawLines :: [String] -> MP ()
 mpRawLines ls = mpRaw $ concat $ map (++"\n") ls 
