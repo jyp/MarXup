@@ -29,6 +29,7 @@ import Control.Applicative
 import Data.LabeledTree
 -- import Control.Applicative.State
 import Data.Monoid hiding ((<>))
+import MarXup (element)
 import MarXup.Tex hiding (label)
 import MarXup.Latex (math)
 import MarXup.MultiRef
@@ -207,9 +208,12 @@ stringizeTex (Node Rule {..} premises) = braces $ do
 
 ----------------------------------------------------------
 -- Phase 4'': Tikzify
+
+derivationTreeD :: Derivation -> Tex ()
+derivationTreeD d = element $ derivationTreeDiag $ delayD d
   
-derivationTreeD :: Derivation' a -> Diagram ()
-derivationTreeD d = do
+derivationTreeDiag :: Derivation' a -> Diagram ()
+derivationTreeDiag d = do
   [h] <- newVars [ContVar]
   minimize h
   h >== 1
@@ -257,8 +261,8 @@ chainBases spacing ls = do
 toDiagram :: Expr -> Derivation' a -> Diagram (T.Tree (Point,Object,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
-  concl <- extend 1.5 <$> texObj conclusion
-  lab <- texObj ruleLabel
+  concl <- extend 1.5 <$> texObj (math conclusion)
+  lab <- texObj (math ruleLabel)
   psGrp <- chainBases 10 $ [p | T.Node (_,p,_) _ <- ps]
   layerHeight === height psGrp
   separ <- abstractBox

@@ -53,7 +53,7 @@ runDiagram (Dia diag) = do
       let solution = case unsafePerformIO $ glpSolveVars simplexDefaults problem of
             (_retcode,Just (_objFunc,s)) -> s
             (retcode,Nothing) -> error $ "ret code = " ++ show retcode
-  Raw Normal $ "%" ++ show problem ++ "\n"
+  -- Raw Normal $ "%problem solved: " ++ show problem ++ "\n"
   return a
 
 diaRawTex :: Tex a -> Diagram a

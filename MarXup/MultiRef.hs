@@ -32,7 +32,6 @@ data Multi a where
 
   -- Reference management
   Label :: Multi Label -- create a new label
-  Refer :: Label -> Multi Label -- a reference, currently yielding exactly the text of the label TODO: remove this.
   MFix :: (a -> Multi a) -> Multi a -- to be able to refer to future references
 
   -- Target file management
@@ -72,7 +71,6 @@ display t = case t of
       (Return a) -> return a
       (Bind k f) -> display k >>= (display . f)
       Label -> do x <- get;  put $ x + 1; return x
-      (Refer x) -> do tell' (show x); return x
       (MFix f) -> mfix (display . f)
       (Target f x) -> local (const f) $ display x 
   where tell' :: String -> Displayer ()
@@ -109,7 +107,6 @@ display' t = case t of
       (Return a) -> return a
       (Bind k f) -> display' k >>= (display' . f)
       Label -> do x <- fst <$> get;  modify (first (+1)); return x
-      (Refer x) -> do tell (show x); return x
       (MFix f) -> mfix (display' . f)
       (Target _ x) -> display' x
       (Box x) -> do

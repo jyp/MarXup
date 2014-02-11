@@ -51,7 +51,10 @@ type TeX = Tex ()
 
 newLabel :: Tex Label
 newLabel = Tex $ lift Label
-reference = Tex . lift . Refer
+
+reference :: Label -> Tex ()
+reference l = Tex $ do
+  lift $ Raw Normal (show l)
 
 instance Monoid (TeX) where
   mempty = textual ""
@@ -223,12 +226,12 @@ renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
 renderWithBoxes bs mode (Tex t) = doc
   where (_,_,doc) = runRWS (fromDisplay'er $ display' $ runReaderT t ("<no filepath>",EPS) ) mode (0,bs)
 
-renderTex :: TeX -> TeX -> IO String
+renderTex :: (Bool -> TeX) -> TeX -> IO String
 renderTex preamble body = do
-  let bxsTex = renderWithBoxes (repeat nilBoxSpec) OutsideBox wholeDoc
+  let bxsTex = renderWithBoxes (repeat nilBoxSpec) OutsideBox (wholeDoc True)
       boxesName = "mpboxes"
-      wholeDoc = do
-        outputAlsoInBoxMode preamble
+      wholeDoc inBoxMode = do
+        outputAlsoInBoxMode (preamble inBoxMode)
         shipoutMacros
         texInMode Always "\\begin{document}"
         body
@@ -237,7 +240,7 @@ renderTex preamble body = do
   system $ "latex " ++ boxesName
   boxes <- withDVI (boxesName ++ ".dvi") (\_ _ -> return emptyFont) () getBoxInfo
   putStrLn $ "Number of boxes found: " ++ show (length boxes)
-  return $ renderWithBoxes (nilBoxSpec:boxes) Regular $ wholeDoc
+  return $ renderWithBoxes (nilBoxSpec:boxes) Regular $ (wholeDoc False)
   -- ???? Hack???? I cannot figure out why an extra nil box is needed here.
 
 getBoxInfo :: () -> Page -> IO (Maybe ((), BoxSpec))
@@ -245,4 +248,5 @@ getBoxInfo () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
   where ((width,descent),Rule _ height) = last objs
         dims = BoxSpec (scale width) (scale height) (negate $ scale descent)
         scale x = fromIntegral x / 65536
+getBoxInfo () (Page _ objs _) = error $ "getBoxInfo oops: " ++ show objs
 

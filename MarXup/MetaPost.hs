@@ -31,7 +31,7 @@ mpRaw x = MP $ lift $ Raw Normal x
 mpRawLines :: [String] -> MP ()
 mpRawLines ls = mpRaw $ concat $ map (++"\n") ls 
 
-mpRefer l = MP (lift $ Refer l) >> return ()
+mpRefer = sho
 mpLabel  = MP $ lift $ Label
 
 sho :: Show a => a -> MP ()
