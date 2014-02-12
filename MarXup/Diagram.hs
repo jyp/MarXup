@@ -132,20 +132,14 @@ texObj t = do
   -- drawBounds l -- for debugging
   return l
 
+-- We'd like to also return an automatic anchor advice, as tikz does;
+-- but this can't be used in constraints (circularity), unless we use
+-- MIP instead of LP.
 edge :: Object -> Object -> Diagram Point
 edge source target = do
   let points = [source Center,target Center]
   path $ polyline points
   return $ avg points
-  
--- edge source target = do
---   let delta = target Center - source Center
---   dx <- valueOf $ xpart delta
---   dy <- valueOf $ ypart delta
---   let angle = atan2 dx dy
-  
---   line drawArrow
-
 
 infix 8 ▸
 
