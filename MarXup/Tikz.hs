@@ -2,6 +2,8 @@
 
 module MarXup.Tikz (module MarXup.Tikz) where
 
+import qualified Geom2D.CubicBezier as CB
+import Geom2D.CubicBezier (CubicBezier(..))
 import Control.Applicative
 import Control.Monad.LPMonad
 import Control.Monad.RWS
@@ -39,10 +41,6 @@ type Constant = Double
 
 -- | Expressions are linear functions of the variables
 type Expr = LinExpr Var Constant
-
--- | A point in 2d space
-data Point = Point {xpart :: Expr, ypart :: Expr}
-
 
 -------------
 -- Diagrams
@@ -188,6 +186,10 @@ maximize = minimize . negate
 
 ----------------
 -- Points
+-- | A point in 2d space
+data Point = Point {xpart :: Expr, ypart :: Expr}
+  deriving (Eq)
+           
 instance Num Point where
   negate = neg
   (+) = (^+^)
@@ -245,14 +247,31 @@ eastwards = westwards . negate
 -----------------
 -- Paths
 
-data Path = EmptyPath |
-            Path {startingPoint :: Point
-                 ,segments :: [Segment]}
+type Path = Path' Point
 
-data Segment = StraightTo Point | CurveTo Point Point Point | HV Point | VH Point | Cycle | Rounded (Maybe Constant)
+data Path' a
+  = EmptyPath
+  | Path {startingPoint :: a
+         ,segments :: [Segment a]}
 
-instance Element Segment where
-  type Target Segment = Diagram ()
+-- toBeziers :: PathPoint -> [CubicBezier]
+toBeziers EmptyPath = []
+toBeziers (Path start ss) | not (null ss) &&
+                            isCycle (last ss) = toBeziers' start (init ss ++ [StraightTo start])
+                          | otherwise = toBeziers' start ss
+
+toBeziers' _ [] = []
+toBeziers' start (StraightTo next:ss) = CubicBezier start start next next : toBeziers' next ss
+toBeziers' p (CurveTo c d q:ss) = CubicBezier p c d q : toBeziers' q ss
+
+isCycle Cycle = True
+isCycle _  = False
+
+data Segment point = StraightTo point | CurveTo point point point | HV point | VH point | Cycle | Rounded (Maybe Constant)
+  deriving (Eq)
+
+instance (Element point,Target point~Dia) => Element (Segment point) where
+  type Target (Segment point) = Diagram ()
   element (StraightTo p) = "--" <> element p
   element (VH p) = "|-" <> element p
   element (HV p) = "-|" <> element p
