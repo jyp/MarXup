@@ -64,7 +64,13 @@ diaRaw = diaRawTex . tex
 
 instance Element (Diagram ()) where
   type Target (Diagram ()) = TeX
-  element d = env "tikzpicture" $
+  element d = braces $ do
+    cmd0 "normalsize"
+      -- otherwise the boxes have a "normalsize", and tikz inherits
+      -- the smaller or bigger size from the current scope. Actually,
+      -- every text styling should be reset, but I don't know how to
+      -- do that.
+    env "tikzpicture" $
       Tex $ lift $ runDiagram d
 
 instance Monoid (Diagram ()) where
