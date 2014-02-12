@@ -214,7 +214,7 @@ derivationTreeD d = element $ derivationTreeDiag $ delayD d
   
 derivationTreeDiag :: Derivation' a -> Diagram ()
 derivationTreeDiag d = do
-  [h] <- newVars [ContVar]
+  [h] <- newVars [ContVar] -- the height of a layer in the tree.
   minimize h
   h >== 1
   tree@(T.Node (_,n,_) _) <- toDiagram h d
@@ -223,6 +223,15 @@ derivationTreeDiag d = do
       [] -> return ()
       (_:ls') -> forM_ (zip ls ls') $ \((_,_,l),(r,_,_)) ->
         (l + Point 4 0) `westOf` r
+  let leftFringe = map head nonNilLevs
+      rightFringe = map last nonNilLevs
+      nonNilLevs = filter (not . null) $ T.levels tree
+  [leftMost,rightMost] <- newVars [ContVar,ContVar]
+  forM_ leftFringe $ \(p,_,_) ->
+    leftMost <== xpart p
+  forM_ rightFringe $ \(_,_,p) ->
+    xpart p <== rightMost
+  minimize $ 10 *- (rightMost - leftMost)
   n Center .=. Point 0 0
 
 toDiagPart :: Expr -> Premise' a -> Diagram (T.Tree (Point,Object,Point))
