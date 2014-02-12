@@ -118,7 +118,7 @@ thinest o = do
 rectangleObj :: Diagram Object
 rectangleObj = do
   l <- abstractBox
-  draw $ boundingRect l
+  draw $ path $ boundingRect l
   return l
 
 texObj :: TeX -> Diagram Object
@@ -131,6 +131,21 @@ texObj t = do
   height  l === constant h
   -- drawBounds l -- for debugging
   return l
+
+edge :: Object -> Object -> Diagram Point
+edge source target = do
+  let points = [source Center,target Center]
+  path $ polyline points
+  return $ avg points
+  
+-- edge source target = do
+--   let delta = target Center - source Center
+--   dx <- valueOf $ xpart delta
+--   dy <- valueOf $ ypart delta
+--   let angle = atan2 dx dy
+  
+--   line drawArrow
+
 
 infix 8 ▸
 

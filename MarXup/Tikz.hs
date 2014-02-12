@@ -2,21 +2,22 @@
 
 module MarXup.Tikz (module MarXup.Tikz) where
 
-import Data.String
+import Control.Applicative
+import Control.Monad.LPMonad
 import Control.Monad.RWS
 import Control.Monad.Reader
-import Control.Applicative
-import MarXup
-import MarXup.MultiRef
-import MarXup.Tex
-import Control.Monad.LPMonad
-import qualified Data.Map as M
-import Data.Map (Map)
 import Data.LinearProgram
 import Data.LinearProgram.Common as MarXup.Tikz (VarKind(..)) 
 import Data.LinearProgram.LinExpr
-import System.IO.Unsafe
+import Data.List (transpose)
+import Data.Map (Map)
+import Data.String
+import MarXup
+import MarXup.MultiRef
+import MarXup.Tex
 import Numeric (showFFloat)
+import System.IO.Unsafe
+import qualified Data.Map as M
 
 
 type LPState = LP Var Constant
@@ -66,7 +67,7 @@ instance Element (Diagram ()) where
   type Target (Diagram ()) = TeX
   element d = braces $ do
     cmd0 "normalsize"
-      -- otherwise the boxes have a "normalsize", and tikz inherits
+      -- otherwise the boxes use "normalsize", while tikz inherits
       -- the smaller or bigger size from the current scope. Actually,
       -- every text styling should be reset, but I don't know how to
       -- do that.
@@ -188,8 +189,17 @@ maximize = minimize . negate
 ----------------
 -- Points
 instance Num Point where
-  Point x1 y1 + Point x2 y2 = Point (x1 + x2) (y1 + y2)
-  negate (Point x y) = Point (negate x) (negate y)
+  negate = neg
+  (+) = (^+^)
+  (-) = (^-^)
+
+instance Group Point where
+  zero = Point zero zero
+  Point x1 y1 ^+^ Point x2 y2 = Point (x1 ^+^ x2) (y1 ^+^ y2)
+  neg (Point x y) = Point (neg x) (neg y)
+
+instance Module Constant Point where
+  k *^ Point x y = Point (k *^ x) (k *^ y)
 
 --------------------
 -- Point rendering
@@ -217,6 +227,12 @@ alignVert = align xpart
 align :: (a -> Expr) -> [a] -> Diagram ()
 align _ [] = return ()
 align f (p:ps) = forM_ ps $ \p' -> f p === f p'
+
+alignMatrix :: [[Point]] -> Dia
+alignMatrix ls = do
+  forM_ ls alignHoriz
+  forM_ (transpose ls) alignVert
+
 ---------------------
 -- Point objectives
 
@@ -274,19 +290,19 @@ polygon (x:xs) = Path x (map StraightTo xs ++ [Cycle])
 localPathOptions :: (PathOptions -> PathOptions) -> Diagram a -> Diagram a
 localPathOptions f = local $ \(Env s o) -> Env s (f o)
 
-draw :: Path -> Dia
-draw p = localPathOptions (\o -> o {drawColor = Just "black"}) $ path p
+draw :: Diagram a -> Diagram a
+draw = localPathOptions (\o -> o {drawColor = Just "black"}) 
 
-data LineTip = Circle | None | Stealth | Latex | Reversed LineTip | Bracket | Parens
+data LineTip = CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
 instance Show LineTip where
   show t = case t of
-    Circle -> "o"
-    None -> ""
-    Latex -> "latex"
-    Reversed x -> show x ++ " reversed"
-    Bracket -> "["
-    Parens -> "("
-      
+    CircleTip -> "o"
+    NoTip -> ""
+    LatexTip -> "latex"
+    ReversedTip x -> show x ++ " reversed"
+    BracketTip -> "["
+    ParensTip -> "("
+
 type Color = String
 data LineCap = Butt | Rect | RoundCap
 data LineJoin = Miter | RoundJoin | Bevel
@@ -314,8 +330,8 @@ defaultPathOptions = PathOptions
   {drawColor = Nothing
   ,fillColor = Nothing
   ,lineWidth = thin
-  ,startTip  = None
-  ,endTip    = None
+  ,startTip  = NoTip
+  ,endTip    = NoTip
   ,lineCap   = Butt
   ,lineJoin  = Miter
   ,dashPattern = solidDash

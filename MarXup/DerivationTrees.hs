@@ -246,7 +246,7 @@ toDiagPart layerHeight (Link{..} ::> rul)
     xpart pt =~= xpart (concl Center)
     let top = ypart (concl S)
     ypart pt + (fromIntegral steps *- layerHeight) === top
-    draw $ polyline [pt,Point (xpart pt) top]
+    draw $ path $ polyline [pt,Point (xpart pt) top]
     let embedPt 1 x = T.Node (concl W,ptObj,concl E) [x]
         embedPt n x = T.Node (pt,ptObj,pt) [embedPt (n-1) x]
     return $ embedPt steps above
@@ -283,7 +283,7 @@ toDiagram layerHeight (Node Rule{..} premises) = do
   separ `wider` psGrp
   separ `wider` concl
   alignVert [separ Center,concl Center]
-  when (ruleStyle /= None) $ draw $ polyline [separ W,separ E]
+  when (ruleStyle /= None) $ draw $ path $ polyline [separ W,separ E]
   return $ T.Node (separ W, concl, lab E) ps
 
 -----------------------
