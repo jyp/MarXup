@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies, OverloadedStrings, RecordWildCards,UndecidableInstances #-}
 
 module MarXup.Tikz (module MarXup.Tikz) where
 
@@ -127,9 +127,10 @@ instance Element Expr where
   type Target Expr = Dia
   element x = do
     v <- valueOf x
-    diaRaw $ showFFloat (Just 4) v tikzUnit
-    where tikzUnit = "pt"
+    diaRaw $ showDistance v
 
+showDistance x = showFFloat (Just 4) x tikzUnit
+    where tikzUnit = "pt"
 
 variable :: Var -> Expr
 variable v = LinExpr (var v) 0
@@ -211,6 +212,10 @@ instance Module Constant Point where
 instance Element Point where
   type Target Point = Diagram ()
   element (Point x y) = "(" <> element x <> "," <> element y <> ")"
+
+instance Element CB.Point where
+  type Target CB.Point = String
+  element (CB.Point x y) = "(" <> showDistance x <> "," <> showDistance y <> ")"
 
 -----------------
 -- Point constraints
@@ -321,19 +326,18 @@ revBeziers = reverse . map rev
         
 cutBefore' path area = revBeziers $ cutAfter' (revBeziers path) area
   
-fromCBPoint :: CB.Point -> Point
-fromCBPoint (CB.Point x y) = Point (constant x) (constant y)
+-- fromCBPoint :: CB.Point -> Point
+-- fromCBPoint (CB.Point x y) = Point (constant x) (constant y)
 
-onFrozenPaths op p q = do
-  [p',q'] <- mapM freezePath [p,q]
-  let p'' = op (toBeziers p') (toBeziers q')
-  return $ fmap fromCBPoint $ fromBeziers p''
+onBeziers op p' q' = fromBeziers $ op (toBeziers p') (toBeziers q')
 
-cutAfter :: Path -> Path -> Diagram Path
-cutAfter = onFrozenPaths cutAfter'
+type FrozenPath = Path' CB.Point
 
-cutBefore :: Path -> Path -> Diagram Path
-cutBefore = onFrozenPaths cutBefore'
+cutAfter :: FrozenPath -> FrozenPath -> FrozenPath
+cutAfter = onBeziers cutAfter'
+
+cutBefore :: FrozenPath -> FrozenPath -> FrozenPath
+cutBefore = onBeziers cutBefore'
 
 data Segment point = CurveTo point point point
                    | StraightTo point
@@ -351,8 +355,8 @@ instance Traversable Segment where
   traverse f (StraightTo p) = StraightTo <$> f p
   traverse f (CurveTo c d q) = CurveTo <$> f c <*> f d <*> f q
   
-instance (Element point,Target point~Dia) => Element (Segment point) where
-  type Target (Segment point) = Diagram ()
+instance (Element point,Monoid (Target point), IsString (Target point)) => Element (Segment point) where
+  type Target (Segment point) = Target point
   element (StraightTo p) = "--" <> element p
   element (CurveTo c d p) = "..controls" <> element c <> "and" <> element d <> ".." <> element p
   element Cycle = "--cycle"
@@ -373,6 +377,16 @@ path (Path start segs) = do
     <> element options
     <> element start <> mapM_ element segs
       <> ";\n"
+
+frozenPath :: Path' CB.Point  -> Dia
+frozenPath p  = do
+  options <- diaPathOptions <$> ask
+  diaRaw "\\path"
+  element options
+  diaRaw $ case p of
+    EmptyPath -> ""
+    (Path start segs) -> element start ++ concatMap element segs
+  diaRaw ";\n"
 
 polyline :: [Point] -> Path
 polyline [] = EmptyPath
@@ -471,3 +485,5 @@ drawText point t = do
   (_,box) <- diaRawTex $ inBox $ braces $ t
   diaRawTex $ tex ";\n"
   return box
+
+  

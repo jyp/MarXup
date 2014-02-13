@@ -138,9 +138,14 @@ texObj t = do
 edge :: Object -> Object -> Diagram Point
 edge source target = do
   let points = [source Center,target Center]
-  path $ polyline points
+      link = polyline points
+      targetArea = boundingRect $ extend 3 target
+      sourceArea = boundingRect $ extend 3 target
+  l' <- freezePath link
+  sa' <- freezePath sourceArea
+  ta' <- freezePath targetArea
+  frozenPath $ (l' `cutAfter` ta') `cutBefore` sa'
   return $ avg points
 
 infix 8 ▸
 
-  
