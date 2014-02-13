@@ -2,17 +2,19 @@
 
 module MarXup.Tikz (module MarXup.Tikz) where
 
+import Prelude hiding (sum,mapM_,mapM,concatMap)
 import qualified Geom2D.CubicBezier as CB
 import Geom2D.CubicBezier (CubicBezier(..))
 import Control.Applicative
 import Control.Monad.LPMonad
-import Control.Monad.RWS
-import Control.Monad.Reader
+import Control.Monad.RWS hiding (forM,forM_,mapM_,mapM)
+import Control.Monad.Reader hiding (forM,forM_,mapM_,mapM)
 import Data.LinearProgram
 import Data.LinearProgram.Common as MarXup.Tikz (VarKind(..)) 
 import Data.LinearProgram.LinExpr
-import Data.List (transpose)
+import Data.List (sort,transpose)
 import Data.Map (Map)
+import Data.Maybe (listToMaybe)
 import Data.String
 import MarXup
 import MarXup.MultiRef
@@ -20,7 +22,8 @@ import MarXup.Tex
 import Numeric (showFFloat)
 import System.IO.Unsafe
 import qualified Data.Map as M
-
+import Data.Traversable
+import Data.Foldable
 
 type LPState = LP Var Constant
 data Env = Env {diaSolution :: Solution, diaPathOptions :: PathOptions}
@@ -188,7 +191,7 @@ maximize = minimize . negate
 -- Points
 -- | A point in 2d space
 data Point = Point {xpart :: Expr, ypart :: Expr}
-  deriving (Eq)
+  deriving (Eq,Show)
            
 instance Num Point where
   negate = neg
@@ -253,32 +256,110 @@ data Path' a
   = EmptyPath
   | Path {startingPoint :: a
          ,segments :: [Segment a]}
+  deriving Show
+           
+instance Functor Path' where
+  fmap = fmapDefault
+
+instance Foldable Path' where
+  foldMap = foldMapDefault
+instance Traversable Path' where
+  traverse _ EmptyPath = pure EmptyPath
+  traverse f (Path s ss) = Path <$> f s <*> traverse (traverse f) ss
+
+freezePoint :: Point -> Diagram CB.Point
+freezePoint (Point x y) = CB.Point <$> valueOf x <*> valueOf y
+
+freezePath :: Path' Point -> Diagram (Path' CB.Point)
+freezePath = traverse freezePoint
 
 -- toBeziers :: PathPoint -> [CubicBezier]
 toBeziers EmptyPath = []
 toBeziers (Path start ss) | not (null ss) &&
                             isCycle (last ss) = toBeziers' start (init ss ++ [StraightTo start])
                           | otherwise = toBeziers' start ss
+fromBeziers [] = EmptyPath
+fromBeziers (CubicBezier p c d q:bs) = Path p (CurveTo c d q:pathSegments (fromBeziers bs))
 
-toBeziers' _ [] = []
-toBeziers' start (StraightTo next:ss) = CubicBezier start start next next : toBeziers' next ss
-toBeziers' p (CurveTo c d q:ss) = CubicBezier p c d q : toBeziers' q ss
+pathSegments EmptyPath = []
+pathSegments (Path _ ss) = ss
 
 isCycle Cycle = True
 isCycle _  = False
 
-data Segment point = StraightTo point | CurveTo point point point | HV point | VH point | Cycle | Rounded (Maybe Constant)
-  deriving (Eq)
+instance Group CB.Point where
+  zero = CB.Point 0 0
+  (^+^) = (CB.^+^)
+  (^-^) = (CB.^-^)
+  
+instance Module Constant CB.Point where
+  (*^) = (CB.*^)
 
+
+diaDebug msg = diaRaw $ "\n%DBG:" ++ msg ++ "\n"
+
+toBeziers' :: CB.Point -> [Segment CB.Point] -> [CubicBezier]
+toBeziers' _ [] = []
+toBeziers' start (StraightTo next:ss) = CubicBezier start mid mid next : toBeziers' next ss
+  where mid = avg [start, next]
+toBeziers' p (CurveTo c d q:ss) = CubicBezier p c d q : toBeziers' q ss
+
+clipOne :: CubicBezier -> [CubicBezier] -> Maybe CubicBezier
+clipOne b cutter = fmap firstPart $ listToMaybe $ sort $ concatMap (\b' -> map fst $ CB.bezierIntersection b b' 0.001) cutter
+  where firstPart t = fst $ CB.splitBezier b t
+
+-- | @cutAfter path area@ cuts the path after its first intersection with the @area@.
+cutAfter' :: [CubicBezier] -> [CubicBezier] -> [CubicBezier]
+cutAfter' [] _cutter = []
+cutAfter' (b:bs) cutter = case clipOne b cutter of
+  Nothing -> b:cutAfter' bs cutter
+  Just b' -> [b']
+
+revBeziers :: [CubicBezier] -> [CubicBezier]
+revBeziers = reverse . map rev
+  where rev (CubicBezier a b c d) = CubicBezier d c b a
+        
+cutBefore' path area = revBeziers $ cutAfter' (revBeziers path) area
+  
+fromCBPoint :: CB.Point -> Point
+fromCBPoint (CB.Point x y) = Point (constant x) (constant y)
+
+onFrozenPaths op p q = do
+  [p',q'] <- mapM freezePath [p,q]
+  let p'' = op (toBeziers p') (toBeziers q')
+  return $ fmap fromCBPoint $ fromBeziers p''
+
+cutAfter :: Path -> Path -> Diagram Path
+cutAfter = onFrozenPaths cutAfter'
+
+cutBefore :: Path -> Path -> Diagram Path
+cutBefore = onFrozenPaths cutBefore'
+
+data Segment point = CurveTo point point point
+                   | StraightTo point
+                   | Cycle
+                   -- | Rounded (Maybe Constant)
+                   -- | HV point | VH point
+  deriving (Show,Eq)
+instance Functor Segment where
+  fmap = fmapDefault
+  
+instance Foldable Segment where
+  foldMap = foldMapDefault
+instance Traversable Segment where
+  traverse _ Cycle = pure Cycle
+  traverse f (StraightTo p) = StraightTo <$> f p
+  traverse f (CurveTo c d q) = CurveTo <$> f c <*> f d <*> f q
+  
 instance (Element point,Target point~Dia) => Element (Segment point) where
   type Target (Segment point) = Diagram ()
   element (StraightTo p) = "--" <> element p
-  element (VH p) = "|-" <> element p
-  element (HV p) = "-|" <> element p
   element (CurveTo c d p) = "..controls" <> element c <> "and" <> element d <> ".." <> element p
   element Cycle = "--cycle"
-  element (Rounded Nothing) = "[sharp corners]"
-  element (Rounded (Just r)) = "[" <> element (constant r) <> "]"
+  -- element (VH p) = "|-" <> element p
+  -- element (HV p) = "-|" <> element p
+  -- element (Rounded Nothing) = "[sharp corners]"
+  -- element (Rounded (Just r)) = "[" <> element (constant r) <> "]"
 
 instance Element Path where
   type Target Path = Diagram ()
