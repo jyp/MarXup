@@ -325,9 +325,6 @@ revBeziers = reverse . map rev
   where rev (CubicBezier a b c d) = CubicBezier d c b a
         
 cutBefore' path area = revBeziers $ cutAfter' (revBeziers path) area
-  
--- fromCBPoint :: CB.Point -> Point
--- fromCBPoint (CB.Point x y) = Point (constant x) (constant y)
 
 onBeziers op p' q' = fromBeziers $ op (toBeziers p') (toBeziers q')
 

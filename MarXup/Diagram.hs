@@ -140,7 +140,7 @@ edge source target = do
   let points = [source Center,target Center]
       link = polyline points
       targetArea = boundingRect $ extend 3 target
-      sourceArea = boundingRect $ extend 3 target
+      sourceArea = boundingRect $ extend 3 source
   l' <- freezePath link
   sa' <- freezePath sourceArea
   ta' <- freezePath targetArea
