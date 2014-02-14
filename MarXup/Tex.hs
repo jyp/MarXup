@@ -64,23 +64,8 @@ instance Monoid (TeX) where
 instance IsString (TeX) where
   fromString = textual
 
-renderToDisk :: MPOutFormat -> Tex a -> IO ()
-renderToDisk fmt t = do
-  fname <- getProgName
-  renderToDisk' fmt fname t
-
-renderToDisk' :: MPOutFormat -> String -> Tex a -> IO ()
-renderToDisk' fmt fname (Tex t) = 
-  writeToDisk (Target (fname <.> "tex") $ runReaderT t (fname,fmt))
-
-getMpOutFormat :: Tex MPOutFormat
-getMpOutFormat = snd <$> ask
-
 getOutFile :: Tex FilePath
 getOutFile = fst <$> ask
-
-render :: Tex a -> [String]
-render (Tex t) = renderMainTarget (runReaderT t ("<interactive>",EPS))
 
 texLn :: String -> TeX
 texLn s = tex s >> tex "\n"

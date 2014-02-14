@@ -43,14 +43,14 @@ instance MonadFix Multi where
 instance Monad Multi where
   (>>=) = Bind
   return = Return
-  
+
 instance Applicative Multi where
   (<*>) = ap
   pure = Return
-  
+
 instance Functor Multi where
   fmap = liftM
-  
+
 type References = Int -- how many labels have been allocated
 emptyRefs :: References
 emptyRefs = 0
@@ -61,23 +61,6 @@ instance Monoid Outputs where
   mempty = O (M.empty)
   mappend (O m) (O n) = O $ M.unionWith (++) m n
 
--- | Interpret to write into a map from filename to contents.
-newtype Displayer a = Displayer {fromDisplayer :: RWS FilePath Outputs References a }
-  deriving (Monad, MonadWriter Outputs, MonadReader FilePath, MonadState References, MonadFix)
-
-display :: Multi a -> Displayer a
-display t = case t of
-      (Raw _ s) -> tell' s
-      (Return a) -> return a
-      (Bind k f) -> display k >>= (display . f)
-      Label -> do x <- get;  put $ x + 1; return x
-      (MFix f) -> mfix (display . f)
-      (Target f x) -> local (const f) $ display x 
-  where tell' :: String -> Displayer ()
-        tell' s = do fname <- ask; tell (fname ==> s)
-        f ==> s = O $ M.singleton f [s]
-
--- data Selection = Sel {selJustBoxes :: Bool, selRegular :: Bool}
 data Mode = Normal | BoxOnly | NotBoxOnly | Always
 data InterpretMode = OutsideBox | InsideBox | Regular deriving Eq
 
@@ -118,44 +101,3 @@ display' t = case t of
             return b
         a <- local moveInsideBox $ display' x
         return (a,b)
-
--- data Boxes = Boxes {completeBoxes :: [String], currentBox :: [String]}
--- finishBox :: Boxes -> Boxes
--- finishBox (Boxes bxs bx) = Boxes (mconcat bx:bxs) []
--- instance Monoid Boxes where
---   mappend (Boxes bxs bx) (Boxes axs ax) = Boxes (bxs ++ axs) (bx ++ ax)
---   mempty = Boxes [] []
--- newtype Boxer a = Boxer {fromBoxer :: RWS Bool Boxes References a }
---   deriving (Monad, MonadWriter Boxes, MonadReader Bool, MonadState References, MonadFix)
-
--- getBoxes :: Multi a -> Boxer a
--- getBoxes t = case t of
---       (Raw s) -> tell' s
---       (Return a) -> return a
---       (Bind k f) -> getBoxes k >>= (getBoxes . f)
---       Label -> do x <- get; put $ x + 1; return x
---       (Refer x) -> do tell' (show x); return x
---       (MFix f) -> mfix (getBoxes . f)
---       (Target _f x) -> getBoxes x
---       (Box x) -> do
---         inBox <- ask
---         when inBox $ error "nested boxes not supported!"
---         bx <- censor finishBox $ local (\_ -> True) $ getBoxes x
---         return (bx,nilBoxSpec)
---   where tell' :: String -> Boxer ()
---         tell' s = do
---           inBox <- ask
---           when inBox $ tell (Boxes [] [s])
-
-
--- | Write the relevant files to disk
-writeToDisk :: Multi a -> IO ()
-writeToDisk t = do 
-  let (_,O xs) = evalRWS (fromDisplayer $ display t) "" emptyRefs 
-  forM_ (M.assocs xs) $ \ (fname,contents) ->
-    unless (null fname) $
-      writeFile fname (concat contents)
-
-renderMainTarget :: Multi a -> [String]
-renderMainTarget t = M.findWithDefault [] "" xs
-  where (_,O xs) = evalRWS (fromDisplayer $ display t) "" emptyRefs 

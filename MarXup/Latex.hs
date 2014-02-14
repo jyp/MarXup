@@ -92,10 +92,7 @@ usepackage name opts  = cmd' "usepackage" opts (tex name)
 
 stdPreamble :: TeX
 stdPreamble = do
-  fmt <- getMpOutFormat
-  case fmt of
-    SVG -> usepackage "svg" []
-    EPS -> usepackage "graphicx" []
+  usepackage "graphicx" []
   usepackage "inputenc" ["utf8"]
   return ()
 
