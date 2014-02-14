@@ -5,15 +5,7 @@ module MarXup.MultiRef where
 import Control.Monad.Fix
 import Control.Monad.RWS.Lazy
 import Control.Applicative
-import Data.Either
-import GHC.Exts( IsString(..) )
-import System.FilePath
-import System.Environment
-import Data.List (intersperse)
-import Data.Map (Map)
-import qualified Data.Map as M
-import System.FilePath
-import Control.Arrow (first,second)
+import Control.Arrow (first)
 
 -----------------------------------
 -- Basic datatype and semantics
@@ -55,17 +47,8 @@ type References = Int -- how many labels have been allocated
 emptyRefs :: References
 emptyRefs = 0
 
-newtype Outputs = O (Map FilePath [String])
-
-instance Monoid Outputs where
-  mempty = O (M.empty)
-  mappend (O m) (O n) = O $ M.unionWith (++) m n
-
 data Mode = Normal | BoxOnly | NotBoxOnly | Always
 data InterpretMode = OutsideBox | InsideBox | Regular deriving Eq
-
-moveInsideBox OutsideBox = InsideBox
-moveInsideBox x = x
 
 shouldShow :: Mode -> InterpretMode -> Bool
 shouldShow Always _ = True
@@ -77,27 +60,30 @@ shouldShow BoxOnly OutsideBox = True
 shouldShow BoxOnly InsideBox = True
 shouldShow NotBoxOnly Regular = True
 shouldShow NotBoxOnly _ = False
-  
+
 -- | Interpret to write into a map from filename to contents.
-newtype Display'er a = Display'er {fromDisplay'er :: RWS InterpretMode String (References,[BoxSpec]) a }
+newtype Displayer a = Displayer {fromDisplayer :: RWS InterpretMode String (References,[BoxSpec]) a }
   deriving (Functor, Monad, MonadWriter String, MonadState (References,[BoxSpec]), MonadFix, MonadReader InterpretMode)
 
-display' :: Multi a -> Display'er a
-display' t = case t of
+display :: Multi a -> Displayer a
+display t = case t of
       (Raw mode s) -> do
           interpretMode <- ask
           when (shouldShow mode interpretMode) $ tell s
       (Return a) -> return a
-      (Bind k f) -> display' k >>= (display' . f)
+      (Bind k f) -> display k >>= (display . f)
       Label -> do x <- fst <$> get;  modify (first (+1)); return x
-      (MFix f) -> mfix (display' . f)
-      (Target _ x) -> display' x
-      (Box x) -> do
+      (MFix f) -> mfix (display . f)
+      (Target _ x) -> display x
+      Box x -> do
         (refs,bs) <- get
         b <- case bs of
-          [] -> error "display': ran out of boxes!"
+          [] -> error "display: ran out of boxes!"
           (b:bs') -> do
             put (refs,bs')
             return b
-        a <- local moveInsideBox $ display' x
+        a <- local moveInBox $ display x
         return (a,b)
+               where moveInBox m = case m of
+                       OutsideBox -> InsideBox
+                       _ -> m

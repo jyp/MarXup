@@ -7,11 +7,8 @@ import Control.Monad.Reader
 import Control.Monad.RWS
 import Control.Applicative
 import GHC.Exts( IsString(..) )
-import System.FilePath
-import System.Environment
 import Data.List (intersperse)
 import MarXup.MultiRef
-import Data.Monoid
 import Graphics.DVI
 import System.Process
 
@@ -204,7 +201,7 @@ tikzpackage = texInMode NotBoxOnly "\\usepackage{tikz}"
 
 renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
 renderWithBoxes bs mode (Tex t) = doc
-  where (_,_,doc) = runRWS (fromDisplay'er $ display' $ t) mode (0,bs)
+  where (_,_,doc) = runRWS (fromDisplayer $ display $ t) mode (0,bs)
 
 renderTex :: (Bool -> TeX) -> TeX -> IO String
 renderTex preamble body = do
