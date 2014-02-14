@@ -31,7 +31,6 @@ import Data.LabeledTree
 import Data.Monoid hiding ((<>))
 import MarXup (element)
 import MarXup.Tex hiding (label)
-import MarXup.Latex (math)
 import MarXup.MultiRef
 -- import MarXup.MetaPost hiding ((===), alignVert, xpart, ypart, Expr)
 import MarXup.MetaPost (MP(..),sho,mpRefer,mpRaw,mpQuote,mkfig,inMP,mpRawLines,includeMetaPostFigure)
@@ -193,14 +192,14 @@ derivationTreeMP opts j = do
   
 -- | Render a derivation tree without using metapost drv package (links will not be rendered properly)
 derivationTree :: Derivation' a -> TeX
-derivationTree = math . stringizeTex
+derivationTree = stringizeTex
 
 stringizeTex :: Derivation' a -> TeX
 stringizeTex (Node Rule {ruleStyle=None,..} []) = conclusion
 stringizeTex (Node Rule {..} premises) = braces $ do
   cmd0 "displaystyle" -- so that the text does not get smaller
-  cmdn "frac" [mconcat $ 
-               intersperse (cmd0 "quad") 
+  cmdn "frac" [mconcat $
+               intersperse (cmd0 "quad")
                [ stringizeTex v | _ ::> v <- premises]
               ,conclusion]
   braces $ do cmd0 "small"
@@ -251,10 +250,10 @@ toDiagPart layerHeight (Link{..} ::> rul)
         embedPt n x = T.Node (pt,ptObj,pt) [embedPt (n-1) x]
     return $ embedPt steps above
 
--- | chainBases distance objects
+-- | @chainBases distance objects@
 -- - Ensures that all the objects have the same baseline.
 -- - Separates the objects by the given distance
--- - Returns an object encompassing the group, with a correctly set baseline.
+-- - Returns an object encompassing the group, with a the baseline set correctly.
 chainBases :: Expr -> [Object] -> Diagram Object
 chainBases _ [] = abstractBox
 chainBases spacing ls = do
@@ -270,9 +269,9 @@ chainBases spacing ls = do
 toDiagram :: Expr -> Derivation' a -> Diagram (T.Tree (Point,Object,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
-  concl <- extend 1.5 <$> texObj (math conclusion)
-  lab <- texObj (math ruleLabel)
-  psGrp <- chainBases 10 $ [p | T.Node (_,p,_) _ <- ps]
+  concl <- texObj (cmd0 "strut" <> conclusion)
+  lab <- texObj ruleLabel
+  psGrp <- chainBases 10 [p | T.Node (_,p,_) _ <- ps]
   layerHeight === height psGrp
   separ <- abstractBox
   separ N .=. psGrp S

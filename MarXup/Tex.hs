@@ -114,6 +114,7 @@ cmd' cmd options arg = do
   [x] <- cmdn' cmd options [arg]
   return x
 
+-- | Command with options and many arguments
 cmdn' :: String -> [String] -> [Tex a] -> Tex [a]
 cmdn' cmd options args = do
   backslash >> tex cmd
@@ -122,6 +123,7 @@ cmdn' cmd options args = do
   when (null args) $ tex "{}" -- so that this does not get glued with the next thing.
   return res
 
+-- | Command with tex options and many arguments
 cmdm :: String -> [Tex a] -> [Tex a] -> Tex [a]
 cmdm cmd options args = do
   backslash >> tex cmd
