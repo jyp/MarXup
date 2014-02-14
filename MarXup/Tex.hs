@@ -21,7 +21,7 @@ newtype Tex a = Tex {fromTex :: Multi a}
 ---------------------------------
 -- MarXup interface
 instance Textual Tex where
-    textual s = Tex $ (Raw normalMode $ concatMap escape s)
+    textual s = tex $ concatMap escape s
 
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
@@ -38,15 +38,12 @@ instance Element (Tex a) where
   element = id
 
 texInMode ::  Mode -> String ->TeX
-texInMode mode = Tex . Raw mode
+texInMode mode = Tex . raw mode
 
 tex :: String -> TeX
-tex = texInMode normalMode
+tex = texInMode (`elem` [Regular,InsideBox])
 
 type TeX = Tex ()
-
-newLabel :: Tex Label
-newLabel = Tex $ Label
 
 reference :: Label -> Tex ()
 reference l = tex (show l)
@@ -145,7 +142,7 @@ data SortedLabel =  SortedLabel String Label
 
 label :: String -> Tex SortedLabel
 label s = do
-  l <- newLabel
+  l <- Tex newLabel
   cmd "label" (reference l)
   return $ SortedLabel s l
 
@@ -168,22 +165,30 @@ instance Element SortedLabel where
 -----------------
 -- Generate boxes
 
-outputAlsoInBoxMode :: Tex a -> Tex (a,BoxSpec)
-outputAlsoInBoxMode (Tex a) = Tex $ MarXup.MultiRef.Box $ a
-  
--- generateBoxes :: Tex a -> String
--- generateBoxes (Tex t) = mconcat (map inShipout bxs) 
---   where (_,_,Boxes bxs _) = runRWS (fromBoxer $ getBoxes $ runReaderT t ("<no filepath>",EPS) ) False 0
+outputAlsoInBoxMode :: Tex a -> Tex a
+outputAlsoInBoxMode (Tex a) = Tex $ local moveInBox $ a
+         where moveInBox m = case m of
+                 OutsideBox -> InsideBox
+                 _ -> m
 
-inBox :: Tex a -> Tex (a,BoxSpec)
-inBox x = outputAlsoInBoxMode $ do
-  texInMode boxMode "\\mpxshipout%\n"
-  r <- x
-  texInMode boxMode "%\n\\stopmpxshipout\n"
-  return r
+alwaysMode = const True
+
+
+inBoxComputMode = texInMode (`elem` [OutsideBox,InsideBox])
+
+onlyNotBox Regular = True
+onlyNotBox _ = False
+
+inBox :: Tex a -> Tex (a, BoxSpec)
+inBox x = do
+  inBoxComputMode "\\mpxshipout%\n"
+  a <- outputAlsoInBoxMode x
+  inBoxComputMode "%\n\\stopmpxshipout\n"
+  b <- Tex getBoxSpec
+  return (a,b)
 
 shipoutMacros :: TeX
-shipoutMacros = texInMode boxMode "\
+shipoutMacros = inBoxComputMode "\
 \  \\gdef\\mpxshipout{\\shipout\\hbox\\bgroup                              \n\
 \    \\setbox0=\\hbox\\bgroup}                                             \n\
 \  \\gdef\\stopmpxshipout{\\egroup  \\dimen0=\\ht0 \\advance\\dimen0\\dp0  \n\
@@ -198,7 +203,7 @@ shipoutMacros = texInMode boxMode "\
 
 renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
 renderWithBoxes bs mode (Tex t) = doc
-  where (_,_,doc) = runRWS (fromDisplayer $ display $ t) mode (0,bs)
+  where (_,_,doc) = runRWS (fromMulti $ t) mode (0,bs)
 
 renderTex :: (Bool -> TeX) -> TeX -> IO String
 renderTex preamble body = do
@@ -214,8 +219,7 @@ renderTex preamble body = do
   system $ "latex " ++ boxesName
   boxes <- withDVI (boxesName ++ ".dvi") (\_ _ -> return emptyFont) () getBoxInfo
   putStrLn $ "Number of boxes found: " ++ show (length boxes)
-  return $ renderWithBoxes (nilBoxSpec:boxes) Regular $ (wholeDoc False)
-  -- ???? Hack???? I cannot figure out why an extra nil box is needed here.
+  return $ renderWithBoxes boxes Regular $ (wholeDoc False)
 
 getBoxInfo :: () -> Page -> IO (Maybe ((), BoxSpec))
 getBoxInfo () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))

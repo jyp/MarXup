@@ -79,7 +79,7 @@ type Detach x = x -> WriterT [Figure ()] Tex x
 detachP :: Detach Premise
 detachP (Detached{..} ::> d) = do
   d'@(Node r ps) <- detachD d
-  figureTag <- lift $ newLabel 
+  figureTag <- lift $ Tex $ newLabel
   tell [Figure {contents = Node r {delimiter = label} ps,..}]
   return $ (defaultLink ::> haltDrv label d)
 detachP (l ::> d) = (l ::>) <$> detachD d
@@ -140,7 +140,7 @@ type Tag x = x () -> Tex (x Int)
 
 tagify :: Tag Rule
 tagify (Rule {..}) = do
-  tag <- newLabel
+  tag <- Tex $ newLabel
   return $ Rule {..}
 
 tagifyFig :: Tag Figure

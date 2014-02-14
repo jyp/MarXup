@@ -7,41 +7,40 @@ import Control.Monad.RWS.Lazy
 import Control.Applicative
 import Control.Arrow (first)
 
+newtype Multi a = Multi {fromMulti :: RWS InterpretMode String (References,[BoxSpec]) a }
+  deriving (Functor, Monad, Applicative, MonadWriter String, MonadState (References,[BoxSpec]), MonadFix, MonadReader InterpretMode)
+
 -----------------------------------
 -- Basic datatype and semantics
 type Label = Int
+
+-- | Size of a box, in points. boxDescent is how far the baseline is
+-- from the bottom.
 data BoxSpec = BoxSpec {boxWidth, boxHeight, boxDescent :: Double}
-               -- unit is (probably) the point
              deriving (Show)
+
+nilBoxSpec :: BoxSpec
 nilBoxSpec = BoxSpec 0 0 0
 
-data Multi a where
-  Return :: a -> Multi a
-  Bind :: Multi a -> (a -> Multi b) -> Multi b
+raw :: Mode -> String -> Multi ()
+raw mode s = do
+  interpretMode <- ask
+  when (mode interpretMode) $ tell s
 
-  Raw :: Mode -> String -> Multi () -- raw TeX code
-  Box :: Multi a -> Multi (a, BoxSpec)
+getBoxSpec :: Multi BoxSpec
+getBoxSpec = do
+  (refs,bs) <- get
+  case bs of
+    [] -> error "display: ran out of boxes!"
+    (b:bs') -> do
+      put (refs,bs')
+      return b
+ 
 
-  -- Reference management
-  Label :: Multi Label -- create a new label
-  MFix :: (a -> Multi a) -> Multi a -- to be able to refer to future references
 
-  -- Target file management
-  Target :: FilePath -> Multi a -> Multi a -- locally switch to output in another file
-
-instance MonadFix Multi where
-  mfix = MFix
-
-instance Monad Multi where
-  (>>=) = Bind
-  return = Return
-
-instance Applicative Multi where
-  (<*>) = ap
-  pure = Return
-
-instance Functor Multi where
-  fmap = liftM
+-- Reference management
+newLabel :: Multi Label -- create a new label
+newLabel = do x <- fst <$> get;  modify (first (+1)); return x
 
 type References = Int -- how many labels have been allocated
 emptyRefs :: References
@@ -50,42 +49,3 @@ emptyRefs = 0
 type Mode = InterpretMode -> Bool
 data InterpretMode = OutsideBox | InsideBox | Regular deriving Eq
 
-alwaysMode = const True
-
-normalMode Regular = True
-normalMode OutsideBox = False
-normalMode InsideBox = True
-
-boxMode Regular = False
-boxMode OutsideBox = True
-boxMode InsideBox = True
-
-onlyNotBox Regular = True
-onlyNotBox _ = False
-
--- | Interpret to write into a map from filename to contents.
-newtype Displayer a = Displayer {fromDisplayer :: RWS InterpretMode String (References,[BoxSpec]) a }
-  deriving (Functor, Monad, MonadWriter String, MonadState (References,[BoxSpec]), MonadFix, MonadReader InterpretMode)
-
-display :: Multi a -> Displayer a
-display t = case t of
-      (Raw mode s) -> do
-          interpretMode <- ask
-          when (mode interpretMode) $ tell s
-      (Return a) -> return a
-      (Bind k f) -> display k >>= (display . f)
-      Label -> do x <- fst <$> get;  modify (first (+1)); return x
-      (MFix f) -> mfix (display . f)
-      (Target _ x) -> display x
-      Box x -> do
-        (refs,bs) <- get
-        b <- case bs of
-          [] -> error "display: ran out of boxes!"
-          (b:bs') -> do
-            put (refs,bs')
-            return b
-        a <- local moveInBox $ display x
-        return (a,b)
-               where moveInBox m = case m of
-                       OutsideBox -> InsideBox
-                       _ -> m
