@@ -18,24 +18,22 @@ import System.Process
 data MPOutFormat = SVG | EPS
   deriving (Eq,Show)
 
-newtype Tex a = Tex {fromTex :: ReaderT (FilePath,MPOutFormat) Multi a}
-  deriving (Monad, MonadFix, Applicative, Functor, MonadReader (FilePath,MPOutFormat))
+newtype Tex a = Tex {fromTex :: Multi a}
+  deriving (Monad, MonadFix, Applicative, Functor)
 
 ---------------------------------
 -- MarXup interface
 instance Textual Tex where
-    textual s = Tex $ lift (Raw Normal $ concatMap escape s)
+    textual s = Tex $ (Raw Normal $ concatMap escape s)
 
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
 
-escape '%' = "\\%"
 escape '\\' = "\\ensuremath{\\backslash{}}"
 escape '~' = "\\ensuremath{\\sim{}}"
 escape '<' = "\\ensuremath{<}"
 escape '>' = "\\ensuremath{>}"
-escape '_' = "\\_"
-escape c | c `elem` "{}&$" = '\\':c:[]
+escape c | c `elem` "^_{}&$%" = '\\':c:[]
 escape c = [c]
 
 instance Element (Tex a) where
@@ -43,7 +41,7 @@ instance Element (Tex a) where
   element = id
 
 texInMode ::  Mode -> String ->TeX
-texInMode mode = Tex . lift . Raw mode
+texInMode mode = Tex . Raw mode
 
 tex :: String -> TeX
 tex = texInMode Normal
@@ -51,11 +49,10 @@ tex = texInMode Normal
 type TeX = Tex ()
 
 newLabel :: Tex Label
-newLabel = Tex $ lift Label
+newLabel = Tex $ Label
 
 reference :: Label -> Tex ()
-reference l = Tex $ do
-  lift $ Raw Normal (show l)
+reference l = Tex $ Raw Normal (show l)
 
 instance Monoid (TeX) where
   mempty = textual ""
@@ -63,9 +60,6 @@ instance Monoid (TeX) where
 
 instance IsString (TeX) where
   fromString = textual
-
-getOutFile :: Tex FilePath
-getOutFile = fst <$> ask
 
 texLn :: String -> TeX
 texLn s = tex s >> tex "\n"
@@ -178,9 +172,7 @@ instance Element SortedLabel where
 -- Generate boxes
 
 outputAlsoInBoxMode :: Tex a -> Tex (a,BoxSpec)
-outputAlsoInBoxMode (Tex a) = do
-  q <- ask
-  Tex $ lift $ MarXup.MultiRef.Box $ runReaderT a q
+outputAlsoInBoxMode (Tex a) = Tex $ MarXup.MultiRef.Box $ a
   
 -- generateBoxes :: Tex a -> String
 -- generateBoxes (Tex t) = mconcat (map inShipout bxs) 
@@ -212,7 +204,7 @@ tikzpackage = texInMode NotBoxOnly "\\usepackage{tikz}"
 
 renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
 renderWithBoxes bs mode (Tex t) = doc
-  where (_,_,doc) = runRWS (fromDisplay'er $ display' $ runReaderT t ("<no filepath>",EPS) ) mode (0,bs)
+  where (_,_,doc) = runRWS (fromDisplay'er $ display' $ t) mode (0,bs)
 
 renderTex :: (Bool -> TeX) -> TeX -> IO String
 renderTex preamble body = do

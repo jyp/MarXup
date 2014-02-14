@@ -61,7 +61,7 @@ runDiagram (Dia diag) = do
   return a
 
 diaRawTex :: Tex a -> Diagram a
-diaRawTex (Tex t) = Dia $ lift (runReaderT t ("<in diagra>",EPS))
+diaRawTex (Tex t) = Dia $ lift t
 
 diaRaw :: String -> Dia
 diaRaw = diaRawTex . tex
@@ -75,7 +75,7 @@ instance Element (Diagram ()) where
       -- every text styling should be reset, but I don't know how to
       -- do that.
     env "tikzpicture" $
-      Tex $ lift $ runDiagram d
+      Tex $ runDiagram d
 
 instance Monoid (Diagram ()) where
   mempty = return ()
