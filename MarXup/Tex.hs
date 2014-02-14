@@ -171,13 +171,9 @@ outputAlsoInBoxMode (Tex a) = Tex $ local moveInBox $ a
                  OutsideBox -> InsideBox
                  _ -> m
 
-alwaysMode = const True
-
+texAlways = texInMode (const True)
 
 inBoxComputMode = texInMode (`elem` [OutsideBox,InsideBox])
-
-onlyNotBox Regular = True
-onlyNotBox _ = False
 
 inBox :: Tex a -> Tex (a, BoxSpec)
 inBox x = do
@@ -212,9 +208,9 @@ renderTex preamble body = do
       wholeDoc inBoxMode = do
         outputAlsoInBoxMode (preamble inBoxMode)
         shipoutMacros
-        texInMode alwaysMode "\\begin{document}"
+        texAlways "\\begin{document}"
         body
-        texInMode alwaysMode "\\end{document}"
+        texAlways "\\end{document}"
   writeFile (boxesName ++ ".tex") bxsTex
   system $ "latex " ++ boxesName
   boxes <- withDVI (boxesName ++ ".dvi") (\_ _ -> return emptyFont) () getBoxInfo
