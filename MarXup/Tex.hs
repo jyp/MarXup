@@ -29,6 +29,7 @@ instance Textual Tex where
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
 
+escape '%' = "\\%"
 escape '\\' = "\\ensuremath{\\backslash{}}"
 escape '~' = "\\ensuremath{\\sim{}}"
 escape '<' = "\\ensuremath{<}"

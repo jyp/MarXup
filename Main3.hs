@@ -83,7 +83,7 @@ pChunk stops = munch1 (not . (`elem` stops))
 anyQuoteStrings :: [String]
 anyQuoteStrings = concatMap (\(x,y) -> [x,y]) quoteStrings
 
-pTextChunk = oText <$> pChunk' ("\n" : antiQuoteStrings ++ anyQuoteStrings) <?> "Text chunk"
+pTextChunk = oText <$> pChunk' ("\n" : commentString : antiQuoteStrings ++ anyQuoteStrings) <?> "Text chunk"
 pHaskChunk = text <$> pChunk' (map box "\n\"[]()" ++ map fst quoteStrings) <?> "Haskell chunk"
     -- we keep track of balancing
 
@@ -117,7 +117,7 @@ pHask =
 pTextArg' :: String -> String -> Parser Doc
 pTextArg' open close = label "quoted text" $
   string open *>
-  (oMappend <$> many (pElement <|> pTextChunk <|> pTextLn))
+  (oMappend <$> many (pElement <|> pTextChunk <|> pTextLn <|> pComment))
   <* string close
 
 pTextArg :: Parser Doc
@@ -141,6 +141,15 @@ pElement = label "Haskell element" $ do
   var <- ((<+> text "<-") <$> (pIdent <* string "<-")) <<|> pure mempty
   val <- ((:) <$> pIdent <*> manyGreedy pArgument) <|> (box <$> pArg "()")
   return $ var <> text "element" <+> parens (hcat $ fmap parens val)
+
+commentString :: String
+commentString = "%%"
+
+pComment :: Parser Doc
+pComment = label "Comment" $ do
+  string commentString
+  munch (/= '\n')
+  return mempty
 
 main :: IO ()
 main = do
