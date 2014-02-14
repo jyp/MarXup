@@ -47,19 +47,21 @@ type References = Int -- how many labels have been allocated
 emptyRefs :: References
 emptyRefs = 0
 
-data Mode = Normal | BoxOnly | NotBoxOnly | Always
+type Mode = InterpretMode -> Bool
 data InterpretMode = OutsideBox | InsideBox | Regular deriving Eq
 
-shouldShow :: Mode -> InterpretMode -> Bool
-shouldShow Always _ = True
-shouldShow Normal Regular = True
-shouldShow Normal OutsideBox = False
-shouldShow Normal InsideBox = True
-shouldShow BoxOnly Regular = False
-shouldShow BoxOnly OutsideBox = True
-shouldShow BoxOnly InsideBox = True
-shouldShow NotBoxOnly Regular = True
-shouldShow NotBoxOnly _ = False
+alwaysMode = const True
+
+normalMode Regular = True
+normalMode OutsideBox = False
+normalMode InsideBox = True
+
+boxMode Regular = False
+boxMode OutsideBox = True
+boxMode InsideBox = True
+
+onlyNotBox Regular = True
+onlyNotBox _ = False
 
 -- | Interpret to write into a map from filename to contents.
 newtype Displayer a = Displayer {fromDisplayer :: RWS InterpretMode String (References,[BoxSpec]) a }
@@ -69,7 +71,7 @@ display :: Multi a -> Displayer a
 display t = case t of
       (Raw mode s) -> do
           interpretMode <- ask
-          when (shouldShow mode interpretMode) $ tell s
+          when (mode interpretMode) $ tell s
       (Return a) -> return a
       (Bind k f) -> display k >>= (display . f)
       Label -> do x <- fst <$> get;  modify (first (+1)); return x

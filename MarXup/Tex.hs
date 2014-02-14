@@ -21,7 +21,7 @@ newtype Tex a = Tex {fromTex :: Multi a}
 ---------------------------------
 -- MarXup interface
 instance Textual Tex where
-    textual s = Tex $ (Raw Normal $ concatMap escape s)
+    textual s = Tex $ (Raw normalMode $ concatMap escape s)
 
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
@@ -41,7 +41,7 @@ texInMode ::  Mode -> String ->TeX
 texInMode mode = Tex . Raw mode
 
 tex :: String -> TeX
-tex = texInMode Normal
+tex = texInMode normalMode
 
 type TeX = Tex ()
 
@@ -49,7 +49,7 @@ newLabel :: Tex Label
 newLabel = Tex $ Label
 
 reference :: Label -> Tex ()
-reference l = Tex $ Raw Normal (show l)
+reference l = tex (show l)
 
 instance Monoid (TeX) where
   mempty = textual ""
@@ -177,13 +177,13 @@ outputAlsoInBoxMode (Tex a) = Tex $ MarXup.MultiRef.Box $ a
 
 inBox :: Tex a -> Tex (a,BoxSpec)
 inBox x = outputAlsoInBoxMode $ do
-  texInMode BoxOnly "\\mpxshipout%\n"
+  texInMode boxMode "\\mpxshipout%\n"
   r <- x
-  texInMode BoxOnly "%\n\\stopmpxshipout\n"
+  texInMode boxMode "%\n\\stopmpxshipout\n"
   return r
 
 shipoutMacros :: TeX
-shipoutMacros = texInMode BoxOnly "\
+shipoutMacros = texInMode boxMode "\
 \  \\gdef\\mpxshipout{\\shipout\\hbox\\bgroup                              \n\
 \    \\setbox0=\\hbox\\bgroup}                                             \n\
 \  \\gdef\\stopmpxshipout{\\egroup  \\dimen0=\\ht0 \\advance\\dimen0\\dp0  \n\
@@ -196,9 +196,6 @@ shipoutMacros = texInMode BoxOnly "\
 \    \\ht0=0pt \\dp0=0pt \\box0 \\egroup}                                  \n\
 \ "
 
-tikzpackage :: TeX
-tikzpackage = texInMode NotBoxOnly "\\usepackage{tikz}"
-
 renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
 renderWithBoxes bs mode (Tex t) = doc
   where (_,_,doc) = runRWS (fromDisplayer $ display $ t) mode (0,bs)
@@ -210,9 +207,9 @@ renderTex preamble body = do
       wholeDoc inBoxMode = do
         outputAlsoInBoxMode (preamble inBoxMode)
         shipoutMacros
-        texInMode Always "\\begin{document}"
+        texInMode alwaysMode "\\begin{document}"
         body
-        texInMode Always "\\end{document}"
+        texInMode alwaysMode "\\end{document}"
   writeFile (boxesName ++ ".tex") bxsTex
   system $ "latex " ++ boxesName
   boxes <- withDVI (boxesName ++ ".dvi") (\_ _ -> return emptyFont) () getBoxInfo
