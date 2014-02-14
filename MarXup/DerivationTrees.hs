@@ -17,7 +17,7 @@ Alignment(..), LineStyle(..),defaultLink,Link(..),
 Figure(..),
 
 -- * Engine
-derivationTree, derivationTreeMP, derivationTreeD
+derivationTree, derivationTreeD
 
 ) where
 
@@ -34,7 +34,6 @@ import MarXup.Tex hiding (label)
 import MarXup.Latex (math)
 import MarXup.MultiRef
 -- import MarXup.MetaPost hiding ((===), alignVert, xpart, ypart, Expr)
-import MarXup.MetaPost (MP(..),sho,mpRefer,mpRaw,mpQuote,mkfig,inMP,mpRawLines,includeMetaPostFigure)
 import MarXup.Diagram
 import MarXup.Tikz as D hiding (None)
 import qualified Data.Tree as T
@@ -74,7 +73,7 @@ type Derivation = Derivation' ()
 data Figure tag = Figure {figureTag :: Label, contents :: Derivation' tag}
 
 ------------------------------------------------------------
--- Phase 1: Detach
+-- Phase 1: Detach (currently disabled)
 
 type Detach x = x -> WriterT [Figure ()] Tex x
 
@@ -150,43 +149,6 @@ tagifyFig (Figure {..}) = Figure figureTag <$> traverse tagify contents
 
 tagifyTop :: [Figure ()] -> Tex [Figure Int]
 tagifyTop = mapM tagifyFig
-
-----------------------------------------------------------
--- Phase 4: Metapostify
-
-
-mkTuple :: [MP ()] -> MP ()
-mkTuple l = " (" <> sequence_ (intersperse "," l) <> ") "
-
-link (Link {..} ::> Node (Rule{tag}) _) 
-    | steps == 0 = sho tag
-    | otherwise = "MVD " <> sho tag <> " " <>
-                  mkTuple [sho steps,sho "",mpQuote label,sho align,sho (fromEnum linkStyle)]
-
--- type Stringize x = x Int -> MP ()
-
-stringize :: Derivation' Label -> MP ()
-stringize (Node Rule {tag = t, ..} premises) = do
-  traverse (traverse stringize) premises
-  mpRaw "jgm " <> mpRefer t <> " " <> mpQuote conclusion <> ";\n"
-  mpRaw "Nfr " <> mpRefer t <> mkTuple (map link premises) <> " " <>
-                     mkTuple [mpQuote ruleLabel,mpQuote delimiter,mpQuote "",sho (fromEnum ruleStyle)] <> ";\n"
-
-stringizeFig :: Figure Label -> MP () 
-stringizeFig (Figure {..}) = mkfig figureTag $ do
-  stringize contents
-  mpRawLines ["draw drv_tree;"]
-
--- | Render a derivation tree. The 1st argument are the options to
--- pass to the includegraphics command.
-derivationTreeMP :: [String] -> Derivation -> Tex Label
-derivationTreeMP opts j = do 
-  f <- newLabel
-  a <- delayTop <$> detachTop [Figure f j]
-  bz <- tagifyTop a   
-  mapM_ (inMP . stringizeFig) bz
-  includeMetaPostFigure opts f 
-  return f
 
 ----------------------------------------------------------
 -- Phase 4': TeXify

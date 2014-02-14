@@ -4,7 +4,6 @@ module MarXup.Latex where
 import MarXup
 import Control.Monad (forM_)
 import MarXup.Tex
-import MarXup.MetaPost
 import Data.List (intersperse,groupBy,elemIndex,nub)
 import Data.Monoid
 import Data.Function (on)
@@ -102,14 +101,6 @@ stdPreamble = do
 
 documentClass :: String -> [String] -> TeX
 documentClass docClass options = cmd' "documentclass" options (tex docClass)
-
-latexDocument :: (Bool -> TeX) -> Tex a -> Tex ()
-latexDocument preamble body = do
-   fmt <- getMpOutFormat
-   preamble False
-   inMP $ metaPostPreamble fmt (preamble True)
-   env "document" body
-   inMP $ metaPostEpilogue
 
 ----------
 -- Lists

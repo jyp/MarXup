@@ -26,7 +26,9 @@ import Data.Traversable
 import Data.Foldable
 
 type LPState = LP Var Constant
-data Env = Env {diaSolution :: Solution, diaPathOptions :: PathOptions}
+data Env = Env {diaSolution :: Solution
+               ,diaTightness :: Constant -- ^ Multiplicator to minimize constraints
+               ,diaPathOptions :: PathOptions}
 
 type Dia = Diagram ()
 
@@ -50,7 +52,7 @@ type Expr = LinExpr Var Constant
 
 runDiagram :: Diagram a -> Multi a
 runDiagram (Dia diag) = do
-  rec (a,(_,problem),_) <- runRWST diag (Env solution defaultPathOptions)
+  rec (a,(_,problem),_) <- runRWST diag (Env solution 1 defaultPathOptions)
                                         (Var 0,LP Min M.empty [] M.empty M.empty)
       let solution = case unsafePerformIO $ glpSolveVars simplexDefaults problem of
             (_retcode,Just (_objFunc,s)) -> s
@@ -129,6 +131,7 @@ instance Element Expr where
     v <- valueOf x
     diaRaw $ showDistance v
 
+showDistance :: Constant -> String
 showDistance x = showFFloat (Just 4) x tikzUnit
     where tikzUnit = "pt"
 
@@ -183,7 +186,9 @@ x =~= y = minimize =<< absoluteValue (x-y)
 -- Expression objectives
 
 minimize,maximize :: Expr -> Diagram ()
-minimize (LinExpr x _) = addObjective x
+minimize (LinExpr x _) = do
+  tightness <- diaTightness <$> ask
+  addObjective (tightness *- x)
 maximize = minimize . negate
 
 
@@ -367,13 +372,7 @@ instance Element Path where
   element = path
 
 path :: Path -> Dia
-path EmptyPath = return ()
-path (Path start segs) = do
-  options <- diaPathOptions <$> ask
-  "\\path"
-    <> element options
-    <> element start <> mapM_ element segs
-      <> ";\n"
+path = frozenPath <=< freezePath
 
 frozenPath :: Path' CB.Point  -> Dia
 frozenPath p  = do
@@ -399,14 +398,15 @@ polygon (x:xs) = Path x (map StraightTo xs ++ [Cycle])
 -- Path Options
 
 localPathOptions :: (PathOptions -> PathOptions) -> Diagram a -> Diagram a
-localPathOptions f = local $ \(Env s o) -> Env s (f o)
+localPathOptions f = local $ \e -> e {diaPathOptions = f (diaPathOptions e)}
 
 draw :: Diagram a -> Diagram a
 draw = localPathOptions (\o -> o {drawColor = Just "black"}) 
 
-data LineTip = CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
+data LineTip = ToTip | CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
 instance Show LineTip where
   show t = case t of
+    ToTip -> "to"
     CircleTip -> "o"
     NoTip -> ""
     LatexTip -> "latex"
@@ -422,7 +422,7 @@ type DashPattern = [Constant] -- On x1, off x2, ...
 ultraThin, veryThin, thin, semiThick, thick, veryThick, ultraThick :: Constant
 ultraThin = 0.1
 veryThin = 0.2
-thin = 0.4 -- def
+thin = 0.4
 semiThick = 0.6
 thick = 0.8
 veryThick = 1.2

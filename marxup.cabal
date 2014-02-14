@@ -50,15 +50,13 @@ library
 
   exposed-modules: MarXup
   exposed-modules: MarXup.Tex
-  exposed-modules: MarXup.MetaPost
   exposed-modules: MarXup.Latex
   exposed-modules: MarXup.Latex.Math
   exposed-modules: MarXup.Latex.Bib
   exposed-modules: MarXup.Beamer
-  exposed-modules: MarXup.DerivationTrees  
+  exposed-modules: MarXup.DerivationTrees
   exposed-modules: MarXup.Text
   exposed-modules: MarXup.Diagram
-  exposed-modules: MarXup.Diagrams
   exposed-modules: MarXup.MultiRef
   exposed-modules: MarXup.Tikz
 --  exposed-modules: MarXup.Pandoc (broken)
