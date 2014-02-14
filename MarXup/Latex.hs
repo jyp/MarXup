@@ -127,11 +127,40 @@ figure caption body = env "figure" $ do
 ----------
 -- Fonts
 
+data TextSize = Tiny | ScriptSize | FootnoteSize | Small | NormalSize | Large | Larger | Largerr | Huge | Huger
+
+textSize :: TextSize -> Tex a -> Tex a
+textSize sz x = braces (cmd0 latexSize >> x)
+  where latexSize = case sz of
+          Tiny -> "tiny"
+          ScriptSize -> "scriptsize"
+          FootnoteSize -> "footnotesize"
+          Small -> "small"
+          NormalSize -> "normalsize"
+          Large -> "large"
+          Larger -> "Large"
+          Largerr -> "LARGE"
+          Huge -> "huge"
+          Huger -> "Huge"
+
+
+
 sans, emph, smallcaps :: Tex a -> Tex a
 sans = cmd "textsf"
 emph = cmd "emph"
 
 smallcaps x = braces (cmd0 "sc" >> x)
+
+italic :: Tex a -> Tex a
+italic = cmd "textit"
+
+-------------------------
+-- Scaling and rotating
+
+scalebox :: Double -> Tex a -> Tex a
+scalebox factor x = do
+  cmd "scalebox" $ tex $ show factor
+  braces x
 
 ----------
 -- Math
@@ -186,8 +215,3 @@ mathsf = cmd "mathsf"
 inferrule :: [TeX] -> TeX -> TeX
 inferrule xs y = cmdn "inferrule" [mkrows xs,y] >> return ()
 
-----------------
--- Text
-
-italic :: Tex a -> Tex a
-italic = cmd "textit"
