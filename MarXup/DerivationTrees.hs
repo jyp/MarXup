@@ -27,12 +27,10 @@ import Data.Traversable hiding (mapM)
 import Control.Monad.Writer 
 import Control.Applicative 
 import Data.LabeledTree
--- import Control.Applicative.State
-import Data.Monoid hiding ((<>))
+import Data.Monoid
 import MarXup (element)
 import MarXup.Tex hiding (label)
 import MarXup.MultiRef
--- import MarXup.MetaPost hiding ((===), alignVert, xpart, ypart, Expr)
 import MarXup.Diagram
 import MarXup.Tikz as D
 import qualified Data.Tree as T
