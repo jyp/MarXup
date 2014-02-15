@@ -171,7 +171,7 @@ derivationTreeDiag d = do
   forM_ rightFringe $ \(_,_,p) ->
     xpart p <== rightMost
   minimize $ 10 *- (rightMost - leftMost)
-  n Center .=. Point 0 0
+  n # Center .=. Point 0 0
 
 toDiagPart :: Expr -> Premise' a -> Diagram (T.Tree (Point,Object,Point))
 toDiagPart layerHeight (Link{..} ::> rul)
@@ -179,14 +179,14 @@ toDiagPart layerHeight (Link{..} ::> rul)
   | otherwise = do
     above@(T.Node (_,concl,_) _) <- toDiagram layerHeight rul
     ptObj <- abstractPoint
-    let pt = ptObj Center
-    pt `eastOf` concl W
-    pt `westOf` concl E
-    xpart pt =~= xpart (concl Center)
-    let top = ypart (concl S)
+    let pt = ptObj # Center
+    pt `eastOf` (concl # W)
+    pt `westOf` (concl # E)
+    xpart pt =~= xpart (concl # Center)
+    let top = ypart (concl # S)
     ypart pt + (fromIntegral steps *- layerHeight) === top
     using linkStyle $ path $ polyline [pt,Point (xpart pt) top]
-    let embedPt 1 x = T.Node (concl W,ptObj,concl E) [x]
+    let embedPt 1 x = T.Node (concl # W,ptObj,concl # E) [x]
         embedPt n x = T.Node (pt,ptObj,pt) [embedPt (n-1) x]
     return $ embedPt steps above
 
@@ -198,11 +198,11 @@ chainBases :: Expr -> [Object] -> Diagram Object
 chainBases _ [] = abstractBox
 chainBases spacing ls = do
   grp <- abstractBox
-  D.align ypart $ map ($ Base) (grp:ls)
-  forM_ (zip ls (tail ls)) $ \(x,y) -> (x E + Point spacing 0) `westOf` (y W)
-  forM_ ls $ \l -> grp `taller` l
-  D.align xpart [grp W,head ls W]
-  D.align xpart [grp E,last ls E]
+  D.align ypart $ map (# Base) (grp:ls)
+  forM_ (zip ls (tail ls)) $ \(x,y) -> (x # E + Point spacing 0) `westOf` (y # W)
+  forM_ ls $ \l -> grp `fitsVerticallyIn` l
+  D.align xpart [grp # W,head ls # W]
+  D.align xpart [grp # E,last ls # E]
   -- drawBounds grp
   return grp
 
@@ -214,16 +214,16 @@ toDiagram layerHeight (Node Rule{..} premises) = do
   psGrp <- chainBases 10 [p | T.Node (_,p,_) _ <- ps]
   layerHeight === height psGrp
   separ <- abstractBox
-  separ N .=. psGrp S
-  concl N .=. separ S
-  lab BaseW .=. separ E + Point 3 (negate 2)
+  separ # N .=. psGrp # S
+  concl # N .=. separ # S
+  lab # BaseW .=. separ # E + Point 3 (negate 2)
   height separ === 0
-  thinest separ
-  separ `wider` psGrp
-  separ `wider` concl
-  alignVert [separ Center,concl Center]
-  localPathOptions ruleStyle $ path $ polyline [separ W,separ E]
-  return $ T.Node (separ W, concl, lab E) ps
+  minimize $ width separ
+  psGrp `fitsHorizontallyIn` separ
+  concl `fitsHorizontallyIn` separ
+  alignVert [separ # Center,concl # Center]
+  localPathOptions ruleStyle $ path $ polyline [separ # W,separ # E]
+  return $ T.Node (separ # W, concl, lab # E) ps
 
 -----------------------
 

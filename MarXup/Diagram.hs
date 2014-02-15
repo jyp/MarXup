@@ -13,24 +13,14 @@ import Data.List (intersperse)
 data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
   deriving Show
 
-type Object = Anchor -> Point
+newtype Object = Object (Anchor -> Point)
 
 hdist,vdist :: Object -> Object -> Expr
-hdist x y = xpart (y W - x E)
-vdist x y = ypart (y S - x N)
+hdist x y = xpart (y # W - x # E)
+vdist x y = ypart (y # S - x # N)
 
 extend :: Expr -> Object -> Object
-extend e o = \a -> o a + shiftInDir a e
-
--- line :: (Expr Path -> [Expr DrawOption] -> MP ()) -> [Expr DrawOption] -> Expr ObjectRef -> Expr ObjectRef -> MP (Expr Pair)
--- line renderer opts source target = do
---   c <- mkRef "z" <$> mpLabel
---   mpRaw "pair " <> out c <>";\n"
---   delay $ renderer (Center ▸ source ... open (Center ▸ target))
---     (opts ++ [cutAfter $ boundingZone target,
---               cutBefore $ boundingZone source])
---   c === barycenter [Center ▸ source,Center ▸ target]
---   return c
+extend e o = Object $ \a -> o # a + shiftInDir a e
 
 -- | Makes a shift of size 'd' in the given direction.
 shiftInDir :: Anchor -> Expr -> Point
@@ -49,13 +39,13 @@ shiftInDir _ _  = 0 `Point` 0
 labelPt :: TeX -> Anchor -> Point -> Diagram Object
 labelPt labell anchor labeled  = do
   t <- extend 4 <$> texObj labell
-  t anchor .=. labeled
+  t # anchor .=. labeled
   return t
 
 abstractPoint :: Diagram Object
 abstractPoint = do
   [x,y] <- newVars (replicate 2 ContVar)
-  return $ \a -> case a of
+  return $ Object $ \a -> case a of
     _ -> Point x y
 
 
@@ -69,7 +59,7 @@ abstractBox = do
   midx === avg [w,e]
   midy === avg [n,s]
   let pt = flip Point
-  return $ \anch -> case anch of
+  return $ Object $ \anch -> case anch of
     NW     -> pt n    w
     N      -> pt n    midx
     NE     -> pt n    e  
@@ -83,37 +73,36 @@ abstractBox = do
     BaseE  -> pt base e
     BaseW  -> pt base w
 
-anch ▸ o = o anch
-height o = ypart (N ▸ o - S ▸ o)
-width o = xpart (E ▸ o - W ▸ o)
-ascent o = ypart (N ▸ o - Base ▸ o)
-descent o = ypart (Base ▸ o - S ▸ o)
+infix 8 #
+(Object o) # anch = o anch
+height o = ypart (o # N - o # S)
+width o = xpart (o # E - o # W)
+ascent o = ypart (o # N - o # Base)
+descent o = ypart (o # Base - o # S)
 
 boundingRect :: Object -> Path
-boundingRect l = 
-  polygon (map l [NW,NE,SE,SW])
+boundingRect l =
+  polygon (map (l #) [NW,NE,SE,SW])
   -- polyline (map l [BaseE,BaseW])
 
-taller :: Object -> Object -> Diagram ()
-taller o o' = do
-  o N `northOf` o' N
-  o S `southOf` o' S
 
-smallest :: Object -> Diagram ()
-smallest o = do
-  southwards $ o N
-  northwards $ o S
+fitsVerticallyIn :: Object -> Object -> Diagram ()
+o `fitsVerticallyIn` o' = do
+  let dyN = ypart $ o # N - o' # N
+      dyS = ypart $ o' # S - o # S
+  minimize dyN
+  dyN >== 0
+  minimize dyS
+  dyS >== 0
 
-wider :: Object -> Object -> Diagram ()
-wider o o' = do
-  o W `westOf` o' W
-  o E `eastOf` o' E
-
-thinest :: Object -> Diagram ()
-thinest o = do
-  eastwards $ o W
-  westwards $ o E
-
+fitsHorizontallyIn :: Object -> Object -> Diagram ()
+o `fitsHorizontallyIn` o' = do
+  let dyW = xpart $ o # W - o' # W
+      dyE = xpart $ o' # E - o # E
+  minimize dyW
+  dyW >== 0
+  minimize dyE
+  dyE >== 0
 
 rectangleObj :: Diagram Object
 rectangleObj = do
@@ -124,7 +113,7 @@ rectangleObj = do
 texObj :: TeX -> Diagram Object
 texObj t = do
   l <- abstractBox
-  BoxSpec wid h desc <- drawText (l NW) t
+  BoxSpec wid h desc <- drawText (l # NW) t
 
   width   l === constant wid
   descent l === constant desc
@@ -137,7 +126,7 @@ texObj t = do
 -- MIP instead of LP.
 edge :: Object -> Object -> Diagram Point
 edge source target = do
-  let points = [source Center,target Center]
+  let points = [source # Center,target # Center]
       link = polyline points
       targetArea = boundingRect $ extend 3 target
       sourceArea = boundingRect $ extend 3 source
@@ -147,5 +136,4 @@ edge source target = do
   frozenPath $ (l' `cutAfter` ta') `cutBefore` sa'
   return $ avg points
 
-infix 8 ▸
 
