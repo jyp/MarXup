@@ -73,6 +73,12 @@ abstractBox = do
     BaseE  -> pt base e
     BaseW  -> pt base w
 
+vrule :: Diagram Object
+vrule = do
+  o <- abstractBox
+  align xpart [o # W, o #Center, o#E]
+  return o
+
 infix 8 #
 (Object o) # anch = o anch
 height o = ypart (o # N - o # S)

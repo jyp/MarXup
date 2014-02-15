@@ -161,7 +161,7 @@ derivationTreeDiag d = do
     case ls of
       [] -> return ()
       (_:ls') -> forM_ (zip ls ls') $ \((_,_,l),(r,_,_)) ->
-        (l + Point 4 0) `westOf` r
+        (l + Point 10 0) `westOf` r
   let leftFringe = map head nonNilLevs
       rightFringe = map last nonNilLevs
       nonNilLevs = filter (not . null) $ T.levels tree
@@ -178,14 +178,14 @@ toDiagPart layerHeight (Link{..} ::> rul)
   | steps == 0 = toDiagram layerHeight rul
   | otherwise = do
     above@(T.Node (_,concl,_) _) <- toDiagram layerHeight rul
-    ptObj <- abstractPoint
-    let pt = ptObj # Center
+    ptObj <- vrule
+    let pt = ptObj # S
     pt `eastOf` (concl # W)
     pt `westOf` (concl # E)
     xpart pt =~= xpart (concl # Center)
     let top = ypart (concl # S)
     ypart pt + (fromIntegral steps *- layerHeight) === top
-    using linkStyle $ path $ polyline [pt,Point (xpart pt) top]
+    using linkStyle $ path $ polyline [ptObj # Base,Point (xpart pt) top]
     let embedPt 1 x = T.Node (concl # W,ptObj,concl # E) [x]
         embedPt n x = T.Node (pt,ptObj,pt) [embedPt (n-1) x]
     return $ embedPt steps above
@@ -203,7 +203,6 @@ chainBases spacing ls = do
   forM_ ls $ \l -> grp `fitsVerticallyIn` l
   D.align xpart [grp # W,head ls # W]
   D.align xpart [grp # E,last ls # E]
-  -- drawBounds grp
   return grp
 
 toDiagram :: Expr -> Derivation' a -> Diagram (T.Tree (Point,Object,Point))
@@ -216,7 +215,7 @@ toDiagram layerHeight (Node Rule{..} premises) = do
   separ <- abstractBox
   separ # N .=. psGrp # S
   concl # N .=. separ # S
-  lab # BaseW .=. separ # E + Point 3 (negate 2)
+  lab # BaseW .=. separ # E + Point 3 (negate 1)
   height separ === 0
   minimize $ width separ
   psGrp `fitsHorizontallyIn` separ
