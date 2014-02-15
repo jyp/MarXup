@@ -13,7 +13,7 @@ import "mtl" Control.Monad.RWS hiding (forM,forM_,mapM_,mapM)
 import Data.LinearProgram
 import Data.LinearProgram.Common as MarXup.Tikz (VarKind(..)) 
 import Data.LinearProgram.LinExpr
-import Data.List (sort,transpose)
+import Data.List (sort,transpose,intercalate)
 import Data.Map (Map)
 import Data.Maybe (listToMaybe)
 import Data.String
@@ -302,7 +302,7 @@ instance Group CB.Point where
   zero = CB.Point 0 0
   (^+^) = (CB.^+^)
   (^-^) = (CB.^-^)
-  
+
 instance Module Constant CB.Point where
   (*^) = (CB.*^)
 
@@ -415,7 +415,7 @@ instance Show LineTip where
 type Color = String
 data LineCap = ButtCap | RectCap | RoundCap
 data LineJoin = MiterJoin | RoundJoin | BevelJoin
-type DashPattern = [Constant] -- On x1, off x2, ...
+type DashPattern = [(Constant,Constant)]
 
 ultraThin, veryThin, thin, semiThick, thick, veryThick, ultraThick :: Constant
 ultraThin = 0.1
@@ -426,13 +426,10 @@ thick = 0.8
 veryThick = 1.2
 ultraThick = 1.6
 
-solidDash :: DashPattern
-solidDash = [1]
 
-showDashPat :: Bool -> DashPattern -> String
-showDashPat _ [] = ""
-showDashPat on (x:xs) = (if on then "on" else "off") <> " " <> show x <>
-                        " " <> showDashPat (not on) xs
+showDashPat :: DashPattern -> String
+showDashPat xs = intercalate " " ["on " <> showDistance on <>
+                                  " off " <> showDistance off | (on,off) <- xs]
 
 defaultPathOptions :: PathOptions
 defaultPathOptions = PathOptions
@@ -443,7 +440,7 @@ defaultPathOptions = PathOptions
   ,_endTip    = NoTip
   ,_lineCap   = ButtCap
   ,_lineJoin  = MiterJoin
-  ,_dashPattern = solidDash
+  ,_dashPattern = []
   }
 
 data PathOptions = PathOptions
@@ -458,8 +455,22 @@ data PathOptions = PathOptions
                      }
 $(makeLenses ''PathOptions)
 
-draw :: Diagram a -> Diagram a
-draw = localPathOptions (set drawColor (Just "black"))
+solid             o@PathOptions{..} = o { _dashPattern = [] }
+dotted            o@PathOptions{..} = o { _dashPattern = [(_lineWidth,2)] }
+denselyDotted     o@PathOptions{..} = o { _dashPattern = [(_lineWidth, 1)] }
+looselyDotted     o@PathOptions{..} = o { _dashPattern = [(_lineWidth, 4)] }
+dashed            o@PathOptions{..} = o { _dashPattern = [(3, 3)] }
+denselyDashed     o@PathOptions{..} = o { _dashPattern = [(3, 2)] }
+looselyDashed     o@PathOptions{..} = o { _dashPattern = [(3, 6)] }
+dashdotted        o@PathOptions{..} = o { _dashPattern = [(3, 2), (_lineWidth, 2)] }
+denselyDashdotted o@PathOptions{..} = o { _dashPattern = [(3, 1), (_lineWidth, 1)] }
+looselyDashdotted o@PathOptions{..} = o { _dashPattern = [(3, 4), (_lineWidth, 4)] }
+
+using = localPathOptions 
+draw = using (outline "black")
+
+noOutline = set drawColor Nothing
+outline color = set drawColor (Just color)
 
 instance Element PathOptions where
   type Target PathOptions = String
@@ -476,7 +487,7 @@ instance Element PathOptions where
                           RoundJoin -> "round"
                           BevelJoin -> "bevel"
                           MiterJoin -> "miter") <> ","
-    <> "dash pattern=" <> showDashPat True _dashPattern
+    <> "dash pattern=" <> showDashPat _dashPattern
     <> "]"
     where col attr = maybe "" (\c -> attr <> "=" <> c <> ",")
 
