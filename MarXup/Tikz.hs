@@ -1,14 +1,15 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies, OverloadedStrings, RecordWildCards,UndecidableInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies, OverloadedStrings, RecordWildCards,UndecidableInstances, PackageImports, TemplateHaskell #-}
 
 module MarXup.Tikz (module MarXup.Tikz) where
 
+import Control.Lens hiding (element)
 import Prelude hiding (sum,mapM_,mapM,concatMap)
 import qualified Geom2D.CubicBezier as CB
 import Geom2D.CubicBezier (CubicBezier(..))
 import Control.Applicative
 import Control.Monad.LPMonad
-import Control.Monad.RWS hiding (forM,forM_,mapM_,mapM)
-import Control.Monad.Reader hiding (forM,forM_,mapM_,mapM)
+import "mtl" Control.Monad.RWS hiding (forM,forM_,mapM_,mapM)
+-- import "mtl" Control.Monad.Reader hiding (forM,forM_,mapM_,mapM)
 import Data.LinearProgram
 import Data.LinearProgram.Common as MarXup.Tikz (VarKind(..)) 
 import Data.LinearProgram.LinExpr
@@ -377,11 +378,11 @@ path = frozenPath <=< freezePath
 frozenPath :: Path' CB.Point  -> Dia
 frozenPath p  = do
   options <- diaPathOptions <$> ask
-  diaRaw "\\path"
-  element options
-  diaRaw $ case p of
-    EmptyPath -> ""
-    (Path start segs) -> element start ++ concatMap element segs
+  diaRaw $ "\\path"
+    <> element options
+    <> case p of
+      EmptyPath -> ""
+      (Path start segs) -> element start ++ concatMap element segs
   diaRaw ";\n"
 
 polyline :: [Point] -> Path
@@ -400,9 +401,6 @@ polygon (x:xs) = Path x (map StraightTo xs ++ [Cycle])
 localPathOptions :: (PathOptions -> PathOptions) -> Diagram a -> Diagram a
 localPathOptions f = local $ \e -> e {diaPathOptions = f (diaPathOptions e)}
 
-draw :: Diagram a -> Diagram a
-draw = localPathOptions (\o -> o {drawColor = Just "black"}) 
-
 data LineTip = ToTip | CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
 instance Show LineTip where
   show t = case t of
@@ -415,8 +413,8 @@ instance Show LineTip where
     ParensTip -> "("
 
 type Color = String
-data LineCap = Butt | Rect | RoundCap
-data LineJoin = Miter | RoundJoin | Bevel
+data LineCap = ButtCap | RectCap | RoundCap
+data LineJoin = MiterJoin | RoundJoin | BevelJoin
 type DashPattern = [Constant] -- On x1, off x2, ...
 
 ultraThin, veryThin, thin, semiThick, thick, veryThick, ultraThick :: Constant
@@ -438,39 +436,49 @@ showDashPat on (x:xs) = (if on then "on" else "off") <> " " <> show x <>
 
 defaultPathOptions :: PathOptions
 defaultPathOptions = PathOptions
-  {drawColor = Nothing
-  ,fillColor = Nothing
-  ,lineWidth = thin
-  ,startTip  = NoTip
-  ,endTip    = NoTip
-  ,lineCap   = Butt
-  ,lineJoin  = Miter
-  ,dashPattern = solidDash
+  {_drawColor = Nothing
+  ,_fillColor = Nothing
+  ,_lineWidth = thin
+  ,_startTip  = NoTip
+  ,_endTip    = NoTip
+  ,_lineCap   = ButtCap
+  ,_lineJoin  = MiterJoin
+  ,_dashPattern = solidDash
   }
 
 data PathOptions = PathOptions
-                     {drawColor :: Maybe Color
-                     ,fillColor :: Maybe Color
-                     ,lineWidth :: Constant
-                     ,startTip  :: LineTip
-                     ,endTip    :: LineTip
-                     ,lineCap   :: LineCap
-                     ,lineJoin  :: LineJoin
-                     ,dashPattern :: DashPattern
+                     {_drawColor :: Maybe Color
+                     ,_fillColor :: Maybe Color
+                     ,_lineWidth :: Constant
+                     ,_startTip  :: LineTip
+                     ,_endTip    :: LineTip
+                     ,_lineCap   :: LineCap
+                     ,_lineJoin  :: LineJoin
+                     ,_dashPattern :: DashPattern
                      }
+$(makeLenses ''PathOptions)
+
+draw :: Diagram a -> Diagram a
+draw = localPathOptions (set drawColor (Just "black"))
 
 instance Element PathOptions where
-  type Target PathOptions = Diagram ()
+  type Target PathOptions = String
   element PathOptions{..} = "["
-    <> diaRaw (show startTip ++ "-" ++ show endTip) <> ","
-    <> col "draw" drawColor
-    <> col "fill" drawColor
-    <> "line width=" <> element (constant lineWidth) <> ","
-    -- <> "line cap=" <>  <> ","
-    -- <> "line join=" <>  <> ","
-    -- <> "dash pattern=" <>  <> ","
+    <> show _startTip <> "-" <> show _endTip <> ","
+    <> col "draw" _drawColor
+    <> col "fill" _drawColor
+    <> "line width=" <> showDistance _lineWidth <> ","
+    <> "line cap=" <> (case _lineCap of
+                          RoundCap -> "round"
+                          RectCap -> "rect"
+                          ButtCap -> "butt") <> ","
+    <> "line join=" <> (case _lineJoin of
+                          RoundJoin -> "round"
+                          BevelJoin -> "bevel"
+                          MiterJoin -> "miter") <> ","
+    <> "dash pattern=" <> showDashPat True _dashPattern
     <> "]"
-    where col attr = maybe "" (\c -> attr <> "=" <> diaRaw c <> ",")
+    where col attr = maybe "" (\c -> attr <> "=" <> c <> ",")
 
 ----------
 -- Text
@@ -482,5 +490,3 @@ drawText point t = do
   (_,box) <- diaRawTex $ inBox $ braces $ t
   diaRawTex $ tex ";\n"
   return box
-
-  

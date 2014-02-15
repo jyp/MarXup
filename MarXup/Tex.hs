@@ -1,10 +1,10 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies,TypeSynonymInstances,FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies,TypeSynonymInstances,FlexibleInstances, PackageImports #-}
 
 module MarXup.Tex where
 
 import MarXup
-import Control.Monad.Reader
-import Control.Monad.RWS
+import "mtl" Control.Monad.Reader
+import "mtl" Control.Monad.RWS
 import Control.Applicative
 import GHC.Exts( IsString(..) )
 import Data.List (intersperse)

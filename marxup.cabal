@@ -40,13 +40,14 @@ library
   build-depends: base>=4.2&&<5
 --  build-depends: pandoc==1.5.*  (support broken)
   build-depends: mtl==2.1.*
-  build-depends: labeled-tree==1.*  
-  build-depends: filepath==1.3.*  
+  build-depends: labeled-tree==1.*
+  build-depends: filepath==1.3.*
   build-depends: containers>=0.4 &&<1
   build-depends: process==1.1.*
   build-depends: dvi-processing==0.3.1
   build-depends: glpk-hs>=0.3.4
   build-depends: cubicbezier>=0.2
+  build-depends: lens>=3.10
 
   exposed-modules: MarXup
   exposed-modules: MarXup.Tex

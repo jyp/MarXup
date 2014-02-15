@@ -1,9 +1,9 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, GADTs, PackageImports #-}
 
 module MarXup.MultiRef where
 
 import Control.Monad.Fix
-import Control.Monad.RWS.Lazy
+import "mtl" Control.Monad.RWS.Lazy
 import Control.Applicative
 import Control.Arrow (first)
 
