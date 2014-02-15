@@ -149,6 +149,7 @@ pComment :: Parser Doc
 pComment = label "Comment" $ do
   string commentString
   munch (/= '\n')
+  string "\n"
   return mempty
 
 main :: IO ()
