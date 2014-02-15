@@ -11,7 +11,7 @@ emptyDrv, haltDrv, haltDrv', abortDrv, delayPre,
 dummy, rule, Derivation, Premise, Rule(..), 
 
 -- * Links
-Alignment(..), LineStyle(..),defaultLink,Link(..),
+LineStyle(..),defaultLink,Link(..),
 
 -- * Figure building
 Figure(..),
@@ -34,7 +34,7 @@ import MarXup.Tex hiding (label)
 import MarXup.MultiRef
 -- import MarXup.MetaPost hiding ((===), alignVert, xpart, ypart, Expr)
 import MarXup.Diagram
-import MarXup.Tikz as D hiding (None)
+import MarXup.Tikz as D
 import qualified Data.Tree as T
 ------------------
 --- Basics
@@ -42,21 +42,13 @@ import qualified Data.Tree as T
 data LineStyle = None | Simple | Double | Dotted | Dashed | Waved | TeXDotted
   deriving (Enum,Show,Eq,Ord)
 
-data Link = Link {label :: Tex (), linkStyle :: LineStyle, align :: Alignment, steps :: Int}  -- ^ Regular link
+data Link = Link {label :: Tex (), linkStyle :: LineStyle, steps :: Int}  -- ^ Regular link
           | Detached {label :: Tex ()}   -- ^ Detach the derivation as another figure
-          | Delayed {align :: Alignment} -- ^ automatic delaying
+          | Delayed -- ^ automatic delaying
 -- deriving Show
 
 defaultLink :: Link
-defaultLink = Link mempty Dotted CenterA 0
-
-data Alignment = LeftA | CenterA | RightA
-  deriving (Eq,Ord)
-           
-instance Show Alignment where    
-    show LeftA = "l"
-    show CenterA = "c"
-    show RightA = "r"
+defaultLink = Link mempty Dotted  0
 
 
 -------------------
@@ -114,7 +106,7 @@ isDelayed :: Premise -> Bool
 isDelayed (Delayed{} ::> _) = True
 isDelayed _ = False
 
-delayPre a s (Link {..} ::> j) = Link {steps = s, align = a, ..} ::> j
+delayPre s (Link {..} ::> j) = Link {steps = s, ..} ::> j
 
 delayD :: Derivation -> Derivation
 delayD (Node r ps0) = Node r (map delayP ps)
