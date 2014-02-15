@@ -1,4 +1,4 @@
-{-# LANGUAGE DisambiguateRecordFields, NamedFieldPuns, RecordWildCards, PostfixOperators, LiberalTypeSynonyms, TypeOperators, OverloadedStrings #-}
+{-# LANGUAGE DisambiguateRecordFields, NamedFieldPuns, RecordWildCards, PostfixOperators, LiberalTypeSynonyms, TypeOperators, OverloadedStrings, PackageImports #-}
 
 module MarXup.DerivationTrees (
 -- * Basics
@@ -7,11 +7,11 @@ module Data.LabeledTree,
 
 -- * Derivation' building
 -- axiom, rule, etc, aborted, 
-emptyDrv, haltDrv, haltDrv', abortDrv, delayPre,
+emptyDrv, haltDrv, haltDrv', delayPre,
 dummy, rule, Derivation, Premise, Rule(..), 
 
 -- * Links
-LineStyle(..),defaultLink,Link(..),
+LineStyle,defaultLink,Link(..),
 
 -- * Figure building
 Figure(..),
@@ -24,7 +24,7 @@ derivationTree, derivationTreeD
 -- import DerivationTrees.Basics
 import Data.List
 import Data.Traversable hiding (mapM)
-import Control.Monad.Writer 
+import "mtl" Control.Monad.Writer 
 import Control.Applicative 
 import Data.LabeledTree
 import Data.Monoid
@@ -37,16 +37,14 @@ import qualified Data.Tree as T
 ------------------
 --- Basics
 
-data LineStyle = None | Simple | Double | Dotted | Dashed | Waved | TeXDotted
-  deriving (Enum,Show,Eq,Ord)
+type LineStyle = PathOptions -> PathOptions
 
 data Link = Link {label :: Tex (), linkStyle :: LineStyle, steps :: Int}  -- ^ Regular link
           | Detached {label :: Tex ()}   -- ^ Detach the derivation as another figure
           | Delayed -- ^ automatic delaying
--- deriving Show
 
 defaultLink :: Link
-defaultLink = Link mempty Dotted  0
+defaultLink = Link mempty (denselyDotted . outline "black")  0
 
 
 -------------------
@@ -91,12 +89,6 @@ detachTop fs = do
 --------------------------------------------------
 -- Phase 2: Delay
 
-insertAt n x xs = take n xs ++ x : drop n xs
-
-rm idx [] = []
-rm 0 (x:xs) = xs
-rm n (x:xs) = x : rm (n-1) xs
-
 depth (Detached{} ::> _) = 2
 depth (Link{steps} ::> Node _ ps) = 1 + steps + maximum (0 : map depth ps)
 
@@ -110,10 +102,7 @@ delayD :: Derivation -> Derivation
 delayD (Node r ps0) = Node r (map delayP ps)
     where ps = fmap (fmap delayD) ps0
           ps' = filter (not . isDelayed) ps
-          delayP (Delayed{..} ::> d) = Link{..} ::> d
-             where steps = 1 + maximum (0 : map depth ps')
-                   label = mempty
-                   linkStyle = Dotted
+          delayP (Delayed{..} ::> d) = defaultLink {steps = 1 + maximum (0 : map depth ps')} ::> d
           delayP p = p
 
 delayF :: Figure () -> Figure ()
@@ -147,7 +136,6 @@ derivationTree :: Derivation' a -> TeX
 derivationTree = stringizeTex
 
 stringizeTex :: Derivation' a -> TeX
-stringizeTex (Node Rule {ruleStyle=None,..} []) = conclusion
 stringizeTex (Node Rule {..} premises) = braces $ do
   cmd0 "displaystyle" -- so that the text does not get smaller
   cmdn "frac" [mconcat $
@@ -197,7 +185,7 @@ toDiagPart layerHeight (Link{..} ::> rul)
     xpart pt =~= xpart (concl Center)
     let top = ypart (concl S)
     ypart pt + (fromIntegral steps *- layerHeight) === top
-    draw $ path $ polyline [pt,Point (xpart pt) top]
+    using linkStyle $ path $ polyline [pt,Point (xpart pt) top]
     let embedPt 1 x = T.Node (concl W,ptObj,concl E) [x]
         embedPt n x = T.Node (pt,ptObj,pt) [embedPt (n-1) x]
     return $ embedPt steps above
@@ -234,23 +222,24 @@ toDiagram layerHeight (Node Rule{..} premises) = do
   separ `wider` psGrp
   separ `wider` concl
   alignVert [separ Center,concl Center]
-  when (ruleStyle /= None) $ draw $ path $ polyline [separ W,separ E]
+  localPathOptions ruleStyle $ path $ polyline [separ W,separ E]
   return $ T.Node (separ W, concl, lab E) ps
 
 -----------------------
 
-rule ruleLabel conclusion = Rule {tag = (), delimiter = mempty, ruleStyle = Simple, ..}
+
+rule ruleLabel conclusion = Rule {tag = (), delimiter = mempty, ruleStyle = outline "black", ..}
 
 dummy :: Rule ()
-dummy = (rule mempty mempty) {ruleStyle = None}
+dummy = (rule mempty mempty) {ruleStyle = const defaultPathOptions}
 emptyDrv = Node dummy []
 
-abortDrv (Node Rule {..} _) = Node Rule {ruleStyle = Waved, ..} []
+-- abortDrv (Node Rule {..} _) = Node Rule {ruleStyle = Waved, ..} []
 
 -- | Used when the rest of the derivation is known.
 haltDrv' :: Tex () -> Derivation -> Derivation
-haltDrv' tex (Node r _) = Node r {ruleStyle = None} 
-     [defaultLink {linkStyle = TeXDotted, steps = 1, label = tex} ::> emptyDrv]
+haltDrv' tex (Node r _) = Node r {ruleStyle = noOutline}
+     [defaultLink {steps = 1, label = tex} ::> emptyDrv]
 
 -- | More compact variant
 haltDrv :: Tex () -> Derivation -> Derivation
