@@ -15,9 +15,13 @@ data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
 
 newtype Object = Object (Anchor -> Point)
 
-hdist,vdist :: Object -> Object -> Expr
-hdist x y = xpart (y # W - x # E)
-vdist x y = ypart (y # S - x # N)
+hdiff,vdiff :: Object -> Object -> Expr
+hdiff x y = xpart (y # W - x # E)
+vdiff x y = ypart (y # S - x # N)
+
+xdiff,ydiff :: Point -> Point -> Expr
+xdiff p q = xpart (q - p)
+ydiff p q = ypart (q - p)
 
 extend :: Expr -> Object -> Object
 extend e o = Object $ \a -> o # a + shiftInDir a e
@@ -77,6 +81,12 @@ vrule :: Diagram Object
 vrule = do
   o <- abstractBox
   align xpart [o # W, o #Center, o#E]
+  return o
+
+hrule :: Diagram Object
+hrule = do
+  o <- abstractBox
+  height o === 0
   return o
 
 infix 8 #

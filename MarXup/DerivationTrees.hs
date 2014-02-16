@@ -134,32 +134,39 @@ toDiagPart layerHeight (Link{..} ::> rul)
 -- - Ensures that all the objects have the same baseline.
 -- - Separates the objects by the given distance
 -- - Returns an object encompassing the group, with a the baseline set correctly.
-chainBases :: Expr -> [Object] -> Diagram Object
-chainBases _ [] = abstractBox
+-- - Returns the average distance between the objects
+   
+chainBases :: Expr -> [Object] -> Diagram (Object,Expr)
+chainBases _ [] = do
+  o <- abstractBox
+  return (o,0)
 chainBases spacing ls = do
   grp <- abstractBox
   D.align ypart $ map (# Base) (grp:ls)
-  forM_ (zip ls (tail ls)) $ \(x,y) -> (x # E + Point spacing 0) `westOf` (y # W)
+  dxs <- forM (zip ls (tail ls)) $ \(x,y) -> do
+    let dx = xdiff (x # E) (y # W)
+    dx >== spacing
+    return dx
   forM_ ls $ \l -> grp `fitsVerticallyIn` l
   D.align xpart [grp # W,head ls # W]
   D.align xpart [grp # E,last ls # E]
-  return grp
+  return (grp,avg dxs)
 
 toDiagram :: Expr -> Derivation -> Diagram (T.Tree (Point,Object,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
   concl <- texObj (cmd0 "strut" <> conclusion)
   lab <- texObj ruleLabel
-  psGrp <- chainBases 10 [p | T.Node (_,p,_) _ <- ps]
+  (psGrp,premisesDist) <- chainBases 10 [p | T.Node (_,p,_) _ <- ps]
   layerHeight === height psGrp
-  separ <- abstractBox
+  separ <- hrule
   separ # N .=. psGrp # S
   concl # N .=. separ # S
   lab # BaseW .=. separ # E + Point 3 (negate 1)
-  height separ === 0
   minimize $ width separ
   psGrp `fitsHorizontallyIn` separ
   concl `fitsHorizontallyIn` separ
+  xdiff (separ # W) (psGrp # W) =~= premisesDist
   alignVert [separ # Center,concl # Center]
   localPathOptions ruleStyle $ path $ polyline [separ # W,separ # E]
   return $ T.Node (separ # W, concl, lab # E) ps
