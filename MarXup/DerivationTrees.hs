@@ -53,7 +53,6 @@ type Derivation = Tree Link Rule
 --------------------------------------------------
 -- Delay
 
-depth (Detached{} ::> _) = 2
 depth (Link{steps} ::> Node _ ps) = 1 + steps + maximum (0 : map depth ps)
 
 isDelayed :: Premise -> Bool
