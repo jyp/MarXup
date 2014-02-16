@@ -13,9 +13,6 @@ dummy, rule, Derivation, Premise, Rule(..),
 -- * Links
 LineStyle,defaultLink,Link(..),
 
--- * Figure building
-Figure(..),
-
 -- * Engine
 derivationTree, derivationTreeD
 
@@ -23,8 +20,7 @@ derivationTree, derivationTreeD
 
 -- import DerivationTrees.Basics
 import Data.List
-import Data.Traversable hiding (mapM)
-import "mtl" Control.Monad.Writer 
+import Control.Monad.Writer 
 import Control.Applicative 
 import Data.LabeledTree
 import Data.Monoid
@@ -40,7 +36,6 @@ import qualified Data.Tree as T
 type LineStyle = PathOptions -> PathOptions
 
 data Link = Link {label :: Tex (), linkStyle :: LineStyle, steps :: Int}  -- ^ Regular link
-          | Detached {label :: Tex ()}   -- ^ Detach the derivation as another figure
           | Delayed -- ^ automatic delaying
 
 defaultLink :: Link
@@ -49,45 +44,14 @@ defaultLink = Link mempty (denselyDotted . outline "black")  0
 
 -------------------
 
-data Rule tag = Rule {tag :: tag, ruleStyle :: LineStyle, delimiter :: Tex (), ruleLabel :: Tex (), conclusion :: Tex ()}
+data Rule = Rule {ruleStyle :: LineStyle, delimiter :: Tex (), ruleLabel :: Tex (), conclusion :: Tex ()}
 --  deriving Show
 
-type Premise = Premise' ()
-type Premise' a = Link ::> Derivation' a
-type Derivation' tag = Tree Link (Rule tag)
-type Derivation = Derivation' ()
-
-data Figure tag = Figure {figureTag :: Label, contents :: Derivation' tag}
-
-------------------------------------------------------------
--- Phase 1: Detach (currently disabled)
-
-type Detach x = x -> WriterT [Figure ()] Tex x
-
-detachP :: Detach Premise
-detachP (Detached{..} ::> d) = do
-  d'@(Node r ps) <- detachD d
-  figureTag <- lift $ Tex $ newLabel
-  tell [Figure {contents = Node r {delimiter = label} ps,..}]
-  return $ (defaultLink ::> haltDrv label d)
-detachP (l ::> d) = (l ::>) <$> detachD d
-
-detachD :: Detach Derivation
-detachD (Node n ps) = Node n <$> for ps detachP
-
-detachF :: Figure () -> WriterT [Figure ()] Tex ()
-detachF Figure{..} = do
-  contents <- detachD contents
-  tell [Figure{..}]
-
--- | Detach figures which should be detached.
-detachTop :: [Figure ()] -> Tex [Figure ()]
-detachTop fs = do 
-  figs <- runWriterT $ for fs detachF
-  return $ snd $ figs
+type Premise = Link ::> Derivation
+type Derivation = Tree Link Rule
 
 --------------------------------------------------
--- Phase 2: Delay
+-- Delay
 
 depth (Detached{} ::> _) = 2
 depth (Link{steps} ::> Node _ ps) = 1 + steps + maximum (0 : map depth ps)
@@ -105,37 +69,14 @@ delayD (Node r ps0) = Node r (map delayP ps)
           delayP (Delayed{..} ::> d) = defaultLink {steps = 1 + maximum (0 : map depth ps')} ::> d
           delayP p = p
 
-delayF :: Figure () -> Figure ()
-delayF (Figure{..}) = Figure{contents = delayD contents,..}
-
-delayTop = map delayF
-
-
-
----------------------------------------------------------
--- Phase 3: Tag
-
-type Tag x = x () -> Tex (x Int)
-
-tagify :: Tag Rule
-tagify (Rule {..}) = do
-  tag <- Tex $ newLabel
-  return $ Rule {..}
-
-tagifyFig :: Tag Figure
-tagifyFig (Figure {..}) = Figure figureTag <$> traverse tagify contents
-
-tagifyTop :: [Figure ()] -> Tex [Figure Int]
-tagifyTop = mapM tagifyFig
-
 ----------------------------------------------------------
--- Phase 4': TeXify
+-- TeXify
   
 -- | Render a derivation tree without using metapost drv package (links will not be rendered properly)
-derivationTree :: Derivation' a -> TeX
+derivationTree :: Derivation -> TeX
 derivationTree = stringizeTex
 
-stringizeTex :: Derivation' a -> TeX
+stringizeTex :: Derivation -> TeX
 stringizeTex (Node Rule {..} premises) = braces $ do
   cmd0 "displaystyle" -- so that the text does not get smaller
   cmdn "frac" [mconcat $
@@ -146,12 +87,12 @@ stringizeTex (Node Rule {..} premises) = braces $ do
               ruleLabel
 
 ----------------------------------------------------------
--- Phase 4'': Tikzify
+-- Tikzify
 
 derivationTreeD :: Derivation -> Tex ()
 derivationTreeD d = element $ derivationTreeDiag $ delayD d
-  
-derivationTreeDiag :: Derivation' a -> Diagram ()
+
+derivationTreeDiag :: Derivation -> Diagram ()
 derivationTreeDiag d = do
   [h] <- newVars [ContVar] -- the height of a layer in the tree.
   minimize h
@@ -173,7 +114,7 @@ derivationTreeDiag d = do
   minimize $ 10 *- (rightMost - leftMost)
   n # Center .=. Point 0 0
 
-toDiagPart :: Expr -> Premise' a -> Diagram (T.Tree (Point,Object,Point))
+toDiagPart :: Expr -> Premise -> Diagram (T.Tree (Point,Object,Point))
 toDiagPart layerHeight (Link{..} ::> rul)
   | steps == 0 = toDiagram layerHeight rul
   | otherwise = do
@@ -205,7 +146,7 @@ chainBases spacing ls = do
   D.align xpart [grp # E,last ls # E]
   return grp
 
-toDiagram :: Expr -> Derivation' a -> Diagram (T.Tree (Point,Object,Point))
+toDiagram :: Expr -> Derivation -> Diagram (T.Tree (Point,Object,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
   concl <- texObj (cmd0 "strut" <> conclusion)
@@ -227,9 +168,9 @@ toDiagram layerHeight (Node Rule{..} premises) = do
 -----------------------
 
 
-rule ruleLabel conclusion = Rule {tag = (), delimiter = mempty, ruleStyle = outline "black", ..}
+rule ruleLabel conclusion = Rule {delimiter = mempty, ruleStyle = outline "black", ..}
 
-dummy :: Rule ()
+dummy :: Rule
 dummy = (rule mempty mempty) {ruleStyle = const defaultPathOptions}
 emptyDrv = Node dummy []
 
