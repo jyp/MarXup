@@ -38,11 +38,12 @@ shiftInDir SW d = negate d `Point` negate d
 shiftInDir NE d = d `Point` d
 shiftInDir _ _  = 0 `Point` 0
 
+mkLabel texCode = extend 4 <$> texObj texCode
 
 -- | Label a point by a given TeX expression, at the given anchor.
 labelPt :: TeX -> Anchor -> Point -> Diagram Object
 labelPt labell anchor labeled  = do
-  t <- extend 4 <$> texObj labell
+  t <- mkLabel labell 
   t # anchor .=. labeled
   return t
 
@@ -137,19 +138,43 @@ texObj t = do
   -- drawBounds l -- for debugging
   return l
 
--- We'd like to also return an automatic anchor advice, as tikz does;
--- but this can't be used in constraints (circularity), unless we use
--- MIP instead of LP.
-edge :: Object -> Object -> Diagram Point
+data Incidence = Incidence { incidencePoint, incidenceNormal :: Point }
+swap :: Incidence -> Incidence
+swap (Incidence p v) = Incidence p (negate v)
+
+-- | Traces a straight edge between two objects.
+-- The midpoint is returned, as well as a normal vector.
+edge :: Object -> Object -> Diagram Incidence
 edge source target = do
-  let points = [source # Center,target # Center]
+  let points@[a,b] = [source # Center,target # Center]
       link = polyline points
-      targetArea = boundingRect $ extend 3 target
-      sourceArea = boundingRect $ extend 3 source
+      targetArea = boundingRect target
+      sourceArea = boundingRect source
   l' <- freezePath link
   sa' <- freezePath sourceArea
   ta' <- freezePath targetArea
   frozenPath $ (l' `cutAfter` ta') `cutBefore` sa'
-  return $ avg points
+  return $ Incidence (avg points) (rotate90 (b-a))
 
+(.<.) :: Point -> Point -> Diagram ()
+Point x1 y1 .<. Point x2 y2 = do
+  x1 <== x2
+  y1 <== y2
+
+-- | Forces the point to be inside the (bounding box) of the object.
+inside :: Point -> Object -> Diagram ()
+inside p o = do
+  (o # SW) .<. p
+  p .<. (o # NE)
+
+-- | @autoLabel label i@ Layouts the label at the given incidence
+-- point.
+autoLabel :: Object -> Incidence -> Diagram ()
+autoLabel lab (Incidence point norm) = do
+  point `inside` lab
+  minimize =<< orthoDist (lab#Center) (point + norm)
+
+-- | @labeledEdge label source target@
+labeledEdge :: Object -> Object -> Object -> Diagram ()
+labeledEdge source target lab = autoLabel lab =<< edge source target
 

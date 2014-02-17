@@ -8,8 +8,7 @@ import qualified Geom2D.CubicBezier as CB
 import Geom2D.CubicBezier (CubicBezier(..))
 import Control.Applicative
 import Control.Monad.LPMonad
-import "mtl" Control.Monad.RWS hiding (forM,forM_,mapM_,mapM)
--- import "mtl" Control.Monad.Reader hiding (forM,forM_,mapM_,mapM)
+import Control.Monad.RWS hiding (forM,forM_,mapM_,mapM)
 import Data.LinearProgram
 import Data.LinearProgram.Common as MarXup.Tikz (VarKind(..)) 
 import Data.LinearProgram.LinExpr
@@ -193,7 +192,6 @@ minimize (LinExpr x _) = do
 maximize = minimize . negate
 
 
-
 ----------------
 -- Points
 -- | A point in 2d space
@@ -222,6 +220,20 @@ instance Element Point where
 instance Element CB.Point where
   type Target CB.Point = String
   element (CB.Point x y) = "(" <> showDistance x <> "," <> showDistance y <> ")"
+
+-- | Orthogonal norm of a vector
+orthonorm :: Point -> Diagram Expr
+orthonorm (Point x y) =
+  (+) <$> absoluteValue x <*> absoluteValue y
+
+-- | Orthogonal distance between points.
+orthoDist :: Point -> Point -> Diagram Expr
+orthoDist p q = orthonorm (q-p)
+
+-- | Rotate a vector 90 degres in the trigonometric direction.
+rotate90 (Point x y) = Point (negate y) x
+
+rotate180 = rotate90 . rotate90
 
 -----------------
 -- Point constraints
