@@ -489,7 +489,7 @@ instance Element PathOptions where
   element PathOptions{..} = "["
     <> show _startTip <> "-" <> show _endTip <> ","
     <> col "draw" _drawColor
-    <> col "fill" _drawColor
+    <> col "fill" _fillColor
     <> "line width=" <> showDistance _lineWidth <> ","
     <> "line cap=" <> (case _lineCap of
                           RoundCap -> "round"

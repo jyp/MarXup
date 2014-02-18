@@ -156,6 +156,7 @@ toDiagram :: Expr -> Derivation -> Diagram (T.Tree (Point,Object,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
   concl <- texObj (cmd0 "strut" <> conclusion)
+  -- using (outline "red")$ traceBoundsBounds concl
   lab <- texObj ruleLabel
   (psGrp,premisesDist) <- chainBases 10 [p | T.Node (_,p,_) _ <- ps]
   layerHeight === height psGrp

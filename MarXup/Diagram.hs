@@ -100,7 +100,7 @@ descent o = ypart (o # Base - o # S)
 boundingRect :: Object -> Path
 boundingRect l =
   polygon (map (l #) [NW,NE,SE,SW])
-  -- polyline (map l [BaseE,BaseW])
+
 
 
 fitsVerticallyIn :: Object -> Object -> Diagram ()
@@ -124,8 +124,11 @@ o `fitsHorizontallyIn` o' = do
 rectangleObj :: Diagram Object
 rectangleObj = do
   l <- abstractBox
-  draw $ path $ boundingRect l
+  path $ boundingRect l
   return l
+
+traceBounds :: Object -> Diagram ()
+traceBounds l = path $ boundingRect l
 
 texObj :: TeX -> Diagram Object
 texObj t = do
@@ -135,7 +138,6 @@ texObj t = do
   width   l === constant wid
   descent l === constant desc
   height  l === constant h
-  -- drawBounds l -- for debugging
   return l
 
 data Incidence = Incidence { incidencePoint, incidenceNormal :: Point }
