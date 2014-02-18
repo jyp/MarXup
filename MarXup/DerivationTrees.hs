@@ -142,32 +142,42 @@ chainBases _ [] = do
   return (o,0)
 chainBases spacing ls = do
   grp <- abstractBox
-  D.align ypart $ map (# Base) (grp:ls)
+  forM_ [Base,N,S] $ \ anch -> do
+    D.align ypart $ map (# anch) (grp:ls)
   dxs <- forM (zip ls (tail ls)) $ \(x,y) -> do
     let dx = xdiff (x # E) (y # W)
     dx >== spacing
     return dx
-  forM_ ls $ \l -> grp `fitsVerticallyIn` l
   D.align xpart [grp # W,head ls # W]
   D.align xpart [grp # E,last ls # E]
   return (grp,avg dxs)
 
+fitHeight layerHeight o = do
+  b <- abstractBox
+  D.align xpart [b#W,o#W]
+  D.align xpart [b#E,o#E]
+  D.align ypart [b#Base,o#Base]
+  o `fitsVerticallyIn` b
+  return b
+
 toDiagram :: Expr -> Derivation -> Diagram (T.Tree (Point,Object,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
-  concl <- texObj (cmd0 "strut" <> conclusion)
-  -- using (outline "red")$ traceBoundsBounds concl
+  concl <- fitHeight layerHeight =<< texObj conclusion
+  -- using (outline "red")$ traceBounds concl
   lab <- texObj ruleLabel
   (psGrp,premisesDist) <- chainBases 10 [p | T.Node (_,p,_) _ <- ps]
-  layerHeight === height psGrp
   separ <- hrule
   separ # N .=. psGrp # S
   concl # N .=. separ # S
   lab # BaseW .=. separ # E + Point 3 (negate 1)
   minimize $ width separ
   psGrp `fitsHorizontallyIn` separ
+  -- using (outline "blue" . denselyDotted) $ traceBounds psGrp
   concl `fitsHorizontallyIn` separ
-  xdiff (separ # W) (psGrp # W) =~= premisesDist
+  let xd = xdiff (separ # W) (psGrp # W)
+  xd =~= premisesDist
+  xdiff (psGrp # E) (separ # E) === xd
   alignVert [separ # Center,concl # Center]
   localPathOptions ruleStyle $ path $ polyline [separ # W,separ # E]
   return $ T.Node (separ # W, concl, lab # E) ps
