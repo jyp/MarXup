@@ -152,8 +152,11 @@ chainBases spacing ls = do
   D.align xpart [grp # E,last ls # E]
   return (grp,avg dxs)
 
-fitHeight layerHeight o = do
+-- | Put object in a box of the same width and baseline, but whose
+-- height can be bigger.
+relaxHeight o = do
   b <- abstractBox
+  -- using (outline "green")$ traceBounds o
   D.align xpart [b#W,o#W]
   D.align xpart [b#E,o#E]
   D.align ypart [b#Base,o#Base]
@@ -163,22 +166,34 @@ fitHeight layerHeight o = do
 toDiagram :: Expr -> Derivation -> Diagram (T.Tree (Point,Object,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
-  concl <- fitHeight layerHeight =<< texObj conclusion
+  concl <- relaxHeight =<< extend 1.5 <$> texObj conclusion
   -- using (outline "red")$ traceBounds concl
   lab <- texObj ruleLabel
+
+  -- Grouping
   (psGrp,premisesDist) <- chainBases 10 [p | T.Node (_,p,_) _ <- ps]
+  -- using (outline "blue" . denselyDotted) $ traceBounds psGrp
+  height psGrp === layerHeight
+
+  -- Sepaartion rule
   separ <- hrule
   separ # N .=. psGrp # S
   concl # N .=. separ # S
-  lab # BaseW .=. separ # E + Point 3 (negate 1)
   minimize $ width separ
   psGrp `fitsHorizontallyIn` separ
-  -- using (outline "blue" . denselyDotted) $ traceBounds psGrp
   concl `fitsHorizontallyIn` separ
+
+  -- rule label
+  lab # BaseW .=. separ # E + Point 3 (negate 1)
+
+
+  -- layout hints (not necessary for "correctness")
   let xd = xdiff (separ # W) (psGrp # W)
-  xd =~= premisesDist
-  xdiff (psGrp # E) (separ # E) === xd
+  xd   === xdiff (psGrp # E) (separ # E) 
+  relax 2 $ (2 *- xd) =~= premisesDist
   alignVert [separ # Center,concl # Center]
+
+  -- draw the rule.
   localPathOptions ruleStyle $ path $ polyline [separ # W,separ # E]
   return $ T.Node (separ # W, concl, lab # E) ps
 
