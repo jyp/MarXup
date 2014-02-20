@@ -26,26 +26,48 @@ import Data.Traversable
 import Data.Foldable
 
 type LPState = LP Var Constant
-data Env = Env {diaSolution :: Solution
-               ,diaTightness :: Constant -- ^ Multiplicator to minimize constraints
-               ,diaPathOptions :: PathOptions}
 
-type Dia = Diagram ()
 
-newtype Diagram a = Dia (RWST Env () (Var,LPState) Multi a)
-  deriving (Monad, Applicative, Functor, MonadReader Env)
-
-instance MonadState LPState Diagram where
-  get = Dia $ snd <$> get
-  put y = Dia $ do
-    (x,_) <- get
-    put (x,y)
 
 type Solution = Map Var Double
 type Constant = Double
 
 -- | Expressions are linear functions of the variables
 type Expr = LinExpr Var Constant
+
+data LineTip = ToTip | CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
+type Color = String
+data LineCap = ButtCap | RectCap | RoundCap
+data LineJoin = MiterJoin | RoundJoin | BevelJoin
+type DashPattern = [(Constant,Constant)]
+data PathOptions = PathOptions
+                     {_drawColor :: Maybe Color
+                     ,_fillColor :: Maybe Color
+                     ,_lineWidth :: Constant
+                     ,_startTip  :: LineTip
+                     ,_endTip    :: LineTip
+                     ,_lineCap   :: LineCap
+                     ,_lineJoin  :: LineJoin
+                     ,_dashPattern :: DashPattern
+                     }
+$(makeLenses ''PathOptions)
+
+data Env = Env {_diaSolution :: Solution
+               ,_diaTightness :: Constant -- ^ Multiplicator to minimize constraints
+               ,_diaPathOptions :: PathOptions}
+
+$(makeLenses ''Env)
+
+newtype Diagram a = Dia (RWST Env () (Var,LPState) Multi a)
+  deriving (Monad, Applicative, Functor, MonadReader Env)
+
+type Dia = Diagram ()
+
+instance MonadState LPState Diagram where
+  get = Dia $ snd <$> get
+  put y = Dia $ do
+    (x,_) <- get
+    put (x,y)
 
 -------------
 -- Diagrams
@@ -65,6 +87,8 @@ diaRawTex (Tex t) = Dia $ lift t
 
 diaRaw :: String -> Dia
 diaRaw = diaRawTex . tex
+
+relax factor = local (over diaTightness (/ factor)) 
 
 instance Element (Diagram ()) where
   type Target (Diagram ()) = TeX
@@ -88,7 +112,7 @@ instance IsString (Diagram ()) where
 --------------
 -- Variables
 varValue :: Var -> Diagram Double
-varValue v = M.findWithDefault 0 v . diaSolution <$> ask
+varValue v = M.findWithDefault 0 v <$> view diaSolution
 
 rawNewVar :: Diagram Var
 rawNewVar = Dia $ do
@@ -187,7 +211,7 @@ x =~= y = minimize =<< absoluteValue (x-y)
 
 minimize,maximize :: Expr -> Diagram ()
 minimize (LinExpr x _) = do
-  tightness <- diaTightness <$> ask
+  tightness <- view diaTightness
   addObjective (tightness *- x)
 maximize = minimize . negate
 
@@ -389,7 +413,7 @@ path = frozenPath <=< freezePath
 
 frozenPath :: Path' CB.Point  -> Dia
 frozenPath p  = do
-  options <- diaPathOptions <$> ask
+  options <- view diaPathOptions
   diaRaw $ "\\path"
     <> element options
     <> case p of
@@ -411,9 +435,8 @@ polygon (x:xs) = Path x (map StraightTo xs ++ [Cycle])
 -- Path Options
 
 localPathOptions :: (PathOptions -> PathOptions) -> Diagram a -> Diagram a
-localPathOptions f = local $ \e -> e {diaPathOptions = f (diaPathOptions e)}
+localPathOptions f = local (over diaPathOptions f)
 
-data LineTip = ToTip | CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
 instance Show LineTip where
   show t = case t of
     ToTip -> "to"
@@ -424,10 +447,6 @@ instance Show LineTip where
     BracketTip -> "["
     ParensTip -> "("
 
-type Color = String
-data LineCap = ButtCap | RectCap | RoundCap
-data LineJoin = MiterJoin | RoundJoin | BevelJoin
-type DashPattern = [(Constant,Constant)]
 
 ultraThin, veryThin, thin, semiThick, thick, veryThick, ultraThick :: Constant
 ultraThin = 0.1
@@ -455,17 +474,6 @@ defaultPathOptions = PathOptions
   ,_dashPattern = []
   }
 
-data PathOptions = PathOptions
-                     {_drawColor :: Maybe Color
-                     ,_fillColor :: Maybe Color
-                     ,_lineWidth :: Constant
-                     ,_startTip  :: LineTip
-                     ,_endTip    :: LineTip
-                     ,_lineCap   :: LineCap
-                     ,_lineJoin  :: LineJoin
-                     ,_dashPattern :: DashPattern
-                     }
-$(makeLenses ''PathOptions)
 
 solid             o@PathOptions{..} = o { _dashPattern = [] }
 dotted            o@PathOptions{..} = o { _dashPattern = [(_lineWidth,2)] }
