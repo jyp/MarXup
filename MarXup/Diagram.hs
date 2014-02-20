@@ -105,8 +105,8 @@ boundingRect l =
 
 fitsVerticallyIn :: Object -> Object -> Diagram ()
 o `fitsVerticallyIn` o' = do
-  let dyN = ypart $ o # N - o' # N
-      dyS = ypart $ o' # S - o # S
+  let dyN = ypart $ o' # N - o # N
+      dyS = ypart $ o # S - o' # S
   minimize dyN
   dyN >== 0
   minimize dyS
