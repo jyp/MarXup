@@ -152,8 +152,16 @@ chainBases spacing ls = do
   D.align xpart [grp # E,last ls # E]
   return (grp,avg dxs)
 
--- | Put object in a box of the same width and baseline, but whose
--- height can be bigger.
+-- | Make an horizontally flexible box of glue.
+mkHGlue :: Expr -> Expr -> Diagram Object
+mkHGlue minimumWidth preferredWidth = do
+  g <- abstractBox
+  width g >== minimumWidth
+  width g =~= preferredWidth
+  return g
+
+-- | Put object in a box of the same vertical extent, and baseline,
+-- but whose height can be bigger.
 relaxHeight o = do
   b <- abstractBox
   -- using (outline "green")$ traceBounds o
