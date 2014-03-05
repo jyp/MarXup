@@ -7,15 +7,70 @@ import MarXup.Tex
 import MarXup.DerivationTrees
 import Control.Applicative
 import Data.Monoid
-
+import Control.Monad (unless)
+import MarXup.Tikz
+import MarXup.Diagram
+import Control.Lens (set)
 
 preamble inMP = do
   documentClass "article" []
-  usepackage "inputenc" ["utf8x"] 
+  usepackage "inputenc" ["utf8x"]
+  unless inMP $ usepackage "tikz" []
   usepackage "graphicx" []
 
+arrow src trg = using (outline "black" . set endTip ToTip) $ do
+  edge src trg
 
-someTree = derivationTreeMP [] $ Node (rule (mbox "modus ponens") "A → B") []
+autoLab s i = do
+  o <- mkLabel s
+  autoLabel o i
+
+(▸) = flip (#)
+
+testDiagram = do
+  a   <- mkLabel $ math $ "a"
+  b   <- mkLabel $ math $ "b"
+  a'  <- mkLabel $ math $ "c"
+  b'  <- mkLabel $ math $ "d"
+  a'' <- mkLabel $ math $ "."
+  b'' <- mkLabel $ math $ "."
+
+  -- c <- texObj $ math $ "c"
+  -- Center ▸ c === MP.center [E ▸ a'', E ▸ b''] + (20 +: 0)
+
+  let width = 70
+  vdiff b a === 30
+  hdiff a a' === width
+  hdiff a' a'' === width
+  alignMatrix [[Center ▸ a, Center ▸ a',Center ▸ a'']
+              ,[Center ▸ b, Center ▸ b',Center ▸ b'']
+              ]
+  autoLab "translation" =<< arrow a a'
+  autoLab "translation" =<< arrow b b'
+  autoLab "CLL cut reduction" . swap =<< arrow a b
+  autoLab "F2 reduction" =<< arrow a' a''
+  autoLab "F2 reduction" =<< arrow b' b''
+
+  draw $ do
+    autoLab "equal" =<< edge a'' b''
+  return ()
+
+ax c = Rule {delimiter = mempty, ruleStyle = outline "black", ruleLabel = mempty, conclusion = c}
+
+someTree = derivationTreeD  $ Node (rule ("modus ponens") "B")
+    [defaultLink ::> Node (ax "X") []
+    ,defaultLink  {steps = 0} ::> Node (rule "" "A")
+     [defaultLink {steps = 0} ::> Node (rule (braces $ cmd0 "small" <> "mystery") "A1")
+       [defaultLink ::> Node (ax "Y") []
+       ,defaultLink ::> Node (rule "" "A2")
+         [defaultLink ::> Node (rule "" "A3")
+        [defaultLink ::> Node (ax "Z") []]]]]
+    ,defaultLink {steps = 3} ::> Node (rule "abs" "A --> B")
+     [defaultLink ::> Node (rule "" "B")
+      [defaultLink ::> Node (ax "A") []
+      ]
+     ]
+    ]
 
 (∶) = binop 2 ", "
 γ = Con $ cmd "Gamma" nil
@@ -28,7 +83,7 @@ b = Con "b"
 
 (≜) = binop 1 "="
 
-main = renderToDisk' EPS "LaTeX" $ latexDocument preamble $ «
+main = writeFile ("LaTeX.tex") =<< renderTex preamble «
 
 @intro<-section«Intro»
 
@@ -62,6 +117,11 @@ There is also special support for derivation trees (via METAPOST)
 Here is some derivation tree:
 
 @someTree
+
+@section«Diagrams»
+
+One can also draw diagrams:
+@testDiagram
 
 @concl<-section«Conclusion»
 

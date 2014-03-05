@@ -1,12 +1,7 @@
 
 mainTest: LaTeX.pdf
 
-%-delayed.mp: %.mp
-	rm -f $@
-	mpost $<
-	mpost $<
-
-%.pdf: %.tex %-delayed.mp 
+%.pdf: %.tex
 	pdflatex $<
 	pdflatex $<
 
