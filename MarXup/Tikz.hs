@@ -486,8 +486,9 @@ dashdotted        o@PathOptions{..} = o { _dashPattern = [(3, 2), (_lineWidth, 2
 denselyDashdotted o@PathOptions{..} = o { _dashPattern = [(3, 1), (_lineWidth, 1)] }
 looselyDashdotted o@PathOptions{..} = o { _dashPattern = [(3, 4), (_lineWidth, 4)] }
 
-using = localPathOptions 
-draw = using (outline "black")
+using = localPathOptions
+stroke color = using (outline color)
+draw = stroke "black"
 
 noOutline = set drawColor Nothing
 outline color = set drawColor (Just color)
