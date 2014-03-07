@@ -178,7 +178,7 @@ toDiagram layerHeight (Node Rule{..} premises) = do
   -- Sepaartion rule
   separ <- hrule
   separ # N .=. psGrp # S
-  concl # N .=. separ # S
+  align ypart [concl # N,separ # S]
   minimize $ width separ
   psGrp `fitsHorizontallyIn` separ
   concl `fitsHorizontallyIn` separ
@@ -191,7 +191,9 @@ toDiagram layerHeight (Node Rule{..} premises) = do
   let xd = xdiff (separ # W) (psGrp # W)
   xd   === xdiff (psGrp # E) (separ # E) 
   relax 2 $ (2 *- xd) =~= premisesDist
-  alignVert [separ # Center,concl # Center]
+  -- centering of conclusion
+  xd' <- absoluteValue $ xdiff (separ # Center) (concl # Center)
+  relax 3 $ minimize xd'
 
   -- draw the rule.
   localPathOptions ruleStyle $ path $ polyline [separ # W,separ # E]
