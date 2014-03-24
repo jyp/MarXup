@@ -9,11 +9,10 @@ import Data.Algebra
 import qualified Geom2D.CubicBezier as CB
 import Geom2D.CubicBezier (CubicBezier(..))
 import Control.Applicative
-import Data.List (sort,transpose,intercalate)
-import Data.Monoid
+import Data.List (sort,transpose)
 import Data.Maybe (listToMaybe)
-import Data.Traversable
-import Data.Foldable
+-- import Data.Traversable
+-- import Data.Foldable
 import Prelude hiding (sum,mapM_,mapM,concatMap)
 
 infix 4 .=.
@@ -46,6 +45,7 @@ orthoDist :: Point -> Point -> Diagram Expr
 orthoDist p q = orthonorm (q-p)
 
 -- | Rotate a vector 90 degres in the trigonometric direction.
+rotate90, rotate180 :: Point -> Point
 rotate90 (Point x y) = Point (negate y) x
 
 rotate180 = rotate90 . rotate90
@@ -86,20 +86,23 @@ northwards = southwards . negate
 eastwards = westwards . negate
 
 
-freezePoint :: Point -> Diagram CB.Point
+freezePoint :: Point -> Diagram FrozenPoint
 freezePoint (Point x y) = CB.Point <$> valueOf x <*> valueOf y
 
-freezePath :: Path' Point -> Diagram (Path' CB.Point)
+freezePath :: Path -> Diagram FrozenPath
 freezePath = traverse freezePoint
 
--- toBeziers :: PathPoint -> [CubicBezier]
+toBeziers :: FrozenPath -> [CubicBezier]
 toBeziers EmptyPath = []
 toBeziers (Path start ss) | not (null ss) &&
                             isCycle (last ss) = toBeziers' start (init ss ++ [StraightTo start])
                           | otherwise = toBeziers' start ss
+
+fromBeziers :: [CubicBezier] -> FrozenPath 
 fromBeziers [] = EmptyPath
 fromBeziers (CubicBezier p c d q:bs) = Path p (CurveTo c d q:pathSegments (fromBeziers bs))
 
+pathSegments :: Path' t -> [Segment t]
 pathSegments EmptyPath = []
 pathSegments (Path _ ss) = ss
 
@@ -110,15 +113,15 @@ type FrozenPoint = CB.Point
 
 frozenPointElim (CB.Point x y) f = f x y
 
-instance Group CB.Point where
+instance Group FrozenPoint where
   zero = CB.Point 0 0
   (^+^) = (CB.^+^)
   (^-^) = (CB.^-^)
 
-instance Module Constant CB.Point where
+instance Module Constant FrozenPoint where
   (*^) = (CB.*^)
 
-toBeziers' :: CB.Point -> [Segment CB.Point] -> [CubicBezier]
+toBeziers' :: FrozenPoint -> [Segment FrozenPoint] -> [CubicBezier]
 toBeziers' _ [] = []
 toBeziers' start (StraightTo next:ss) = CubicBezier start mid mid next : toBeziers' next ss
   where mid = avg [start, next]
@@ -129,7 +132,7 @@ clipOne b cutter = fmap firstPart $ listToMaybe $ sort $ concatMap (\b' -> map f
   where firstPart t = fst $ CB.splitBezier b t
 
 -- | @cutAfter path area@ cuts the path after its first intersection with the @area@.
-cutAfter' :: [CubicBezier] -> [CubicBezier] -> [CubicBezier]
+cutAfter', cutBefore' :: [CubicBezier] -> [CubicBezier] -> [CubicBezier]
 cutAfter' [] _cutter = []
 cutAfter' (b:bs) cutter = case clipOne b cutter of
   Nothing -> b:cutAfter' bs cutter
@@ -138,7 +141,7 @@ cutAfter' (b:bs) cutter = case clipOne b cutter of
 revBeziers :: [CubicBezier] -> [CubicBezier]
 revBeziers = reverse . map rev
   where rev (CubicBezier a b c d) = CubicBezier d c b a
-        
+
 cutBefore' path area = revBeziers $ cutAfter' (revBeziers path) area
 
 onBeziers :: ([CubicBezier] -> [CubicBezier] -> [CubicBezier])
@@ -200,3 +203,13 @@ polygon (x:xs) = Path x (map StraightTo xs ++ [Cycle])
 
 ---------
 -- Circles
+
+circle :: Point -> Constant -> Path
+circle center radius = (center ^+^) <$> (radius *^) <$>
+                       Path (Point 1 0)
+                         [CurveTo (Point 1 k) (Point k 1) (Point 0 1),
+                          CurveTo (Point (-k) 1) (Point (-1) k) (Point (-1) 0),
+                          CurveTo (Point (-1) (-k)) (Point (-k) (-1)) (Point 0 (-1)),
+                          CurveTo (Point k (-1)) (Point 1 (-k)) (Point 1 0),
+                          Cycle]
+ where k = constant $ 4 * (sqrt 2 - 1) / 3
