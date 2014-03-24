@@ -45,11 +45,11 @@ testDiagram = do
   alignMatrix [[Center ▸ a, Center ▸ a',Center ▸ a'']
               ,[Center ▸ b, Center ▸ b',Center ▸ b'']
               ]
-  autoLab "translation" =<< arrow a a'
-  autoLab "translation" =<< arrow b b'
-  autoLab "CLL cut reduction" . swap =<< arrow a b
-  autoLab "F2 reduction" =<< arrow a' a''
-  autoLab "F2 reduction" =<< arrow b' b''
+  autoLab "bing" =<< arrow a a'
+  autoLab "bang" =<< arrow b b'
+  autoLab "oops" . swap =<< arrow a b
+  autoLab "pif" =<< arrow a' a''
+  autoLab "paf" =<< arrow b' b''
 
   draw $ do
     autoLab "equal" =<< edge a'' b''
