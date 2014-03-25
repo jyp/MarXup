@@ -16,8 +16,8 @@ import Data.List (intersperse)
 data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
   deriving Show
 
--- | Box-shaped anchorage. TODO: use a newtype.
-type Box = Anchorage
+-- | Box-shaped object. (a subtype)
+type Box = Object
 
 newtype Anchorage = Anchorage {boxAnchors :: Anchor -> Point}
 data Object = Object {objectOutline :: Path, objectAnchorage :: Anchorage}
@@ -61,14 +61,16 @@ shiftInDir _ _  = 0 `Point` 0
 
 -- | Make a label object. This is just some text surrounded by 4
 -- points of blank.
+mkLabel :: TeX -> Diagram Anchorage
 mkLabel texCode = extend 4 <$> texBox texCode
 
+labelObj :: TeX -> Diagram Box
 labelObj = rectangleShape <=< mkLabel
 
 -- | Label a point by a given TeX expression, at the given anchor.
-labelPt :: TeX -> Anchor -> Point -> Diagram Anchorage
+labelPt :: TeX -> Anchor -> Point -> Diagram Box
 labelPt labell anchor labeled  = do
-  t <- mkLabel labell 
+  t <- labelObj labell 
   t # anchor .=. labeled
   return t
 
