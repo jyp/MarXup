@@ -28,7 +28,9 @@ import MarXup (element)
 import MarXup.Tex hiding (label)
 import MarXup.MultiRef
 import MarXup.Diagram
-import MarXup.Tikz as D
+import MarXup.Diagram.Layout
+import MarXup.Diagram.Geometry as D
+import MarXup.Tikz
 import qualified Data.Tree as T
 ------------------
 --- Basics

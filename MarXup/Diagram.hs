@@ -5,6 +5,8 @@ module MarXup.Diagram where
 import MarXup
 import MarXup.Tex
 import MarXup.Tikz
+import MarXup.Diagram.Geometry
+import MarXup.Diagram.Layout
 import MarXup.MultiRef (BoxSpec(..))
 import Control.Monad
 import Control.Applicative

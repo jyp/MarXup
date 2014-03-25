@@ -10,6 +10,8 @@ import Data.Monoid
 import Control.Monad (unless)
 import MarXup.Tikz
 import MarXup.Diagram
+import MarXup.Diagram.Layout
+import MarXup.Diagram.Geometry
 import Control.Lens (set)
 
 preamble inMP = do
@@ -28,6 +30,7 @@ autoLab s i = do
 (▸) = flip (#)
 
 testDiagram = do
+  draw $ path $ circle (Point 0 0) 5
   a   <- mkLabel $ math $ "a"
   b   <- mkLabel $ math $ "b"
   a'  <- mkLabel $ math $ "c"

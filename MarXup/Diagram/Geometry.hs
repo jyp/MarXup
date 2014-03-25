@@ -193,6 +193,7 @@ instance Traversable Path' where
   traverse _ EmptyPath = pure EmptyPath
   traverse f (Path s ss) = Path <$> f s <*> traverse (traverse f) ss
 
+
 polyline :: [Point] -> Path
 polyline [] = EmptyPath
 polyline (x:xs) = Path x (map StraightTo xs)
@@ -201,15 +202,16 @@ polygon :: [Point] -> Path
 polygon [] = EmptyPath
 polygon (x:xs) = Path x (map StraightTo xs ++ [Cycle])
 
----------
--- Circles
-
-circle :: Point -> Constant -> Path
-circle center radius = (center ^+^) <$> (radius *^) <$>
-                       Path (Point 1 0)
-                         [CurveTo (Point 1 k) (Point k 1) (Point 0 1),
-                          CurveTo (Point (-k) 1) (Point (-1) k) (Point (-1) 0),
-                          CurveTo (Point (-1) (-k)) (Point (-k) (-1)) (Point 0 (-1)),
-                          CurveTo (Point k (-1)) (Point 1 (-k)) (Point 1 0),
+-- | Circle approximated with 4 curves
+circle :: Point -> Expr -> Path
+circle center r = (center ^+^) <$>
+                       Path (Point r 0)
+                         [CurveTo (Point r k) (Point k r) (Point 0 r),
+                          CurveTo (Point (-k) r) (Point (-r) k) (Point (-r) 0),
+                          CurveTo (Point (-r) (-k)) (Point (-k) (-r)) (Point 0 (-r)),
+                          CurveTo (Point k (-r)) (Point r (-k)) (Point r 0),
                           Cycle]
- where k = constant $ 4 * (sqrt 2 - 1) / 3
+ where k1 :: Constant
+       k1 = 4 * (sqrt 2 - 1) / 3
+       k = k1 *^ r
+

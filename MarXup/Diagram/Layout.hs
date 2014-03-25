@@ -5,7 +5,7 @@ import Control.Monad.LPMonad
 import Prelude hiding (sum,mapM_,mapM,concatMap)
 import Control.Monad.RWS hiding (forM,forM_,mapM_,mapM)
 import Data.LinearProgram
--- import Data.LinearProgram.Common as MarXup.Tikz (VarKind(..)) 
+import Data.LinearProgram.Common as MarXup.Diagram.Layout (VarKind(..)) 
 import Data.LinearProgram.LinExpr
 import Data.Map (Map)
 import qualified Data.Map as M
