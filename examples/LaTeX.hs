@@ -8,10 +8,7 @@ import MarXup.DerivationTrees
 import Control.Applicative
 import Data.Monoid
 import Control.Monad (unless)
-import MarXup.Tikz
 import MarXup.Diagram
-import MarXup.Diagram.Layout
-import MarXup.Diagram.Geometry
 import Control.Lens (set)
 
 preamble inMP = do

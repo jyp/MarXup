@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds, KindSignatures, OverloadedStrings, EmptyDataDecls, MultiParamTypeClasses, FlexibleContexts, OverlappingInstances   #-}
 
-module MarXup.Diagram where
+module MarXup.Diagram.Object where
 
 import MarXup
 import MarXup.Tex
@@ -15,16 +15,17 @@ import Data.List (intersperse)
 data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
   deriving Show
 
-newtype Object = Object (Anchor -> Point)
+newtype Object = Object {objectAnchors :: Anchor -> Point}
 
-hdiff,vdiff :: Object -> Object -> Expr
+-- | Horizontal distance between objects
+hdiff :: Object -> Object -> Expr
 hdiff x y = xpart (y # W - x # E)
+
+-- | Vertical distance between objects
+vdiff :: Object -> Object -> Expr
 vdiff x y = ypart (y # S - x # N)
 
-xdiff,ydiff :: Point -> Point -> Expr
-xdiff p q = xpart (q - p)
-ydiff p q = ypart (q - p)
-
+-- | Extend the object boundaries by the given delta (by appropriately shifting the anchors)
 extend :: Expr -> Object -> Object
 extend e o = Object $ \a -> o # a + shiftInDir a e
 
@@ -40,6 +41,8 @@ shiftInDir SW d = negate d `Point` negate d
 shiftInDir NE d = d `Point` d
 shiftInDir _ _  = 0 `Point` 0
 
+-- | Make a label object. This is just some text surrounded by 4
+-- points of blank.
 mkLabel texCode = extend 4 <$> texObj texCode
 
 -- | Label a point by a given TeX expression, at the given anchor.
@@ -49,13 +52,14 @@ labelPt labell anchor labeled  = do
   t # anchor .=. labeled
   return t
 
+-- | A point object (similar to a box of zero width and height)
 abstractPoint :: Diagram Object
 abstractPoint = do
   [x,y] <- newVars (replicate 2 ContVar)
   return $ Object $ \a -> case a of
     _ -> Point x y
 
-
+-- | Abstract box object (no outline is drawn)
 abstractBox :: Diagram Object
 abstractBox = do
   [n,s,e,w,base,midx,midy] <- newVars (replicate 7 ContVar)
@@ -80,12 +84,14 @@ abstractBox = do
     BaseE  -> pt base e
     BaseW  -> pt base w
 
+-- | A box of zero width
 vrule :: Diagram Object
 vrule = do
   o <- abstractBox
   align xpart [o # W, o #Center, o#E]
   return o
 
+-- | A box of zero height
 hrule :: Diagram Object
 hrule = do
   o <- abstractBox

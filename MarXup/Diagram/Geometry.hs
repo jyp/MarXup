@@ -50,6 +50,10 @@ rotate90 (Point x y) = Point (negate y) x
 
 rotate180 = rotate90 . rotate90
 
+xdiff,ydiff :: Point -> Point -> Expr
+xdiff p q = xpart (q - p)
+ydiff p q = ypart (q - p)
+
 -----------------
 -- Point constraints
 

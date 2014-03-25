@@ -58,6 +58,7 @@ library
   exposed-modules: MarXup.DerivationTrees
   exposed-modules: MarXup.Text
   exposed-modules: MarXup.Diagram
+  exposed-modules: MarXup.Diagram.Object
   exposed-modules: MarXup.Diagram.Geometry
   exposed-modules: MarXup.Diagram.Layout
   exposed-modules: MarXup.MultiRef
