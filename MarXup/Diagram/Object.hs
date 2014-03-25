@@ -10,24 +10,42 @@ import MarXup.Diagram.Layout
 import MarXup.MultiRef (BoxSpec(..))
 import Control.Monad
 import Control.Applicative
+import Data.Algebra
 import Data.List (intersperse)
 
 data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
   deriving Show
 
-newtype Object = Object {objectAnchors :: Anchor -> Point}
+-- | Box-shaped anchorage. TODO: use a newtype.
+type Box = Anchorage
+
+newtype Anchorage = Anchorage {boxAnchors :: Anchor -> Point}
+data Object = Object {objectOutline :: Path, objectAnchorage :: Anchorage}
+
+class Anchored a where
+  anchors :: a -> Anchor -> Point
+infix 8 #
+
+(#) :: Anchored a => a -> Anchor -> Point
+(#) = anchors
+
+instance Anchored Anchorage where
+  anchors = boxAnchors
+
+instance Anchored Object where
+  anchors = anchors . objectAnchorage
 
 -- | Horizontal distance between objects
-hdiff :: Object -> Object -> Expr
+hdiff :: Anchored a => a -> a -> Expr
 hdiff x y = xpart (y # W - x # E)
 
 -- | Vertical distance between objects
-vdiff :: Object -> Object -> Expr
+vdiff :: Anchored a => a -> a -> Expr
 vdiff x y = ypart (y # S - x # N)
 
--- | Extend the object boundaries by the given delta (by appropriately shifting the anchors)
-extend :: Expr -> Object -> Object
-extend e o = Object $ \a -> o # a + shiftInDir a e
+-- | Extend the box boundaries by the given delta
+extend :: Expr -> Anchorage -> Anchorage
+extend e o = Anchorage $ \a -> o # a + shiftInDir a e
 
 -- | Makes a shift of size 'd' in the given direction.
 shiftInDir :: Anchor -> Expr -> Point
@@ -43,25 +61,32 @@ shiftInDir _ _  = 0 `Point` 0
 
 -- | Make a label object. This is just some text surrounded by 4
 -- points of blank.
-mkLabel texCode = extend 4 <$> texObj texCode
+mkLabel texCode = extend 4 <$> texBox texCode
+
+labelObj = rectangleShape <=< mkLabel
 
 -- | Label a point by a given TeX expression, at the given anchor.
-labelPt :: TeX -> Anchor -> Point -> Diagram Object
+labelPt :: TeX -> Anchor -> Point -> Diagram Anchorage
 labelPt labell anchor labeled  = do
   t <- mkLabel labell 
   t # anchor .=. labeled
   return t
 
--- | A point object (similar to a box of zero width and height)
-abstractPoint :: Diagram Object
-abstractPoint = do
+-- | A free point
+point :: Diagram Point
+point = do
   [x,y] <- newVars (replicate 2 ContVar)
-  return $ Object $ \a -> case a of
-    _ -> Point x y
+  return $ Point x y
 
--- | Abstract box object (no outline is drawn)
-abstractBox :: Diagram Object
-abstractBox = do
+-- | A point anchorage (similar to a box of zero width and height)
+pointBox :: Diagram Anchorage
+pointBox = do
+  p <- point
+  return $ Anchorage $ \a -> case a of _ -> p
+
+-- | A box. Anchors are aligned along a grid.
+box :: Diagram Anchorage
+box = do
   [n,s,e,w,base,midx,midy] <- newVars (replicate 7 ContVar)
   n >== base
   base >== s
@@ -70,7 +95,7 @@ abstractBox = do
   midx === avg [w,e]
   midy === avg [n,s]
   let pt = flip Point
-  return $ Object $ \anch -> case anch of
+  return $ Anchorage $ \anch -> case anch of
     NW     -> pt n    w
     N      -> pt n    midx
     NE     -> pt n    e  
@@ -85,33 +110,26 @@ abstractBox = do
     BaseW  -> pt base w
 
 -- | A box of zero width
-vrule :: Diagram Object
+vrule :: Diagram Anchorage
 vrule = do
-  o <- abstractBox
+  o <- box
   align xpart [o # W, o #Center, o#E]
   return o
 
 -- | A box of zero height
-hrule :: Diagram Object
+hrule :: Diagram Anchorage
 hrule = do
-  o <- abstractBox
+  o <- box
   height o === 0
   return o
 
-infix 8 #
-(Object o) # anch = o anch
+
 height o = ypart (o # N - o # S)
 width o = xpart (o # E - o # W)
 ascent o = ypart (o # N - o # Base)
 descent o = ypart (o # Base - o # S)
 
-boundingRect :: Object -> Path
-boundingRect l =
-  polygon (map (l #) [NW,NE,SE,SW])
-
-
-
-fitsVerticallyIn :: Object -> Object -> Diagram ()
+fitsVerticallyIn :: Anchorage -> Anchorage -> Diagram ()
 o `fitsVerticallyIn` o' = do
   let dyN = ypart $ o' # N - o # N
       dyS = ypart $ o # S - o' # S
@@ -120,7 +138,7 @@ o `fitsVerticallyIn` o' = do
   minimize dyS
   dyS >== 0
 
-fitsHorizontallyIn :: Object -> Object -> Diagram ()
+fitsHorizontallyIn :: Anchorage -> Anchorage -> Diagram ()
 o `fitsHorizontallyIn` o' = do
   let dyW = xpart $ o # W - o' # W
       dyE = xpart $ o' # E - o # E
@@ -129,18 +147,37 @@ o `fitsHorizontallyIn` o' = do
   minimize dyE
   dyE >== 0
 
-rectangleObj :: Diagram Object
-rectangleObj = do
-  l <- abstractBox
-  path $ boundingRect l
-  return l
+-- circleObj :: Diagram Object
+-- circleObj = do
+--   [base,r] <- newVars [ContVar]
+--   center <- point
+--   let k1 :: Constant
+--       k1 = sqrt 2 / 2
+--       k = k1 *^ r
+--       p = circle center r
+--   return $ Object p $ Anchorage $ \a -> center + case a of
+--     N -> Point 0 r
+--     S -> Point 0 (-r)
+--     E -> Point r 0
+--     W -> Point (-r) 0
+--     Center -> Point 0 0
+--     NE -> Point k k
 
-traceBounds :: Object -> Diagram ()
-traceBounds l = path $ boundingRect l
+rectangleShape :: Anchorage -> Diagram Object
+rectangleShape l = do
+  let p = polygon (map (l #) [NW,NE,SE,SW])
+  path p
+  return $ Object p l
 
-texObj :: TeX -> Diagram Object
-texObj t = do
-  l <- abstractBox
+traceAnchorage :: Color -> Object -> Diagram ()
+traceAnchorage c l = do
+  stroke c $ path $ polygon (map (l #) [NW,NE,SE,SW])
+  -- TODO: draw the baseline, etc.
+
+-- | Typeset a piece of text and return its bounding box.
+texBox :: TeX -> Diagram Anchorage
+texBox t = do
+  l <- box
   BoxSpec wid h desc <- drawText (l # NW) t
 
   width   l === constant wid
@@ -158,8 +195,8 @@ edge :: Object -> Object -> Diagram Incidence
 edge source target = do
   let points@[a,b] = [source # Center,target # Center]
       link = polyline points
-      targetArea = boundingRect target
-      sourceArea = boundingRect source
+      targetArea = objectOutline target
+      sourceArea = objectOutline source
   l' <- freezePath link
   sa' <- freezePath sourceArea
   ta' <- freezePath targetArea
@@ -172,19 +209,19 @@ Point x1 y1 .<. Point x2 y2 = do
   y1 <== y2
 
 -- | Forces the point to be inside the (bounding box) of the object.
-inside :: Point -> Object -> Diagram ()
+inside :: Point -> Box -> Diagram ()
 inside p o = do
   (o # SW) .<. p
   p .<. (o # NE)
 
 -- | @autoLabel label i@ Layouts the label at the given incidence
 -- point.
-autoLabel :: Object -> Incidence -> Diagram ()
-autoLabel lab (Incidence point norm) = do
-  point `inside` lab
-  minimize =<< orthoDist (lab#Center) (point + norm)
+autoLabel :: Box -> Incidence -> Diagram ()
+autoLabel lab (Incidence pt norm) = do
+  pt `inside` lab
+  minimize =<< orthoDist (lab#Center) (pt + norm)
 
 -- | @labeledEdge label source target@
-labeledEdge :: Object -> Object -> Object -> Diagram ()
+labeledEdge :: Object -> Object -> Box -> Diagram ()
 labeledEdge source target lab = autoLabel lab =<< edge source target
 

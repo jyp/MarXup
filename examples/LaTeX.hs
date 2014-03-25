@@ -17,6 +17,7 @@ preamble inMP = do
   unless inMP $ usepackage "tikz" []
   usepackage "graphicx" []
 
+arrow :: Object -> Object -> Diagram Incidence
 arrow src trg = using (outline "black" . set endTip ToTip) $ do
   edge src trg
 
@@ -28,12 +29,12 @@ autoLab s i = do
 
 testDiagram = do
   draw $ path $ circle (Point 0 0) 5
-  a   <- mkLabel $ math $ "a"
-  b   <- mkLabel $ math $ "b"
-  a'  <- mkLabel $ math $ "c"
-  b'  <- mkLabel $ math $ "d"
-  a'' <- mkLabel $ math $ "."
-  b'' <- mkLabel $ math $ "."
+  a   <- labelObj $ math $ "a"
+  b   <- labelObj $ math $ "b"
+  a'  <- labelObj $ math $ "c"
+  b'  <- labelObj $ math $ "d"
+  a'' <- labelObj $ math $ "."
+  b'' <- labelObj $ math $ "."
 
   -- c <- texObj $ math $ "c"
   -- Center ▸ c === MP.center [E ▸ a'', E ▸ b''] + (20 +: 0)

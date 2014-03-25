@@ -115,7 +115,7 @@ derivationTreeDiag d = do
   minimize $ 10 *- (rightMost - leftMost)
   n # Center .=. Point 0 0
 
-toDiagPart :: Expr -> Premise -> Diagram (T.Tree (Point,Object,Point))
+toDiagPart :: Expr -> Premise -> Diagram (T.Tree (Point,Anchorage,Point))
 toDiagPart layerHeight (Link{..} ::> rul)
   | steps == 0 = toDiagram layerHeight rul
   | otherwise = do
@@ -138,12 +138,12 @@ toDiagPart layerHeight (Link{..} ::> rul)
 -- - Returns an object encompassing the group, with a the baseline set correctly.
 -- - Returns the average distance between the objects
    
-chainBases :: Expr -> [Object] -> Diagram (Object,Expr)
+chainBases :: Expr -> [Anchorage] -> Diagram (Anchorage,Expr)
 chainBases _ [] = do
-  o <- abstractBox
+  o <- box
   return (o,0)
 chainBases spacing ls = do
-  grp <- abstractBox
+  grp <- box
   forM_ [Base,N,S] $ \ anch -> do
     D.align ypart $ map (# anch) (grp:ls)
   dxs <- forM (zip ls (tail ls)) $ \(x,y) -> do
@@ -155,9 +155,9 @@ chainBases spacing ls = do
   return (grp,avg dxs)
 
 -- | Make an horizontally flexible box of glue.
-mkHGlue :: Expr -> Expr -> Diagram Object
+mkHGlue :: Expr -> Expr -> Diagram Anchorage
 mkHGlue minimumWidth preferredWidth = do
-  g <- abstractBox
+  g <- box
   width g >== minimumWidth
   width g =~= preferredWidth
   return g
@@ -165,7 +165,7 @@ mkHGlue minimumWidth preferredWidth = do
 -- | Put object in a box of the same vertical extent, and baseline,
 -- but whose height can be bigger.
 relaxHeight o = do
-  b <- abstractBox
+  b <- box
   -- using (outline "green")$ traceBounds o
   D.align xpart [b#W,o#W]
   D.align xpart [b#E,o#E]
@@ -173,12 +173,12 @@ relaxHeight o = do
   o `fitsVerticallyIn` b
   return b
 
-toDiagram :: Expr -> Derivation -> Diagram (T.Tree (Point,Object,Point))
+toDiagram :: Expr -> Derivation -> Diagram (T.Tree (Point,Anchorage,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
-  concl <- relaxHeight =<< extend 1.5 <$> texObj conclusion
+  concl <- relaxHeight =<< extend 1.5 <$> texBox conclusion
   -- using (outline "red")$ traceBounds concl
-  lab <- texObj ruleLabel
+  lab <- texBox ruleLabel
 
   -- Grouping
   (psGrp,premisesDist) <- chainBases 10 [p | T.Node (_,p,_) _ <- ps]
