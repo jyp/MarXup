@@ -128,7 +128,7 @@ infix 4 <==,===,>==
 -- Expressions
 instance Fractional Expr where
   fromRational ratio = constant (fromRational ratio)
-    
+
 instance Num Expr where
   fromInteger x = LinExpr M.empty (fromInteger x)
   negate = neg

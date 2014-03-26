@@ -111,7 +111,7 @@ example: @(γ ⊢ x ∶ a).
 The operators are overloaded to work on text as well:
 @display(b ≜ sqrt (a * (b + (x/y))))
 
-There is also special support for derivation trees (via METAPOST)
+There is also special support for derivation trees:
 
 @section«Derivation Trees»
 

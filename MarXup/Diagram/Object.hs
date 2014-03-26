@@ -131,7 +131,7 @@ width o = xpart (o # E - o # W)
 ascent o = ypart (o # N - o # Base)
 descent o = ypart (o # Base - o # S)
 
-fitsVerticallyIn :: Anchorage -> Anchorage -> Diagram ()
+-- fitsVerticallyIn :: Anchorage -> Anchorage -> Diagram ()
 o `fitsVerticallyIn` o' = do
   let dyN = ypart $ o' # N - o # N
       dyS = ypart $ o # S - o' # S
@@ -140,7 +140,7 @@ o `fitsVerticallyIn` o' = do
   minimize dyS
   dyS >== 0
 
-fitsHorizontallyIn :: Anchorage -> Anchorage -> Diagram ()
+-- fitsHorizontallyIn :: Anchorage -> Anchorage -> Diagram ()
 o `fitsHorizontallyIn` o' = do
   let dyW = xpart $ o # W - o' # W
       dyE = xpart $ o' # E - o # E
@@ -149,10 +149,18 @@ o `fitsHorizontallyIn` o' = do
   minimize dyE
   dyE >== 0
 
--- circleObj :: Diagram Object
--- circleObj = do
---   [base,r] <- newVars [ContVar]
---   center <- point
+a `fitsIn` b = do
+  a `fitsHorizontallyIn` b
+  a `fitsVerticallyIn` b
+
+circleShape :: Diagram Object
+circleShape = do
+  anch <- box
+  width anch === height anch
+  let radius = 0.5 *- width anch
+  let p = circle (anch # Center) radius
+  path p
+  return $ Object p anch
 --   let k1 :: Constant
 --       k1 = sqrt 2 / 2
 --       k = k1 *^ r

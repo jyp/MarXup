@@ -10,7 +10,7 @@ usetheme = cmd "usetheme" . tex
 frame tit bod = env "frame" $ do
   cmd "frametitle" tit
   bod
-  
+
 pause :: TeX
 pause = cmd "pause"$  mempty
 
