@@ -28,7 +28,9 @@ instance Element Expr where
 
 instance Element (Diagram ()) where
   type Target (Diagram ()) = TeX
-  element d = braces $ do
+  element d = do
+   texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!)
+   braces $ do
     cmd0 "normalsize"
       -- otherwise the boxes use "normalsize", while tikz inherits
       -- the smaller or bigger size from the current scope. Actually,
@@ -36,7 +38,6 @@ instance Element (Diagram ()) where
       -- do that.
     env "tikzpicture" $
       Tex $ runDiagram d
-
 
 --------------------
 -- Point rendering
