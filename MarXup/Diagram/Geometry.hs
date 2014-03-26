@@ -13,7 +13,7 @@ import Data.List (sort,transpose)
 import Data.Maybe (listToMaybe)
 -- import Data.Traversable
 -- import Data.Foldable
-import Prelude hiding (sum,mapM_,mapM,concatMap)
+import Prelude hiding (sum,mapM_,mapM,concatMap,maximum,minimum)
 
 infix 4 .=.
 ----------------
@@ -99,8 +99,27 @@ freezePath = traverse freezePoint
 toBeziers :: FrozenPath -> [CubicBezier]
 toBeziers EmptyPath = []
 toBeziers (Path start ss) | not (null ss) &&
-                            isCycle (last ss) = toBeziers' start (init ss ++ [StraightTo start])
-                          | otherwise = toBeziers' start ss
+                            isCycle (last ss) = filterNilCurves $ toBeziers' start (init ss ++ [StraightTo start])
+                          | otherwise = filterNilCurves $ toBeziers' start ss
+
+filterNilCurves = filter (not . isNil)
+
+isNil :: CubicBezier -> Bool
+isNil (CubicBezier a b c d) = (maxx - minx < eps) && (maxy - miny < eps)
+  where xs = map CB.pointX pts
+        ys = map CB.pointY pts
+        minx = minimum xs
+        miny = minimum ys
+        maxx = maximum xs
+        maxy = maximum ys
+        eps = 0.001
+        pts = [a,b,c,d]
+
+toBeziers' :: FrozenPoint -> [Segment FrozenPoint] -> [CubicBezier]
+toBeziers' _ [] = []
+toBeziers' start (StraightTo next:ss) = CubicBezier start mid mid next : toBeziers' next ss
+  where mid = avg [start, next]
+toBeziers' p (CurveTo c d q:ss) = CubicBezier p c d q : toBeziers' q ss
 
 fromBeziers :: [CubicBezier] -> FrozenPath 
 fromBeziers [] = EmptyPath
@@ -125,11 +144,6 @@ instance Group FrozenPoint where
 instance Module Constant FrozenPoint where
   (*^) = (CB.*^)
 
-toBeziers' :: FrozenPoint -> [Segment FrozenPoint] -> [CubicBezier]
-toBeziers' _ [] = []
-toBeziers' start (StraightTo next:ss) = CubicBezier start mid mid next : toBeziers' next ss
-  where mid = avg [start, next]
-toBeziers' p (CurveTo c d q:ss) = CubicBezier p c d q : toBeziers' q ss
 
 clipOne :: CubicBezier -> [CubicBezier] -> Maybe CubicBezier
 clipOne b cutter = fmap firstPart $ listToMaybe $ sort $ concatMap (\b' -> map fst $ CB.bezierIntersection b b' 0.001) cutter
