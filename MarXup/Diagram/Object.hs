@@ -35,13 +35,16 @@ instance Anchored Anchorage where
 instance Anchored Object where
   anchors = anchors . objectAnchorage
 
+instance Anchored Point where
+  anchors p _ = p
+
 -- | Horizontal distance between objects
-hdiff :: Anchored a => a -> a -> Expr
-hdiff x y = xpart (y # W - x # E)
+hdist :: Anchored a => a -> a -> Expr
+hdist x y = xpart (y # W - x # E)
 
 -- | Vertical distance between objects
-vdiff :: Anchored a => a -> a -> Expr
-vdiff x y = ypart (y # S - x # N)
+vdist :: Anchored a => a -> a -> Expr
+vdist x y = ypart (y # S - x # N)
 
 -- | Extend the box boundaries by the given delta
 extend :: Expr -> Anchorage -> Anchorage
