@@ -60,9 +60,10 @@ library
   exposed-modules: MarXup.Text
   exposed-modules: MarXup.Diagram
   exposed-modules: MarXup.Diagram.Object
-  exposed-modules: MarXup.Diagram.Geometry
+  exposed-modules: MarXup.Diagram.Path
+  exposed-modules: MarXup.Diagram.Point
   exposed-modules: MarXup.Diagram.Layout
+  exposed-modules: MarXup.Diagram.Tikz
   exposed-modules: MarXup.MultiRef
-  exposed-modules: MarXup.Tikz
 --  exposed-modules: MarXup.Pandoc (broken)
 

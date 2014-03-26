@@ -22,7 +22,7 @@ arrow src trg = using (outline "black" . set endTip ToTip) $ do
   edge src trg
 
 autoLab s i = do
-  o <- mkLabel s
+  o <- labelObj s
   autoLabel o i
 
 (▸) = flip (#)
@@ -40,9 +40,9 @@ testDiagram = do
   -- Center ▸ c === MP.center [E ▸ a'', E ▸ b''] + (20 +: 0)
 
   let width = 70
-  vdiff b a === 30
-  hdiff a a' === width
-  hdiff a' a'' === width
+  vdist b a === 30
+  hdist a a' === width
+  hdist a' a'' === width
   alignMatrix [[Center ▸ a, Center ▸ a',Center ▸ a'']
               ,[Center ▸ b, Center ▸ b',Center ▸ b'']
               ]

@@ -27,10 +27,7 @@ import Data.Monoid
 import MarXup (element)
 import MarXup.Tex hiding (label)
 import MarXup.MultiRef
-import MarXup.Diagram
-import MarXup.Diagram.Layout
-import MarXup.Diagram.Geometry as D
-import MarXup.Tikz
+import MarXup.Diagram as D
 import qualified Data.Tree as T
 ------------------
 --- Basics

@@ -1,20 +1,19 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies, OverloadedStrings, RecordWildCards,UndecidableInstances, PackageImports, TemplateHaskell #-}
 
-module MarXup.Tikz (module MarXup.Tikz) where
+module MarXup.Diagram.Tikz where
 
 import MarXup.Diagram.Layout
-import MarXup.Diagram.Geometry
+import MarXup.Diagram.Point
+import MarXup.Diagram.Path
 import Control.Lens hiding (element)
 import Prelude hiding (sum,mapM_,mapM,concatMap)
 import Control.Applicative
 import Data.List (intercalate)
--- import Data.Map (Map)
 import Data.String
 import MarXup
 import MarXup.MultiRef
 import MarXup.Tex
 import Numeric (showFFloat)
--- import qualified Data.Map as M
 import Data.Traversable
 import Data.Foldable
 import Data.Monoid
