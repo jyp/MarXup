@@ -11,6 +11,7 @@ import Data.List (intersperse)
 import MarXup.MultiRef
 import Graphics.DVI
 import System.Process
+import System.Directory (doesFileExist)
 
 data MPOutFormat = SVG | EPS
   deriving (Eq,Show)
@@ -201,10 +202,14 @@ renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
 renderWithBoxes bs mode (Tex t) = doc
   where (_,_,doc) = runRWS (fromMulti $ t) mode (0,bs)
 
+renderSimple :: TeX -> String
+renderSimple = renderWithBoxes [] Regular
+  
 renderTex :: (Bool -> TeX) -> TeX -> IO String
 renderTex preamble body = do
   let bxsTex = renderWithBoxes (repeat nilBoxSpec) OutsideBox (wholeDoc True)
       boxesName = "mpboxes"
+      boxesDVI = boxesName ++ ".dvi"
       wholeDoc inBoxMode = do
         outputAlsoInBoxMode (preamble inBoxMode)
         shipoutMacros
@@ -213,7 +218,11 @@ renderTex preamble body = do
         texAlways "\\end{document}"
   writeFile (boxesName ++ ".tex") bxsTex
   system $ "latex " ++ boxesName
-  boxes <- withDVI (boxesName ++ ".dvi") (\_ _ -> return emptyFont) () getBoxInfo
+  boxes <- do
+    e <- doesFileExist boxesDVI
+    if e
+      then withDVI boxesDVI (\_ _ -> return emptyFont) () getBoxInfo
+      else return []
   putStrLn $ "Number of boxes found: " ++ show (length boxes)
   return $ renderWithBoxes boxes Regular $ (wholeDoc False)
 

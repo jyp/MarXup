@@ -48,6 +48,7 @@ library
   build-depends: glpk-hs>=0.3.4
   build-depends: cubicbezier>=0.2
   build-depends: lens>=3.10
+  build-depends: directory>=1.2
 
   exposed-modules: MarXup
   exposed-modules: MarXup.Tex
