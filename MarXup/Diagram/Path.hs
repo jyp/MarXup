@@ -7,49 +7,58 @@ import MarXup.Diagram.Point
 import Data.Traversable
 import Data.Foldable
 import Data.Algebra
-import qualified Geom2D.CubicBezier as CB
-import Geom2D.CubicBezier (CubicBezier(..))
+-- import Data.Traversable
+-- import Data.Foldable
+import Graphics.Typography.Geometry.Bezier
 import Control.Applicative
 import Data.List (sort,transpose)
 import Data.Maybe (listToMaybe)
--- import Data.Traversable
--- import Data.Foldable
 import Prelude hiding (sum,mapM_,mapM,concatMap,maximum,minimum)
+import qualified Data.Vector.Unboxed as V
+import Algebra.Polynomials.Bernstein
+
+type FrozenPoint = Point' Constant
 
 freezePoint :: Point -> Diagram FrozenPoint
-freezePoint (Point x y) = CB.Point <$> valueOf x <*> valueOf y
+freezePoint = traverse valueOf
 
 freezePath :: Path -> Diagram FrozenPath
 freezePath = traverse freezePoint
 
-toBeziers :: FrozenPath -> [CubicBezier]
+toBeziers :: FrozenPath -> [Curve]
 toBeziers EmptyPath = []
 toBeziers (Path start ss) | not (null ss) &&
-                            isCycle (last ss) = filterNilCurves $ toBeziers' start (init ss ++ [StraightTo start])
-                          | otherwise = filterNilCurves $ toBeziers' start ss
+                            isCycle (last ss) = toBeziers' start (init ss ++ [StraightTo start])
+                          | otherwise = toBeziers' start ss
 
-filterNilCurves = filter (not . isNil)
+-- filterNilCurves = filter (not . isNil)
 
-isNil :: CubicBezier -> Bool
-isNil (CubicBezier a b c d) = (maxx - minx < eps) && (maxy - miny < eps)
-  where xs = map CB.pointX pts
-        ys = map CB.pointY pts
-        minx = minimum xs
-        miny = minimum ys
-        maxx = maximum xs
-        maxy = maximum ys
-        eps = 0.001
-        pts = [a,b,c,d]
+-- isNil :: Curve -> Bool
+-- isNil (Curve a b c d) = (maxx - minx < eps) && (maxy - miny < eps)
+--   where xs = map CB.pointX pts
+--         ys = map CB.pointY pts
+--         minx = minimum xs
+--         miny = minimum ys
+--         maxx = maximum xs
+--         maxy = maximum ys
+--         eps = 0.001
+--         pts = [a,b,c,d]
 
-toBeziers' :: FrozenPoint -> [Segment FrozenPoint] -> [CubicBezier]
+curve (Point xa ya) (Point xb yb) (Point xc yc) (Point xd yd) = bezier3 xa ya xb yb xc yc xd yd
+
+toBeziers' :: FrozenPoint -> [Segment FrozenPoint] -> [Curve]
 toBeziers' _ [] = []
-toBeziers' start (StraightTo next:ss) = CubicBezier start mid mid next : toBeziers' next ss
+toBeziers' start (StraightTo next:ss) = curve start mid mid next : toBeziers' next ss
   where mid = avg [start, next]
-toBeziers' p (CurveTo c d q:ss) = CubicBezier p c d q : toBeziers' q ss
+toBeziers' p (CurveTo c d q:ss) = curve p c d q : toBeziers' q ss
 
-fromBeziers :: [CubicBezier] -> FrozenPath 
+fromBeziers :: [Curve] -> FrozenPath 
 fromBeziers [] = EmptyPath
-fromBeziers (CubicBezier p c d q:bs) = Path p (CurveTo c d q:pathSegments (fromBeziers bs))
+fromBeziers (Bezier cx cy t0 t1:bs) = Path p (CurveTo c d q:pathSegments (fromBeziers bs))
+  where [cx',cy'] = map (\c -> coefs $ restriction c t0 t1) [cx,cy]
+        cxy = V.zip cx' cy'
+        [p,c,d,q] = map toPt $ V.foldr (:) [] cxy
+        toPt (x,y) = Point x y
 
 pathSegments :: Path' t -> [Segment t]
 pathSegments EmptyPath = []
@@ -58,37 +67,28 @@ pathSegments (Path _ ss) = ss
 isCycle Cycle = True
 isCycle _  = False
 
-type FrozenPoint = CB.Point
+frozenPointElim (Point x y) f = f x y
 
-frozenPointElim (CB.Point x y) f = f x y
+splitBezier (Bezier cx cy t0 t1) (u,v,_,_) = (Bezier cx cy t0 u, Bezier cx cy v t1)
 
-instance Group FrozenPoint where
-  zero = CB.Point 0 0
-  (^+^) = (CB.^+^)
-  (^-^) = (CB.^-^)
-
-instance Module Constant FrozenPoint where
-  (*^) = (CB.*^)
-
-
-clipOne :: CubicBezier -> [CubicBezier] -> Maybe CubicBezier
-clipOne b cutter = fmap firstPart $ listToMaybe $ sort $ concatMap (\b' -> map fst $ CB.bezierIntersection b b' 0.001) cutter
-  where firstPart t = fst $ CB.splitBezier b t
+clipOne :: Curve -> [Curve] -> Maybe Curve
+clipOne b cutter = fmap firstPart $ listToMaybe $ sort $ concatMap (inter b) cutter
+  where firstPart t = fst $ splitBezier b t
 
 -- | @cutAfter path area@ cuts the path after its first intersection with the @area@.
-cutAfter', cutBefore' :: [CubicBezier] -> [CubicBezier] -> [CubicBezier]
+cutAfter', cutBefore' :: [Curve] -> [Curve] -> [Curve]
 cutAfter' [] _cutter = []
 cutAfter' (b:bs) cutter = case clipOne b cutter of
   Nothing -> b:cutAfter' bs cutter
   Just b' -> [b']
 
-revBeziers :: [CubicBezier] -> [CubicBezier]
+revBeziers :: [Curve] -> [Curve]
 revBeziers = reverse . map rev
-  where rev (CubicBezier a b c d) = CubicBezier d c b a
+  where rev (Bezier cx cy t0 t1) = error "rev: todo"
 
 cutBefore' path area = revBeziers $ cutAfter' (revBeziers path) area
 
-onBeziers :: ([CubicBezier] -> [CubicBezier] -> [CubicBezier])
+onBeziers :: ([Curve] -> [Curve] -> [Curve])
              -> FrozenPath -> FrozenPath -> FrozenPath
 onBeziers op p' q' = fromBeziers $ op (toBeziers p') (toBeziers q')
 

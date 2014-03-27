@@ -214,7 +214,7 @@ edge source target = do
   l' <- freezePath link
   sa' <- freezePath sourceArea
   ta' <- freezePath targetArea
-  frozenPath $ (l' `cutAfter` ta') `cutBefore` sa'
+  frozenPath $ (l' `cutAfter` ta') -- `cutBefore` sa'
   return $ Incidence (avg points) (rotate90 (b-a))
 
 (.<.) :: Point -> Point -> Diagram ()

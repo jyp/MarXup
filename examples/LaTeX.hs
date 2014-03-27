@@ -28,10 +28,11 @@ autoLab s i = do
 (▸) = flip (#)
 
 testDiagram = do
-  draw $ path $ circle (Point 0 0) 5
+  -- draw $ path $ circle (Point 0 0) 5
   a   <- labelObj $ math $ "a"
   b   <- labelObj $ math $ "b"
-  a'  <- labelObj $ math $ "c"
+  a'  <- draw $ circleShape -- labelObj $ math $ "c"
+  width a' === 15
   b'  <- labelObj $ math $ "d"
   a'' <- labelObj $ math $ "."
   b'' <- labelObj $ math $ "."

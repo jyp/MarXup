@@ -14,20 +14,31 @@ infix 4 .=.
 ----------------
 -- Points 
 -- | A point in 2d space
-data Point = Point {xpart :: Expr, ypart :: Expr}
+data Point' a = Point {xpart :: a, ypart :: a}
   deriving (Eq,Show)
-           
-instance Num Point where
+
+instance Traversable Point' where
+  traverse f (Point x y) = Point <$> f x <*> f y
+
+instance Foldable Point' where
+  foldMap = foldMapDefault
+
+instance Functor Point' where
+  fmap = fmapDefault
+
+  
+type Point = Point' Expr
+instance Group a => Num (Point' a) where
   negate = neg
   (+) = (^+^)
   (-) = (^-^)
 
-instance Group Point where
+instance Group v => Group (Point' v) where
   zero = Point zero zero
   Point x1 y1 ^+^ Point x2 y2 = Point (x1 ^+^ x2) (y1 ^+^ y2)
   neg (Point x y) = Point (neg x) (neg y)
 
-instance Module Constant Point where
+instance Module Constant v => Module Constant (Point' v) where
   k *^ Point x y = Point (k *^ x) (k *^ y)
 
 -- | Orthogonal norm of a vector
