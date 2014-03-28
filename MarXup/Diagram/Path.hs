@@ -82,9 +82,10 @@ cutAfter' (b:bs) cutter = case clipOne b cutter of
   Nothing -> b:cutAfter' bs cutter
   Just b' -> [b']
 
+revBernstein (Bernsteinp n c) = Bernsteinp n (V.reverse c)
 revBeziers :: [Curve] -> [Curve]
 revBeziers = reverse . map rev
-  where rev (Bezier cx cy t0 t1) = error "rev: todo"
+  where rev (Bezier cx cy t0 t1) = (Bezier (revBernstein cx) (revBernstein cy) (1-t1) (1-t0))
 
 cutBefore' path area = revBeziers $ cutAfter' (revBeziers path) area
 
