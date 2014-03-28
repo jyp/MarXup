@@ -52,6 +52,7 @@ library
   build-depends: typography-geometry
   build-depends: polynomials-bernstein==1.*
   build-depends: vector
+  build-depends: graphviz
 
   exposed-modules: MarXup
   exposed-modules: MarXup.Tex
