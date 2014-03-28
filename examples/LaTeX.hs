@@ -9,7 +9,11 @@ import Control.Applicative
 import Data.Monoid
 import Control.Monad (unless)
 import MarXup.Diagram
+import MarXup.Diagram.Graphviz
 import Control.Lens (set)
+import Data.GraphViz
+import Data.String
+import Data.GraphViz.Attributes.Complete (Attribute(Shape,Label),Shape(..),Label(StrLabel))
 
 preamble inMP = do
   documentClass "article" []
@@ -26,6 +30,13 @@ autoLab s i = do
   autoLabel o i
 
 (▸) = flip (#)
+
+grDiag = graph Dot gr
+
+nod x = DotNode x [Shape Circle, Label $ StrLabel $ fromString x]
+edg x y = DotEdge x y []
+gr :: DotGraph String
+gr = DotGraph False True Nothing (DotStmts [] [] [nod "A", nod "B", nod "C"] [edg "A" "B", edg "A" "C"])
 
 testDiagram = do
   -- draw $ path $ circle (Point 0 0) 5
@@ -51,7 +62,7 @@ testDiagram = do
   autoLab "bang" =<< arrow b b'
   autoLab "oops" . swap =<< arrow a b
   autoLab "pif" =<< arrow a' a''
-  autoLab "paf" =<< arrow b' b''
+  autoLab "paf" =<< arrow b' b'' 
 
   draw $ do
     autoLab "equal" =<< edge a'' b''
@@ -125,6 +136,8 @@ Here is some derivation tree:
 One can also draw diagrams:
 @testDiagram
 
+
+@grDiag
 @concl<-section«Conclusion»
 
 
