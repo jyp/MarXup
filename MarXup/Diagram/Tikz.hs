@@ -94,6 +94,7 @@ localPathOptions f = local (over diaPathOptions f)
 instance Show LineTip where
   show t = case t of
     ToTip -> "to"
+    SteathTip -> "stealth"
     CircleTip -> "o"
     NoTip -> ""
     LatexTip -> "latex"
