@@ -10,20 +10,23 @@ import Data.Algebra
 -- import Data.Traversable
 -- import Data.Foldable
 import Graphics.Typography.Geometry.Bezier
+import Graphics.Typography.Geometry.Bezier as MarXup.Diagram.Point (Curve) 
 import Control.Applicative
 import Data.List (sort,transpose)
 import Data.Maybe (listToMaybe)
 import Prelude hiding (sum,mapM_,mapM,concatMap,maximum,minimum)
 import qualified Data.Vector.Unboxed as V
-import Algebra.Polynomials.Bernstein
+import Algebra.Polynomials.Bernstein (restriction,Bernsteinp(..))
 
-type FrozenPoint = Point' Constant
+type Frozen x = x Constant
+type FrozenPoint = Frozen Point'
+type FrozenPath = Frozen Path'
 
-freezePoint :: Point -> Diagram FrozenPoint
-freezePoint = traverse valueOf
+freeze :: Traversable t => t Expr -> Diagram (t Constant)
+freeze = traverse valueOf
 
-freezePath :: Path -> Diagram FrozenPath
-freezePath = traverse freezePoint
+unfreeze :: Functor t => t Constant -> t Expr
+unfreeze = fmap constant
 
 toBeziers :: FrozenPath -> [Curve]
 toBeziers EmptyPath = []
@@ -31,28 +34,15 @@ toBeziers (Path start ss) | not (null ss) &&
                             isCycle (last ss) = toBeziers' start (init ss ++ [StraightTo start])
                           | otherwise = toBeziers' start ss
 
--- filterNilCurves = filter (not . isNil)
-
--- isNil :: Curve -> Bool
--- isNil (Curve a b c d) = (maxx - minx < eps) && (maxy - miny < eps)
---   where xs = map CB.pointX pts
---         ys = map CB.pointY pts
---         minx = minimum xs
---         miny = minimum ys
---         maxx = maximum xs
---         maxy = maximum ys
---         eps = 0.001
---         pts = [a,b,c,d]
-
 curve (Point xa ya) (Point xb yb) (Point xc yc) (Point xd yd) = bezier3 xa ya xb yb xc yc xd yd
 
-toBeziers' :: FrozenPoint -> [Segment FrozenPoint] -> [Curve]
+toBeziers' :: FrozenPoint -> [Frozen Segment] -> [Curve]
 toBeziers' _ [] = []
 toBeziers' start (StraightTo next:ss) = curve start mid mid next : toBeziers' next ss
   where mid = avg [start, next]
 toBeziers' p (CurveTo c d q:ss) = curve p c d q : toBeziers' q ss
 
-fromBeziers :: [Curve] -> FrozenPath 
+fromBeziers :: [Curve] -> FrozenPath
 fromBeziers [] = EmptyPath
 fromBeziers (Bezier cx cy t0 t1:bs) = Path p (CurveTo c d q:pathSegments (fromBeziers bs))
   where [cx',cy'] = map (\c -> coefs $ restriction c t0 t1) [cx,cy]
@@ -93,7 +83,6 @@ onBeziers :: ([Curve] -> [Curve] -> [Curve])
              -> FrozenPath -> FrozenPath -> FrozenPath
 onBeziers op p' q' = fromBeziers $ op (toBeziers p') (toBeziers q')
 
-type FrozenPath = Path' FrozenPoint
 
 cutAfter :: FrozenPath -> FrozenPath -> FrozenPath
 cutAfter = onBeziers cutAfter'
@@ -101,8 +90,8 @@ cutAfter = onBeziers cutAfter'
 cutBefore :: FrozenPath -> FrozenPath -> FrozenPath
 cutBefore = onBeziers cutBefore'
 
-data Segment point = CurveTo point point point
-                   | StraightTo point
+data Segment v = CurveTo (Point' v) (Point' v) (Point' v)
+                   | StraightTo (Point' v)
                    | Cycle
                    -- | Rounded (Maybe Constant)
                    -- | HV point | VH point
@@ -114,21 +103,22 @@ instance Foldable Segment where
   foldMap = foldMapDefault
 instance Traversable Segment where
   traverse _ Cycle = pure Cycle
-  traverse f (StraightTo p) = StraightTo <$> f p
-  traverse f (CurveTo c d q) = CurveTo <$> f c <*> f d <*> f q
+  traverse f (StraightTo p) = StraightTo <$> traverse f p
+  traverse f (CurveTo c d q) = CurveTo <$> traverse f c <*> traverse f d <*> traverse f q
   
 
 -----------------
 -- Paths
 
-type Path = Path' Point
+type Path = Path' Expr
 
 data Path' a
   = EmptyPath
-  | Path {startingPoint :: a
+  | Path {startingPoint :: Point' a
          ,segments :: [Segment a]}
   deriving Show
-           
+
+-- mapPoints :: (Point' a -> Point' b) -> Path' a -> Path' b
 instance Functor Path' where
   fmap = fmapDefault
 
@@ -136,7 +126,7 @@ instance Foldable Path' where
   foldMap = foldMapDefault
 instance Traversable Path' where
   traverse _ EmptyPath = pure EmptyPath
-  traverse f (Path s ss) = Path <$> f s <*> traverse (traverse f) ss
+  traverse f (Path s ss) = Path <$> traverse f s <*> traverse (traverse f) ss
 
 
 polyline :: [Point] -> Path
@@ -150,14 +140,14 @@ polygon (x:xs) = Path x (map StraightTo xs ++ [Cycle])
 
 -- | Circle approximated with 4 cubic bezier curves
 circle :: Point -> Expr -> Path
-circle center r = (center ^+^) <$>
-                       Path (Point r 0)
-                         [CurveTo (Point r k) (Point k r) (Point 0 r),
-                          CurveTo (Point (-k) r) (Point (-r) k) (Point (-r) 0),
-                          CurveTo (Point (-r) (-k)) (Point (-k) (-r)) (Point 0 (-r)),
-                          CurveTo (Point k (-r)) (Point r (-k)) (Point r 0),
+circle center r =      Path (pt r 0)
+                         [CurveTo (pt r k) (pt k r) (pt 0 r),
+                          CurveTo (pt (-k) r) (pt (-r) k) (pt (-r) 0),
+                          CurveTo (pt (-r) (-k)) (pt (-k) (-r)) (pt 0 (-r)),
+                          CurveTo (pt k (-r)) (pt r (-k)) (pt r 0),
                           Cycle]
  where k1 :: Constant
        k1 = 4 * (sqrt 2 - 1) / 3
        k = k1 *^ r
+       pt x y = center ^+^ (Point x y)
 

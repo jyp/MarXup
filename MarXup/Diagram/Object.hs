@@ -1,8 +1,8 @@
-{-# LANGUAGE DataKinds, KindSignatures, OverloadedStrings, EmptyDataDecls, MultiParamTypeClasses, FlexibleContexts, OverlappingInstances   #-}
+{-# LANGUAGE DataKinds, KindSignatures, OverloadedStrings, EmptyDataDecls, MultiParamTypeClasses, FlexibleContexts, OverlappingInstances, TypeSynonymInstances, FlexibleInstances   #-}
 
 module MarXup.Diagram.Object where
 
-import MarXup
+-- import MarXup
 import MarXup.Tex
 import MarXup.Diagram.Tikz
 import MarXup.Diagram.Path
@@ -11,8 +11,8 @@ import MarXup.Diagram.Layout
 import MarXup.MultiRef (BoxSpec(..))
 import Control.Monad
 import Control.Applicative
-import Data.Algebra
-import Data.List (intersperse)
+-- import Data.Algebra
+-- import Data.List (intersperse)
 
 data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
   deriving Show
@@ -211,9 +211,9 @@ edge source target = do
       link = polyline points
       targetArea = objectOutline target
       sourceArea = objectOutline source
-  l' <- freezePath link
-  sa' <- freezePath sourceArea
-  ta' <- freezePath targetArea
+  l' <- freeze link
+  sa' <- freeze sourceArea
+  ta' <- freeze targetArea
   frozenPath $ (l' `cutAfter` ta') `cutBefore` sa'
   return $ Incidence (avg points) (rotate90 (b-a))
 

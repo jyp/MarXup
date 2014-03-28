@@ -44,12 +44,10 @@ instance Element Point where
   type Target Point = Diagram ()
   element (Point x y) = "(" <> element x <> "," <> element y <> ")"
 
-
-
 diaDebug msg = diaRaw $ "\n%DBG:" ++ msg ++ "\n"
 
-instance (Element point,Monoid (Target point), IsString (Target point)) => Element (Segment point) where
-  type Target (Segment point) = Target point
+instance (Element (Point' v),Monoid (Target (Point' v)), IsString (Target (Point' v))) => Element (Segment v) where
+  type Target (Segment v) = Target (Point' v)
   element (StraightTo p) = "--" <> element p
   element (CurveTo c d p) = "..controls" <> element c <> "and" <> element d <> ".." <> element p
   element Cycle = "--cycle"
@@ -63,7 +61,7 @@ instance Element Path where
   element = path
 
 path :: Path -> Dia
-path = frozenPath <=< freezePath
+path = frozenPath <=< freeze
 
 frozenPath :: FrozenPath  -> Dia
 frozenPath p  = do
