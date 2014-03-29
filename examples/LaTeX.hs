@@ -13,7 +13,7 @@ import MarXup.Diagram.Graphviz
 import Control.Lens (set)
 import Data.GraphViz
 import Data.String
-import Data.GraphViz.Attributes.Complete (Attribute(Shape,Label),Shape(..),Label(StrLabel))
+import Data.GraphViz.Attributes.Complete (Attribute(Shape,Label,Margin,Width),Shape(..),Label(StrLabel),DPoint(..))
 
 preamble inMP = do
   documentClass "article" []
@@ -33,7 +33,7 @@ autoLab s i = do
 
 grDiag = graph Dot gr
 
-nod x = DotNode x [Shape Circle, Label $ StrLabel $ fromString x]
+nod x = DotNode x [Margin (DVal 0),Width 0, Shape Circle, Label $ StrLabel $ fromString x]
 edg x y = DotEdge x y []
 gr :: DotGraph String
 gr = DotGraph False True Nothing
