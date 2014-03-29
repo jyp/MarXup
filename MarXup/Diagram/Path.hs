@@ -34,21 +34,24 @@ toBeziers (Path start ss) | not (null ss) &&
                             isCycle (last ss) = toBeziers' start (init ss ++ [StraightTo start])
                           | otherwise = toBeziers' start ss
 
-curve (Point xa ya) (Point xb yb) (Point xc yc) (Point xd yd) = bezier3 xa ya xb yb xc yc xd yd
+curveSegment (Point xa ya) (Point xb yb) (Point xc yc) (Point xd yd) = bezier3 xa ya xb yb xc yc xd yd
+lineSegment (Point xa ya) (Point xb yb) = line xa ya xb yb
 
 toBeziers' :: FrozenPoint -> [Frozen Segment] -> [Curve]
 toBeziers' _ [] = []
-toBeziers' start (StraightTo next:ss) = curve start mid mid next : toBeziers' next ss
+toBeziers' start (StraightTo next:ss) = curveSegment start mid mid next : toBeziers' next ss
   where mid = avg [start, next]
-toBeziers' p (CurveTo c d q:ss) = curve p c d q : toBeziers' q ss
+toBeziers' p (CurveTo c d q:ss) = curveSegment p c d q : toBeziers' q ss
 
 fromBeziers :: [Curve] -> FrozenPath
 fromBeziers [] = EmptyPath
-fromBeziers (Bezier cx cy t0 t1:bs) = Path p (CurveTo c d q:pathSegments (fromBeziers bs))
+fromBeziers (Bezier cx cy t0 t1:bs) = case map toPt $ V.foldr (:) [] cxy of
+      [p,c,d,q] -> Path p (CurveTo c d q:rest)
+      [p,q] -> Path p (StraightTo q:rest)
   where [cx',cy'] = map (\c -> coefs $ restriction c t0 t1) [cx,cy]
         cxy = V.zip cx' cy'
-        [p,c,d,q] = map toPt $ V.foldr (:) [] cxy
         toPt (x,y) = Point x y
+        rest = pathSegments (fromBeziers bs)
 
 pathSegments :: Path' t -> [Segment t]
 pathSegments EmptyPath = []

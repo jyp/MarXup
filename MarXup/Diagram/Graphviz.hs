@@ -17,6 +17,7 @@ import qualified Data.Text.Lazy as T
 import System.IO.Unsafe (unsafePerformIO)
 -- import Data.Traversable
 import Data.Foldable
+import Control.Lens (set)
 
 layout :: (Ord n, PrintDot n, ParseDot n) => GraphvizCommand -> DotGraph n -> Gen.DotGraph n
 layout command input = parseIt' $ unsafePerformIO $ graphvizWithHandle command input DotOutput hGetStrict 
@@ -33,6 +34,9 @@ widthA _ = Nothing
 labelA (Label l) = Just l
 labelA _ = Nothing
 
+arrowHeadA (ArrowHead a) = Just a
+arrowHeadA _ = Nothing
+
 readAttr :: Monad m => (Attribute -> Maybe a) -> [Attribute] -> (a -> m ()) -> m ()
 readAttr f as k = readAttr' f as k (return ())
 
@@ -48,22 +52,33 @@ pt' (G.Point x y _z _forced) = D.Point x y
 pt = unfreeze . pt'
 
 -- diaSpline [w,x,y,z] = Path (pt w) [CurveTo (pt x) (pt y) (pt z)]
-diaSpline [w,x,y,z] = [curve w x y z]
+diaSpline [w,x,y,z] = [curveSegment w x y z]
+-- ToTip | CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
+tipTop def (AType [(_,NoArrow)]) = NoTip
+tipTop def (AType [(_,Normal)]) = ToTip
+tipTop def (AType [(_,Vee)]) = LatexTip
+tipTop def _ = def
 
 graphToDiagram :: Gen.DotGraph n -> Dia
 graphToDiagram (Gen.DotGraph _strict _directed _grIdent stmts) = do
   forM_ stmts $ \ stmt -> case stmt of
     (Gen.DE (DotEdge _from _to attrs)) -> do
       diaRaw $ "%Edge: " ++ show attrs ++ "\n"
+      let toTip = readAttr' arrowHeadA attrs (tipTop ToTip) ToTip
       readAttr pos attrs $ \(SplinePos splines) ->
         forM_ splines $ \Spline{..} -> do
-          case startPoint of
-            Just p -> draw $ path $ circle (pt p) 4
-            Nothing -> return ()
-          case endPoint of
-            Just p -> draw $ path $ circle (pt p) 4
-            Nothing -> return ()
-          draw $ frozenPath $ fromBeziers $ diaSpline $ map pt' splinePoints
+          -- case startPoint of
+          --   Just p -> draw $ path $ circle (pt p) 4
+          --   Nothing -> return ()
+          let mid = diaSpline $ map pt' splinePoints
+          let beg = case (startPoint,splinePoints) of
+                (Just p,q:_) -> [lineSegment (pt' p) (pt' q)]
+                _ -> []
+          let end = case (endPoint,reverse splinePoints) of
+                (Just p,q:_) -> [lineSegment (pt' q) (pt' p)]
+                _ -> []
+          using (set endTip toTip) $
+            draw $ frozenPath $ fromBeziers (beg ++ mid ++ end)
 
     (Gen.DN (DotNode _nodeIdent attrs)) -> do
       diaRaw $ "%Node: " ++ show attrs ++ "\n"

@@ -36,7 +36,10 @@ grDiag = graph Dot gr
 nod x = DotNode x [Shape Circle, Label $ StrLabel $ fromString x]
 edg x y = DotEdge x y []
 gr :: DotGraph String
-gr = DotGraph False True Nothing (DotStmts [] [] [nod "A", nod "B", nod "C"] [edg "A" "B", edg "A" "C"])
+gr = DotGraph False True Nothing
+     (DotStmts [] []
+      [nod "A", nod "B", nod "C", nod "D"]
+      [edg "A" "B", edg "A" "C", edg "B" "D"])
 
 testDiagram = do
   -- draw $ path $ circle (Point 0 0) 5
