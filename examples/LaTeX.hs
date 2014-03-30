@@ -13,7 +13,9 @@ import MarXup.Diagram.Graphviz
 import Control.Lens (set)
 import Data.GraphViz
 import Data.String
-import Data.GraphViz.Attributes.Complete (Attribute(Shape,Label,Margin,Width),Shape(..),Label(StrLabel),DPoint(..))
+import Data.GraphViz.Attributes.Complete
+  (Attribute(RankSep,Shape,Label,Margin,Width,Len,RankDir),
+   Shape(..),Label(StrLabel),DPoint(..),RankDir(..))
 
 preamble inMP = do
   documentClass "article" []
@@ -34,12 +36,12 @@ autoLab s i = do
 grDiag = graph Dot gr
 
 nod x = DotNode x [Margin (DVal 0),Width 0, Shape Circle, Label $ StrLabel $ fromString x]
-edg x y = DotEdge x y []
+edg x y z = DotEdge x y [Label $ StrLabel z, Len 0.1]
 gr :: DotGraph String
 gr = DotGraph False True Nothing
-     (DotStmts [] []
+     (DotStmts [GraphAttrs [RankSep [0.1], RankDir FromLeft]] []
       [nod "A", nod "B", nod "C", nod "D"]
-      [edg "A" "B", edg "A" "C", edg "B" "D"])
+      [edg "A" "B" "1", edg "A" "C" "1", edg "B" "D" "1"])
 
 testDiagram = do
   -- draw $ path $ circle (Point 0 0) 5
@@ -139,6 +141,9 @@ Here is some derivation tree:
 One can also draw diagrams:
 @testDiagram
 
+@section«Graphviz»
+
+There is partial, rudimentary support for layout of graphs using graphviz.
 
 @grDiag
 @concl<-section«Conclusion»

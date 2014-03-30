@@ -25,6 +25,9 @@ layout command input = parseIt' $ unsafePerformIO $ graphvizWithHandle command i
 pos (Pos p) = Just p
 pos _= Nothing
 
+lpos (LPos p) = Just p
+lpos _= Nothing
+
 shapeA (Shape s) = Just s
 shapeA _ = Nothing
 
@@ -51,13 +54,19 @@ graph cmd gr = graphToDiagram $ layout cmd gr
 pt' (G.Point x y _z _forced) = D.Point x y
 pt = unfreeze . pt'
 
--- diaSpline [w,x,y,z] = Path (pt w) [CurveTo (pt x) (pt y) (pt z)]
-diaSpline [w,x,y,z] = [curveSegment w x y z]
+diaSpline (w:x:y:z:rest) = curveSegment w x y z:diaSpline (z:rest)
+-- diaSpline [w,x,y,z] = [curveSegment w x y z]
+diaSpline _ = []
+
 -- ToTip | CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
 tipTop def (AType [(_,NoArrow)]) = NoTip
 tipTop def (AType [(_,Normal)]) = ToTip
 tipTop def (AType [(_,Vee)]) = LatexTip
 tipTop def _ = def
+
+renderLab l p = do
+              l' <- labelObj $ tex $ T.unpack $ l
+              l' # D.Center .=. pt p
 
 graphToDiagram :: Gen.DotGraph n -> Dia
 graphToDiagram (Gen.DotGraph _strict _directed _grIdent stmts) = do
@@ -65,6 +74,9 @@ graphToDiagram (Gen.DotGraph _strict _directed _grIdent stmts) = do
     (Gen.DE (DotEdge _from _to attrs)) -> do
       diaRaw $ "%Edge: " ++ show attrs ++ "\n"
       let toTip = readAttr' arrowHeadA attrs (tipTop ToTip) ToTip
+      readAttr labelA attrs $ \(StrLabel l) ->
+        readAttr lpos attrs $ \p -> 
+        renderLab l p
       readAttr pos attrs $ \(SplinePos splines) ->
         forM_ splines $ \Spline{..} -> do
           -- case startPoint of
@@ -85,9 +97,7 @@ graphToDiagram (Gen.DotGraph _strict _directed _grIdent stmts) = do
       readAttr pos   attrs $ \(PointPos p) -> do
         readAttr labelA attrs $ \l -> do
           case l of
-            StrLabel l -> do
-              l' <- labelObj $ tex $ T.unpack $ l
-              l' # D.Center .=. pt p
+            StrLabel l -> renderLab l p
         readAttr widthA attrs $ \w ->
          readAttr shapeA attrs $ \s ->
           case s of
