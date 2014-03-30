@@ -41,7 +41,10 @@ gr :: DotGraph String
 gr = DotGraph False True Nothing
      (DotStmts [GraphAttrs [RankSep [0.1], RankDir FromLeft]] []
       [nod "A", nod "B", nod "C", nod "D"]
-      [edg "A" "B" "1", edg "A" "C" "1", edg "B" "D" "1"])
+      [edg "A" "B" "1"
+      ,edg "A" "C" "2"
+      ,edg "B" "D" "3"
+      ,edg "D" "A" "4"])
 
 testDiagram = do
   -- draw $ path $ circle (Point 0 0) 5
@@ -146,11 +149,10 @@ One can also draw diagrams:
 There is partial, rudimentary support for layout of graphs using graphviz.
 
 @grDiag
+
 @concl<-section«Conclusion»
 
-
-
-Mar@math«@cmd0"chi"»up is awesome.
+Mar@math«@cmd0"chi"»up is awesome :p .
 
 »
 

@@ -55,7 +55,6 @@ pt' (G.Point x y _z _forced) = D.Point x y
 pt = unfreeze . pt'
 
 diaSpline (w:x:y:z:rest) = curveSegment w x y z:diaSpline (z:rest)
--- diaSpline [w,x,y,z] = [curveSegment w x y z]
 diaSpline _ = []
 
 -- ToTip | CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
@@ -65,8 +64,8 @@ tipTop def (AType [(_,Vee)]) = LatexTip
 tipTop def _ = def
 
 renderLab l p = do
-              l' <- labelObj $ tex $ T.unpack $ l
-              l' # D.Center .=. pt p
+  l' <- labelObj $ tex $ T.unpack $ l
+  l' # D.Center .=. pt p
 
 graphToDiagram :: Gen.DotGraph n -> Dia
 graphToDiagram (Gen.DotGraph _strict _directed _grIdent stmts) = do
@@ -79,9 +78,6 @@ graphToDiagram (Gen.DotGraph _strict _directed _grIdent stmts) = do
         renderLab l p
       readAttr pos attrs $ \(SplinePos splines) ->
         forM_ splines $ \Spline{..} -> do
-          -- case startPoint of
-          --   Just p -> draw $ path $ circle (pt p) 4
-          --   Nothing -> return ()
           let mid = diaSpline $ map pt' splinePoints
           let beg = case (startPoint,splinePoints) of
                 (Just p,q:_) -> [lineSegment (pt' p) (pt' q)]
