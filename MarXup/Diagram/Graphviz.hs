@@ -59,8 +59,9 @@ diaSpline _ = []
 
 -- ToTip | CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
 tipTop def (AType [(_,NoArrow)]) = NoTip
-tipTop def (AType [(_,Normal)]) = ToTip
-tipTop def (AType [(_,Vee)]) = LatexTip
+tipTop def (AType [(_,Normal)]) = LatexTip
+tipTop def (AType [(_,DotArrow)]) = CircleTip
+tipTop def (AType [(_,Vee)]) = StealthTip
 tipTop def _ = def
 
 renderLab l p = do
