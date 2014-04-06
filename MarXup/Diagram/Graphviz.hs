@@ -19,7 +19,10 @@ import System.IO.Unsafe (unsafePerformIO)
 import Data.Foldable
 import Control.Lens (set)
 
-layout :: (Ord n, PrintDot n, ParseDot n) => GraphvizCommand -> DotGraph n -> Gen.DotGraph n
+graph :: (PrintDotRepr g n, ParseDot n, PrintDot n) => GraphvizCommand -> g n -> Dia
+graph cmd gr = graphToDiagram $ layout cmd gr
+
+layout :: (PrintDotRepr g n, ParseDot n, PrintDot n) => GraphvizCommand -> g n -> Gen.DotGraph n
 layout command input = parseIt' $ unsafePerformIO $ graphvizWithHandle command input DotOutput hGetStrict 
 
 pos (Pos p) = Just p
@@ -48,8 +51,6 @@ readAttr' f as k1 k2 = case [x | Just x <- map f as] of
   (x:_) -> k1 x
   _ -> k2
 
-graph :: (Ord n, PrintDot n, ParseDot n, Show n) => GraphvizCommand -> DotGraph n -> Dia
-graph cmd gr = graphToDiagram $ layout cmd gr
 
 pt' (G.Point x y _z _forced) = D.Point x y
 pt = unfreeze . pt'
