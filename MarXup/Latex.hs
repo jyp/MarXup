@@ -6,6 +6,7 @@ import Control.Monad (forM_)
 import MarXup.Tex
 import Data.List (intersperse,groupBy,elemIndex,nub)
 import Data.Monoid
+import Control.Applicative
 import Data.Function (on)
 
 
@@ -24,7 +25,7 @@ title :: TeX -> TeX
 title = cmd "title"
 
 
-data ClassFile = Plain | LNCS | SIGPlan | IEEE | Beamer
+data ClassFile = Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
   deriving Eq
 type AuthorInfoStyle = ClassFile
 
@@ -44,12 +45,21 @@ authorinfo SIGPlan as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((Autho
         emails = mconcat $ intersperse (cmd0 "and") $ map (textual . authorEmail) g
     cmdn "authorinfo" [mconcat $ intersperse (cmd0 "and") $ map textual names, textual institution, emails]
     return ()
+authorinfo EPTCS as = mconcat $ intersperse and' $
+  flip map (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
+    cmd "author" $ do
+      mconcat $ intersperse dquad $ map (textual . authorName) g
+      cmd "institute" $ textual institution
+      cmd "email" $ mconcat $ intersperse dquad $ map (textual . authorEmail) g
+    return ()
+  where dquad = cmd0 "quad" <> cmd0 "quad"
+        and' = cmd0 "and"
 authorinfo IEEE as = cmd "author" $ do
   cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace "1cm") $ map (textual . authorName) as
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
   cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
   where (AuthorInfo {authorInst = inst}:_) = as
-authorinfo _ {- Plain, Beamer -} as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
+authorinfo _ {- Plain, EPTCS, Beamer -} as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
   where oneauthor (AuthorInfo name _ institution) = textual name <> newline <> textual institution
 
 keywords :: ClassFile -> [String] -> TeX
@@ -60,6 +70,7 @@ keywords IEEE ks = env "IEEEkeywords" $ do
 keywords SIGPlan ks = do
   cmd0 "keywords"
   mconcat $ intersperse ", " $ map textual ks
+keywords _ _ = return ()
 
 
 newline = backslash <> backslash
