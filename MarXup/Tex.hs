@@ -31,7 +31,7 @@ escape '\\' = "\\ensuremath{\\backslash{}}"
 escape '~' = "\\ensuremath{\\sim{}}"
 escape '<' = "\\ensuremath{<}"
 escape '>' = "\\ensuremath{>}"
-escape c | c `elem` "^_{}&$%" = '\\':c:[]
+escape c | c `elem` "#^_{}&$%" = '\\':c:[]
 escape c = [c]
 
 instance Element (Tex a) where
