@@ -11,7 +11,10 @@ import Control.Monad (unless)
 
 instance Element Math where
   type Target Math = TeX
-  element = cmd "ensuremath" . mRender 0
+  element = inline
+
+inline = cmd "ensuremath" . mRender 0
+display = cmd "displaymath" . mRender 0
 
 data Math = BinOp Int (TeX -> TeX -> TeX) Int Int Math Math
           | UnOp Int (TeX -> TeX) Int Math
@@ -32,10 +35,15 @@ preop prec op = UnOp prec (\x -> x <> op) prec
 outop left right = UnOp 100 (parenthesize left right) 0
 fct x = UnOp 6 (x <>) 7
 
+--------------
+-- Operators
+
+(.=.) = binop 0 "="
+
 instance Num Math where
   (+) = binop 1 "+"
   (-) = binop 1 "-"
-  (*) = binop 2 "*"
+  (*) = binop 2 ""
   abs = outop (cmd0 "mid") (cmd0 "mid")
   signum = preop 10 $ cmd0 "delta"
   fromInteger x = Con $ textual $ show x
@@ -60,12 +68,11 @@ instance Floating Math where
     asinh = fct (cmd "mathnormal" "asinh")
     acosh = fct (cmd "mathnormal" "acosh")
     atanh = fct (cmd "mathnormal" "atanh")
-    (**) = BinOp 5 (\x y  -> braces x <> tex "^" <> braces y) 5 6
+    (**) = BinOp 5 (^^^) 5 6
 
 ceiling, floor :: Math -> Math
 ceiling = outop "⌈" "⌉"
 floor = outop "⌊" "⌋"
-
 
 frac x y = cmdn_ "frac" [x,y]
 
@@ -129,12 +136,6 @@ proposition = deflike "Prop." "proposition"
 -- Other stuff
 oxford :: Tex a -> Tex a
 oxford = bigParenthesize (textual "⟦") (textual "⟧")
-
-
-(.=.) = binop 0 "="
-
-display :: Math -> TeX
-display = displayMath . element
 
 multiline' body = env "multline*" $ mkrows body
 

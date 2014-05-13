@@ -120,6 +120,16 @@ itemize = env "itemize"
 ------------------------
 -- Various environments
 
+tabular :: [String] -> String -> [[TeX]] -> TeX
+tabular opts format bod = math $ do
+  env' "tabular" opts $ do
+    braces (tex format)
+    mkrows (map mkcols bod)
+  return ()
+
+center ::  Tex a -> Tex a
+center = env "center"
+
 figure_ :: TeX -> TeX -> Tex SortedLabel
 figure_ caption body = env "figure*" $ do
   body
@@ -172,6 +182,7 @@ scalebox factor x = do
 
 ----------
 -- Math
+-- TODO: retire this; use the Math module.
 
 align  = env "align*" . mkrows . map mkcols
 
@@ -195,8 +206,9 @@ math = cmd "ensuremath"
 mbox = cmd "mbox"
 
 displayMath = env "displaymath"
-  -- tex "\\[" *> body <* tex "\\]"
 
+-----------
+-- Parens 
 paren,brack,brac,bigBrac,bigParen :: Tex a -> Tex a
 paren = parenthesize (tex "(") (tex ")")
 brack = parenthesize (tex "[") (tex "]")
