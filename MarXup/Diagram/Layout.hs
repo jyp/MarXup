@@ -27,6 +27,7 @@ type Constant = Double
 -- | Expressions are linear functions of the variables
 type Expr = LinExpr Var Constant
 
+newtype Decoration = Decoration String
 data LineTip = ToTip | CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
 type Color = String
 data LineCap = ButtCap | RectCap | RoundCap
@@ -41,6 +42,7 @@ data PathOptions = PathOptions
                      ,_lineCap   :: LineCap
                      ,_lineJoin  :: LineJoin
                      ,_dashPattern :: DashPattern
+                     ,_decoration :: Decoration
                      }
 $(makeLenses ''PathOptions)
 
@@ -60,6 +62,7 @@ defaultPathOptions = PathOptions
   ,_lineCap   = ButtCap
   ,_lineJoin  = MiterJoin
   ,_dashPattern = []
+  ,_decoration = Decoration ""
   }
 
 newtype Diagram a = Dia (RWST Env () (Var,LPState) Multi a)

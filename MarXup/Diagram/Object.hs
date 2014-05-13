@@ -129,7 +129,6 @@ hrule = do
   height o === 0
   return o
 
-
 height o = ypart (o # N - o # S)
 width o = xpart (o # E - o # W)
 ascent o = ypart (o # N - o # Base)

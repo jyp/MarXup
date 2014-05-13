@@ -132,6 +132,9 @@ draw = stroke "black"
 
 noOutline = set drawColor Nothing
 outline color = set drawColor (Just color)
+fill color = set fillColor (Just color)
+
+zigzagDecoration = set decoration (Decoration "zigzag")
 
 instance Element PathOptions where
   type Target PathOptions = String
@@ -149,6 +152,9 @@ instance Element PathOptions where
                           BevelJoin -> "bevel"
                           MiterJoin -> "miter") <> ","
     <> "dash pattern=" <> showDashPat _dashPattern
+    <> (case _decoration of
+           Decoration [] -> ""
+           Decoration d -> ",decorate,decoration=" ++ d)
     <> "]"
     where col attr = maybe "" (\c -> attr <> "=" <> c <> ",")
 
