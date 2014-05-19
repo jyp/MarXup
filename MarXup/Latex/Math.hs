@@ -13,22 +13,28 @@ instance Element Math where
   type Target Math = TeX
   element = inline
 
-inline = cmd "ensuremath" . mRender 0
-display = cmd "displaymath" . mRender 0
+inline x = " " <> (cmd "ensuremath" . mRender 0 $ x) <> " "
+-- display = cmd "displaymath" . mRender 0
+display x = tex "$$" <> mRender 0 x <> tex "$$"
 
 data Math = BinOp Int (TeX -> TeX -> TeX) Int Int Math Math
           | UnOp Int (TeX -> TeX) Int Math
           | Con TeX
+          | Math (Int -> TeX)
           | Invisible (TeX -> TeX) Math
 
 parp p p' = if p' < p then bigParen else id
 
 mRender :: Int -> Math -> TeX
 mRender _ (Con x) = x
+mRender p (Math x) = x p
 mRender p (BinOp p' f pl pr l r) = parp p p' $ f (mRender pl l) (mRender pr r)
 mRender p (UnOp p' f px x) = parp p p' $ f (mRender px x)
 mRender p (Invisible f x) = f $ mRender p x
 
+ternaryOp :: Int -> (TeX -> TeX -> TeX -> TeX) -> Int -> Int -> Int -> Math -> Math -> Math -> Math
+ternaryOp p' f px py pz x y z = Math $ \p -> parp p p' $ f (mRender px x)(mRender py y)(mRender pz z)
+  
 binop :: Int -> TeX -> Math -> Math -> Math
 binop prec op = BinOp prec (\x y -> x <> op <> y) prec prec
 preop prec op = UnOp prec (\x -> x <> op) prec
@@ -38,7 +44,7 @@ fct x = UnOp 6 (x <>) 7
 --------------
 -- Operators
 
-(.=.) = binop 0 "="
+(=:) = binop 0 "="
 
 instance Num Math where
   (+) = binop 1 "+"
@@ -80,6 +86,7 @@ centerVertically = math . cmd "vcenter" . cmd "hbox"
 
 qedhere = cmd0 "qedhere"
 
+
 x ^^^ y = braces x <> tex "^" <> braces y
 
 -- Envs
@@ -95,11 +102,12 @@ mathpreamble sty = do
   usepackage "stmaryrd" [] -- has ⟦ and ⟧
   usepackage "mathpartir" [] -- mathpar environment
 
-  unless (sty == LNCS || sty == Beamer) $ newtheorem "theorem" "Theorem"
-  unless (sty == LNCS || sty == Beamer) $ newtheorem "corollary" "Corollary"
-  unless (sty == LNCS || sty == Beamer) $ newtheorem "lemma" "Lemma"
-  unless (sty == LNCS || sty == Beamer) $ newtheorem "definition" "Definition"
-  unless (sty == LNCS || sty == Beamer) $ newtheorem "proposition" "Proposition"
+  unless (sty == LNCS || sty == Beamer) $ do
+    newtheorem "theorem" "Theorem"
+    newtheorem "corollary" "Corollary"
+    newtheorem "lemma" "Lemma"
+    newtheorem "definition" "Definition"
+    newtheorem "proposition" "Proposition"
 
 mathpar :: [[TeX]] -> TeX
 mathpar = env "mathpar" . mkrows . map mk . filter (not . null)
