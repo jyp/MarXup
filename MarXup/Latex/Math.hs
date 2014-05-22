@@ -1,6 +1,5 @@
-{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings #-}
 module MarXup.Latex.Math where
-
 import Control.Applicative
 import MarXup.Latex
 import MarXup.Tex
@@ -9,89 +8,35 @@ import Data.Monoid
 import Data.Ratio
 import Control.Monad (unless)
 
-instance Element Math where
-  type Target Math = TeX
-  element = inline
+align  = env "align*" . mkrows . map mkcols
 
-inline x = " " <> (cmd "ensuremath" . mRender 0 $ x) <> " "
--- display = cmd "displaymath" . mRender 0
-display x = tex "$$" <> mRender 0 x <> tex "$$"
+array :: [String] -> String -> [[TeX]] -> TeX
+array opts format bod = ensureMath $ do
+  env' "array" opts $ do
+    braces (tex format)
+    mkrows (map mkcols bod)
+  return ()
 
-data Math = BinOp Int (TeX -> TeX -> TeX) Int Int Math Math
-          | UnOp Int (TeX -> TeX) Int Math
-          | Con TeX
-          | Math (Int -> TeX)
-          | Invisible (TeX -> TeX) Math
+-- | A block
+block :: [TeX] -> TeX
+block  bod = do
+  env "array" $ do
+    braces (tex "l")
+    mkrows $ bod
+  return ()
 
-parp p p' = if p' < p then bigParen else id
+displayMath,ensureMath,mbox :: Tex a -> Tex a
+ensureMath = cmd "ensuremath"
+mbox = cmd "mbox"
+fbox :: TeX -> TeX
+fbox = cmd "fbox"
+superscript y = tex "^" <> braces y
+subscript x = tex "_" <> braces x
 
-mRender :: Int -> Math -> TeX
-mRender _ (Con x) = x
-mRender p (Math x) = x p
-mRender p (BinOp p' f pl pr l r) = parp p p' $ f (mRender pl l) (mRender pr r)
-mRender p (UnOp p' f px x) = parp p p' $ f (mRender px x)
-mRender p (Invisible f x) = f $ mRender p x
+displayMath = env "displaymath"
 
-ternaryOp :: Int -> (TeX -> TeX -> TeX -> TeX) -> Int -> Int -> Int -> Math -> Math -> Math -> Math
-ternaryOp p' f px py pz x y z = Math $ \p -> parp p p' $ f (mRender px x)(mRender py y)(mRender pz z)
-  
-binop :: Int -> TeX -> Math -> Math -> Math
-binop prec op = BinOp prec (\x y -> x <> op <> y) prec prec
-preop prec op = UnOp prec (\x -> x <> op) prec
-outop left right = UnOp 100 (parenthesize left right) 0
-fct x = UnOp 6 (x <>) 7
-
---------------
--- Operators
-
-(=:) = binop 0 "="
-
-instance Num Math where
-  (+) = binop 1 "+"
-  (-) = binop 1 "-"
-  (*) = binop 2 ""
-  abs = outop (cmd0 "mid") (cmd0 "mid")
-  signum = preop 10 $ cmd0 "delta"
-  fromInteger x = Con $ textual $ show x
-  negate = preop 1  "-"
-
-instance Fractional Math where
-    (/) = BinOp 10 (\a b -> cmdn_ "frac" [a,b]) 0 0
-    fromRational r = fromInteger (numerator r) / fromInteger (denominator r)
-
-instance Floating Math where
-    pi = Con $ cmd0 "pi"
-    exp = UnOp 20 (\x -> tex "e^" <> braces x) 0
-    sqrt = UnOp 10 (cmd "sqrt") 0
-    log = fct (cmd "mathnormal" "log")
-    sin = fct (cmd "mathnormal" "sin")
-    cos = fct (cmd "mathnormal" "cos")
-    asin = fct (cmd "mathnormal" "asin")
-    acos = fct (cmd "mathnormal" "acos")
-    atan = fct (cmd "mathnormal" "atan")
-    sinh = fct (cmd "mathnormal" "sinh")
-    cosh = fct (cmd "mathnormal" "cosh")
-    asinh = fct (cmd "mathnormal" "asinh")
-    acosh = fct (cmd "mathnormal" "acosh")
-    atanh = fct (cmd "mathnormal" "atanh")
-    (**) = BinOp 5 (^^^) 5 6
-
-ceiling, floor :: Math -> Math
-ceiling = outop "⌈" "⌉"
-floor = outop "⌊" "⌋"
-
-frac x y = cmdn_ "frac" [x,y]
-
-centerVertically = math . cmd "vcenter" . cmd "hbox"
-
-qedhere = cmd0 "qedhere"
-
-
-x ^^^ y = braces x <> tex "^" <> braces y
-
--- Envs
-
-
+mathsf :: Tex a -> Tex a
+mathsf = cmd "mathsf"
 
 mathpreamble :: ClassFile -> TeX
 mathpreamble sty = do
@@ -113,7 +58,7 @@ mathpar :: [[TeX]] -> TeX
 mathpar = env "mathpar" . mkrows . map mk . filter (not . null)
  where mk = foldr1 (\x y -> x <> cmd0 "and" <> y)
 
-mathbox = mbox . math
+mathbox = mbox . ensureMath
 
 newtheorem :: String -> TeX -> TeX
 newtheorem ident txt = cmd "newtheorem" (tex ident) >> braces txt
@@ -133,9 +78,6 @@ theorem,lemma ::  TeX -> TeX -> TeX -> Tex SortedLabel
 theorem = thmlike "Thm." "theorem"
 lemma = thmlike "Lem." "lemma"
 
-text :: TeX -> Math
-text = Con . cmd "text"
-
 definition,corollary :: TeX -> TeX -> Tex SortedLabel
 definition = deflike "Def." "definition"
 corollary = deflike "Cor." "corollary"
@@ -147,6 +89,8 @@ oxford = bigParenthesize (textual "⟦") (textual "⟧")
 
 multiline' body = env "multline*" $ mkrows body
 
-space = tex "\\:"
+frac x y = cmdn_ "frac" [x,y]
 
-mkIf str = tex "\\newif" <> tex ("\\if" ++ str)
+centerVertically = ensureMath . cmd "vcenter" . cmd "hbox"
+
+qedhere = cmd0 "qedhere"

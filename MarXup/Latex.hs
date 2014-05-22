@@ -121,7 +121,7 @@ itemize = env "itemize"
 -- Various environments
 
 tabular :: [String] -> String -> [[TeX]] -> TeX
-tabular opts format bod = math $ do
+tabular opts format bod = do
   env' "tabular" opts $ do
     braces (tex format)
     mkrows (map mkcols bod)
@@ -172,6 +172,10 @@ smallcaps x = braces (cmd0 "sc" >> x)
 italic :: Tex a -> Tex a
 italic = cmd "textit"
 
+teletype :: Tex a -> Tex a
+teletype = cmd "texttt"
+
+
 -------------------------
 -- Scaling and rotating
 
@@ -180,35 +184,11 @@ scalebox factor x = do
   cmd "scalebox" $ tex $ show factor
   braces x
 
-----------
--- Math
--- TODO: retire this; use the Math module.
-
-align  = env "align*" . mkrows . map mkcols
-
-array :: [String] -> String -> [[TeX]] -> TeX
-array opts format bod = math $ do
-  env' "array" opts $ do
-    braces (tex format)
-    mkrows (map mkcols bod)
-  return ()
-
--- | A block
-block :: [TeX] -> TeX
-block  bod = do
-  env "array" $ do
-    braces (tex "l")
-    mkrows $ bod
-  return ()
-
-displayMath,math,mbox :: Tex a -> Tex a
-math = cmd "ensuremath"
-mbox = cmd "mbox"
-
-displayMath = env "displaymath"
-
 -----------
--- Parens 
+-- Parens
+qu :: TeX -> TeX
+qu x = tex "``" <> x <> tex "''"
+
 paren,brack,brac,bigBrac,bigParen :: Tex a -> Tex a
 paren = parenthesize (tex "(") (tex ")")
 brack = parenthesize (tex "[") (tex "]")
@@ -228,9 +208,6 @@ parenthesize l r bod = do
   x <- bod
   r
   return x
-
-mathsf :: Tex a -> Tex a
-mathsf = cmd "mathsf"
 
 inferrule :: [TeX] -> TeX -> TeX
 inferrule xs y = cmdn "inferrule" [mkrows xs,y] >> return ()

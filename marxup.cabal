@@ -59,6 +59,7 @@ library
   exposed-modules: MarXup.Tex
   exposed-modules: MarXup.Latex
   exposed-modules: MarXup.Latex.Math
+  exposed-modules: MarXup.Math
   exposed-modules: MarXup.Latex.Bib
   exposed-modules: MarXup.Beamer
   exposed-modules: MarXup.DerivationTrees
