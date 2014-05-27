@@ -82,6 +82,7 @@ definition,corollary :: TeX -> TeX -> Tex SortedLabel
 definition = deflike "Def." "definition"
 corollary = deflike "Cor." "corollary"
 proposition = deflike "Prop." "proposition"
+example = deflike "Ex." "example"
 
 -- Other stuff
 oxford :: Tex a -> Tex a

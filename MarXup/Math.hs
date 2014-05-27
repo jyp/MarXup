@@ -8,11 +8,15 @@ import MarXup.Tex
 import MarXup
 import Data.Monoid
 import Data.Ratio
+import Data.String
 import Control.Monad (unless)
 
 instance Element Math where
   type Target Math = TeX
   element = inline
+
+instance IsString Math where
+  fromString = Con . fromString
 
 inline x = " " <> (cmd "ensuremath" . mRender 0 $ x) <> " "
 -- display = cmd "displaymath" . mRender 0
