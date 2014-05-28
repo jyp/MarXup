@@ -21,6 +21,7 @@ mkcols = sequence_ . intersperse newcol
 vspace, hspace :: String -> TeX
 vspace = cmd "vspace" . textual
 hspace = cmd "hspace" . textual
+hfill = cmd0 "hfill"
 
 title :: TeX -> TeX
 title = cmd "title"
@@ -167,6 +168,8 @@ textSize sz x = braces (cmd0 latexSize >> x)
 sans, emph, smallcaps :: Tex a -> Tex a
 sans = cmd "textsf"
 emph = cmd "emph"
+bold :: forall a. Tex a -> Tex a
+bold = cmd "textbf"
 
 smallcaps x = braces (cmd0 "sc" >> x)
 
@@ -208,6 +211,9 @@ parenthesize l r bod = do
   x <- bod
   r
   return x
+
+inferrule' :: TeX -> [TeX] -> TeX -> TeX
+inferrule' name xs y = cmdm "inferrule" [name] [mkrows xs,y] >> return ()
 
 inferrule :: [TeX] -> TeX -> TeX
 inferrule xs y = cmdn "inferrule" [mkrows xs,y] >> return ()
