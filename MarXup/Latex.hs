@@ -2,6 +2,7 @@
 module MarXup.Latex where
 
 import MarXup
+import MarXup.Verbatim
 import Control.Monad (forM_)
 import MarXup.Tex
 import Data.List (intersperse,groupBy,elemIndex,nub)
@@ -175,7 +176,6 @@ italic = cmd "textit"
 teletype :: Tex a -> Tex a
 teletype = cmd "texttt"
 
-
 -------------------------
 -- Scaling and rotating
 
@@ -211,4 +211,19 @@ parenthesize l r bod = do
 
 inferrule :: [TeX] -> TeX -> TeX
 inferrule xs y = cmdn "inferrule" [mkrows xs,y] >> return ()
+
+----------------------
+-- Listings
+
+listing :: [String] -> Verbatim () -> TeX
+listing opt (Verbatim s _) =
+    env' "lstlisting" opt (tex s)
+
+lstinline :: [String] -> Verbatim () -> TeX
+lstinline opt (Verbatim s _) =
+    let sep = tex "$"
+        opt' = tex $ mconcat . intersperse ", "
+               $ "basicstyle=\\ttfamily" :  opt in
+    backslash <> "lstinline" <> brackets opt' <> sep <> tex s <> sep
+
 

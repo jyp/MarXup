@@ -72,5 +72,6 @@ library
   exposed-modules: MarXup.Diagram.Tikz
   exposed-modules: MarXup.Diagram.Graphviz
   exposed-modules: MarXup.MultiRef
+  exposed-modules: MarXup.Verbatim
 --  exposed-modules: MarXup.Pandoc (broken)
 
