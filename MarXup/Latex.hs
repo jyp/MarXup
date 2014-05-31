@@ -2,6 +2,7 @@
 module MarXup.Latex where
 
 import MarXup
+import MarXup.Verbatim
 import Control.Monad (forM_)
 import MarXup.Tex
 import Data.List (intersperse,groupBy,elemIndex,nub)
@@ -20,6 +21,7 @@ mkcols = sequence_ . intersperse newcol
 vspace, hspace :: String -> TeX
 vspace = cmd "vspace" . textual
 hspace = cmd "hspace" . textual
+hfill = cmd0 "hfill"
 
 title :: TeX -> TeX
 title = cmd "title"
@@ -166,6 +168,8 @@ textSize sz x = braces (cmd0 latexSize >> x)
 sans, emph, smallcaps :: Tex a -> Tex a
 sans = cmd "textsf"
 emph = cmd "emph"
+bold :: forall a. Tex a -> Tex a
+bold = cmd "textbf"
 
 smallcaps x = braces (cmd0 "sc" >> x)
 
@@ -174,7 +178,6 @@ italic = cmd "textit"
 
 teletype :: Tex a -> Tex a
 teletype = cmd "texttt"
-
 
 -------------------------
 -- Scaling and rotating
@@ -209,6 +212,24 @@ parenthesize l r bod = do
   r
   return x
 
+inferrule' :: TeX -> [TeX] -> TeX -> TeX
+inferrule' name xs y = cmdm "inferrule" [name] [mkrows xs,y] >> return ()
+
 inferrule :: [TeX] -> TeX -> TeX
 inferrule xs y = cmdn "inferrule" [mkrows xs,y] >> return ()
+
+----------------------
+-- Listings
+
+listing :: [String] -> Verbatim () -> TeX
+listing opt (Verbatim s _) =
+    env' "lstlisting" opt (tex s)
+
+lstinline :: [String] -> Verbatim () -> TeX
+lstinline opt (Verbatim s _) =
+    let sep = tex "$"
+        opt' = tex $ mconcat . intersperse ", "
+               $ "basicstyle=\\ttfamily" :  opt in
+    backslash <> "lstinline" <> brackets opt' <> sep <> tex s <> sep
+
 
