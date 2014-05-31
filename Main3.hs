@@ -18,9 +18,9 @@ import Config
 
 type Doc = DList Char
 
-text s = DL (s ++)
+text = fromList
 x <+> y =  x <> text " " <> y
-oChar c = DL (c:)
+oChar = singleton
 parens s = oChar '(' <> s <> oChar ')'
 braces s = oChar '{' <> s <> oChar '}'
 brackets s = oChar '[' <> s <> oChar ']'
@@ -31,7 +31,7 @@ hcat :: [Doc] -> Doc
 hcat = foldr (<>) mempty
 punctuate t = map (<> t)
 render :: Doc -> String
-render x = unDL x ""
+render = toList
 
 ------------------------------------------
 -- Output combinators
