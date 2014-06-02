@@ -182,7 +182,7 @@ rectangleShape l = do
   path p
   return $ Object p l
 
-traceAnchorage :: Color -> Object -> Diagram ()
+traceAnchorage :: Anchored a => Color -> a -> Diagram ()
 traceAnchorage c l = do
   stroke c $ path $ polygon (map (l #) [NW,NE,SE,SW])
   -- TODO: draw the baseline, etc.
@@ -191,6 +191,7 @@ traceAnchorage c l = do
 texBox :: TeX -> Diagram Anchorage
 texBox t = do
   l <- box
+  -- traceAnchorage "red" l
   BoxSpec wid h desc <- drawText (l # NW) t
 
   width   l === constant wid
