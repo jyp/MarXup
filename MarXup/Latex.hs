@@ -165,10 +165,9 @@ textSize sz x = braces (cmd0 latexSize >> x)
 
 
 
-sans, emph, smallcaps :: Tex a -> Tex a
+bold,sans, emph, smallcaps :: Tex a -> Tex a
 sans = cmd "textsf"
 emph = cmd "emph"
-bold :: forall a. Tex a -> Tex a
 bold = cmd "textbf"
 
 smallcaps x = braces (cmd0 "sc" >> x)

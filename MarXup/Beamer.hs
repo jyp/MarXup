@@ -4,6 +4,8 @@ module MarXup.Beamer where
 import Control.Applicative
 import Data.Monoid
 import MarXup.Tex
+import MarXup.Latex (itemize,enumerate,item,color)
+import Data.List (intercalate)
 
 usetheme = cmd "usetheme" . tex
 
