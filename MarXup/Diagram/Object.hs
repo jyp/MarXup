@@ -13,6 +13,7 @@ import Control.Monad
 import Control.Applicative
 -- import Data.Algebra
 -- import Data.List (intersperse)
+import Control.Lens (set)
 
 data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
   deriving Show
@@ -238,4 +239,28 @@ autoLabel lab (Incidence pt norm) = do
 -- | @labeledEdge label source target@
 labeledEdge :: Object -> Object -> Box -> Diagram ()
 labeledEdge source target lab = autoLabel lab =<< edge source target
+
+
+
+-------------------
+-- Even higher-level primitives:
+
+
+--example:      spread hdist 30 ps
+
+spread f d (x:y:xs) = do
+  f x y === d
+  spread f d (y:xs)
+spread f _ _ = return ()
+
+node lab = do
+  l <- extend 4 <$> texBox lab
+  c <- draw $ circleShape
+  l `fitsIn` c
+  l # Center .=. c # Center
+  return c
+
+arrow :: Object -> Object -> Diagram Incidence
+arrow src trg = using (outline "black" . set endTip LatexTip) $ do
+  edge src trg
 
