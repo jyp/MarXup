@@ -89,6 +89,7 @@ ldots = cmd "ldots" (return ())
 section,subsection,paragraph :: TeX -> Tex SortedLabel
 section s = cmd "section" s >> label "Sec."
 subsection s = cmd "subsection" s >> label "Sec."
+subsubsection s = cmd "subsubsection" s >> label "Sec."
 paragraph s = cmd "paragraph" s >> label "Sec."
 
 color :: String -> Tex a -> Tex a
