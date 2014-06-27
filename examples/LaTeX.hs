@@ -3,6 +3,7 @@
 import MarXup
 import MarXup.Latex
 import MarXup.Latex.Math
+import MarXup.Math
 import MarXup.Tex
 import MarXup.DerivationTrees
 import Control.Applicative
@@ -23,9 +24,9 @@ preamble inMP = do
   unless inMP $ usepackage "tikz" []
   usepackage "graphicx" []
 
-arrow :: Object -> Object -> Diagram Incidence
-arrow src trg = using (outline "black" . set endTip ToTip) $ do
-  edge src trg
+-- arrow :: Object -> Object -> Diagram Incidence
+-- arrow src trg = using (outline "black" . set endTip ToTip) $ do
+--   edge src trg
 
 autoLab s i = do
   o <- labelObj s
@@ -48,15 +49,15 @@ gr = DotGraph False True Nothing
 
 testDiagram = do
   -- draw $ path $ circle (Point 0 0) 5
-  a   <- labelObj $ math $ "a"
-  b   <- labelObj $ math $ "b"
-  a'  <- draw $ circleShape -- labelObj $ math $ "c"
+  a   <- labelObj $ ensureMath $ "a"
+  b   <- labelObj $ ensureMath $ "b"
+  a'  <- draw $ circleShape -- labelObj $ ensureMath $ "c"
   width a' === 15
-  b'  <- labelObj $ math $ "d"
-  a'' <- labelObj $ math $ "."
-  b'' <- labelObj $ math $ "."
+  b'  <- labelObj $ ensureMath $ "d"
+  a'' <- labelObj $ ensureMath $ "."
+  b'' <- labelObj $ ensureMath $ "."
 
-  -- c <- texObj $ math $ "c"
+  -- c <- texObj $ ensureMath $ "c"
   -- Center ▸ c === MP.center [E ▸ a'', E ▸ b''] + (20 +: 0)
 
   let width = 70
@@ -148,11 +149,11 @@ One can also draw diagrams:
 
 There is partial, rudimentary support for layout of graphs using graphviz.
 
-@grDiag
+grDiag
 
 @concl<-section«Conclusion»
 
-Mar@math«@cmd0"chi"»up is awesome :p .
+Mar@ensureMath«@cmd0"chi"»up is awesome :p .
 
 »
 
