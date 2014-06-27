@@ -197,7 +197,7 @@ texBox t = do
 
   width   l === constant wid
   descent l === constant desc
-  height  l === constant h
+  height  l === constant (h + desc)
   return l
 
 data Incidence = Incidence { incidencePoint, incidenceNormal :: Point }

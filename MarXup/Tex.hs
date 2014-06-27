@@ -9,7 +9,6 @@ import Control.Applicative
 import GHC.Exts( IsString(..) )
 import Data.List (intersperse)
 import MarXup.MultiRef
-import Graphics.DVI
 import System.Process
 import System.Directory (doesFileExist)
 
@@ -174,29 +173,24 @@ outputAlsoInBoxMode (Tex a) = Tex $ local moveInBox $ a
 
 texAlways = texInMode (const True)
 
+inBoxComputMode :: String -> TeX
 inBoxComputMode = texInMode (`elem` [OutsideBox,InsideBox])
+
 
 inBox :: Tex a -> Tex (a, BoxSpec)
 inBox x = do
-  inBoxComputMode "\\mpxshipout%\n"
+  inBoxComputMode $ "\n\\savebox{\\marxupbox}{"
   a <- outputAlsoInBoxMode x
-  inBoxComputMode "%\n\\stopmpxshipout\n"
+  inBoxComputMode $ 
+    "}"
+    ++ writeBox "wd"
+    ++ writeBox "ht"
+    ++ writeBox "dp"
+    ++ "\n"
   b <- Tex getBoxSpec
-  return (a,b)
 
-shipoutMacros :: TeX
-shipoutMacros = inBoxComputMode "\
-\  \\gdef\\mpxshipout{\\shipout\\hbox\\bgroup                              \n\
-\    \\setbox0=\\hbox\\bgroup}                                             \n\
-\  \\gdef\\stopmpxshipout{\\egroup  \\dimen0=\\ht0 \\advance\\dimen0\\dp0  \n\
-\    \\dimen1=\\ht0 \\dimen2=\\dp0                                         \n\
-\    \\setbox0=\\hbox\\bgroup                                              \n\
-\      \\box0                                                              \n\
-\      \\ifnum\\dimen0>0 \\vrule width1sp height\\dimen1 depth\\dimen2     \n\
-\      \\else \\vrule width1sp height1sp depth0sp\\relax                   \n\
-\      \\fi\\egroup                                                        \n\
-\    \\ht0=0pt \\dp0=0pt \\box0 \\egroup}                                  \n\
-\ "
+  return (a,b)
+  where writeBox l = "\\immediate\\write\\boxesfile{\\number\\"++ l ++"\\marxupbox}"
 
 renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
 renderWithBoxes bs mode (Tex t) = doc
@@ -209,27 +203,29 @@ renderTex :: (Bool -> TeX) -> TeX -> IO String
 renderTex preamble body = do
   let bxsTex = renderWithBoxes (repeat nilBoxSpec) OutsideBox (wholeDoc True)
       boxesName = "mpboxes"
-      boxesDVI = boxesName ++ ".dvi"
+      boxesTxt = boxesName ++ ".txt"
       wholeDoc inBoxMode = do
         outputAlsoInBoxMode (preamble inBoxMode)
-        shipoutMacros
+        inBoxComputMode $ "\\newwrite\\boxesfile"
         texAlways "\\begin{document}"
+        inBoxComputMode $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n \\newsavebox{\\marxupbox}"
         body
+        inBoxComputMode "\n\\immediate\\closeout\\boxesfile"
         texAlways "\\end{document}"
   writeFile (boxesName ++ ".tex") bxsTex
   system $ "latex " ++ boxesName
   boxes <- do
-    e <- doesFileExist boxesDVI
+    e <- doesFileExist boxesTxt
     if e
-      then withDVI boxesDVI (\_ _ -> return emptyFont) () getBoxInfo
+      then do
+        boxData <- map read . lines <$> readFile boxesTxt
+        return $ getBoxInfo boxData
       else return []
   putStrLn $ "Number of boxes found: " ++ show (length boxes)
   return $ renderWithBoxes boxes Regular $ (wholeDoc False)
 
-getBoxInfo :: () -> Page -> IO (Maybe ((), BoxSpec))
-getBoxInfo () (Page _ [(_,Graphics.DVI.Box objs)] _) = return (Just ((),dims))
-  where ((width,descent),Rule _ height) = last objs
-        dims = BoxSpec (scale width) (scale height) (negate $ scale descent)
-        scale x = fromIntegral x / 65536
-getBoxInfo () (Page _ objs _) = error $ "getBoxInfo oops: " ++ show objs
+getBoxInfo :: [Int] -> [BoxSpec]
+getBoxInfo [] = []
+getBoxInfo (width:height:depth:bs) = BoxSpec (scale width) (scale height) (scale depth):getBoxInfo bs
+  where scale x = fromIntegral x / 65536
 

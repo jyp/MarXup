@@ -14,9 +14,10 @@ newtype Multi a = Multi {fromMulti :: RWS InterpretMode String (References,[BoxS
 -- Basic datatype and semantics
 type Label = Int
 
--- | Size of a box, in points. boxDescent is how far the baseline is
--- from the bottom.
-data BoxSpec = BoxSpec {boxWidth, boxHeight, boxDescent :: Double}
+-- | Size of a box, in points. boxDepth is how far the baseline is
+-- from the bottom. boxHeight is how far the baseline is from the top.
+-- (These are TeX meanings)
+data BoxSpec = BoxSpec {boxWidth, boxHeight, boxDepth :: Double}
              deriving (Show)
 
 nilBoxSpec :: BoxSpec
