@@ -7,8 +7,8 @@ import "mtl" Control.Monad.RWS.Lazy
 import Control.Applicative
 import Control.Arrow (first)
 
-newtype Multi a = Multi {fromMulti :: RWS InterpretMode String (References,[BoxSpec]) a }
-  deriving (Functor, Monad, Applicative, MonadWriter String, MonadState (References,[BoxSpec]), MonadFix, MonadReader InterpretMode)
+newtype Multi a = Multi {fromMulti :: RWS () String (References,[BoxSpec]) a }
+  deriving (Functor, Monad, Applicative, MonadWriter String, MonadState (References,[BoxSpec]), MonadFix)
 
 -----------------------------------
 -- Basic datatype and semantics
@@ -23,10 +23,8 @@ data BoxSpec = BoxSpec {boxWidth, boxHeight, boxDepth :: Double}
 nilBoxSpec :: BoxSpec
 nilBoxSpec = BoxSpec 0 0 0
 
-raw :: Mode -> String -> Multi ()
-raw mode s = do
-  interpretMode <- ask
-  when (mode interpretMode) $ tell s
+raw :: String -> Multi ()
+raw s = tell s
 
 getBoxSpec :: Multi BoxSpec
 getBoxSpec = do
@@ -46,7 +44,4 @@ newLabel = do x <- fst <$> get;  modify (first (+1)); return x
 type References = Int -- how many labels have been allocated
 emptyRefs :: References
 emptyRefs = 0
-
-type Mode = InterpretMode -> Bool
-data InterpretMode = OutsideBox | InsideBox | Regular deriving Eq
 

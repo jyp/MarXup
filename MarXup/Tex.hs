@@ -12,9 +12,6 @@ import MarXup.MultiRef
 import System.Process
 import System.Directory (doesFileExist)
 
-data MPOutFormat = SVG | EPS
-  deriving (Eq,Show)
-
 newtype Tex a = Tex {fromTex :: Multi a}
   deriving (Monad, MonadFix, Applicative, Functor)
 
@@ -26,6 +23,7 @@ instance Textual Tex where
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
 
+escape :: Char -> [Char]
 escape '\\' = "\\ensuremath{\\backslash{}}"
 escape '~' = "\\ensuremath{\\sim{}}"
 escape '<' = "\\ensuremath{<}"
@@ -37,11 +35,8 @@ instance Element (Tex a) where
   type Target (Tex a) = Tex a
   element = id
 
-texInMode ::  Mode -> String ->TeX
-texInMode mode = Tex . raw mode
-
-tex :: String -> TeX
-tex = texInMode (`elem` [Regular,InsideBox])
+tex ::  String ->TeX
+tex = Tex . raw
 
 type TeX = Tex ()
 
@@ -165,53 +160,40 @@ instance Element SortedLabel where
 -----------------
 -- Generate boxes
 
-outputAlsoInBoxMode :: Tex a -> Tex a
-outputAlsoInBoxMode (Tex a) = Tex $ local moveInBox $ a
-         where moveInBox m = case m of
-                 OutsideBox -> InsideBox
-                 _ -> m
-
-texAlways = texInMode (const True)
-
-inBoxComputMode :: String -> TeX
-inBoxComputMode = texInMode (`elem` [OutsideBox,InsideBox])
 
 
 inBox :: Tex a -> Tex (a, BoxSpec)
-inBox x = do
-  inBoxComputMode $ "\n\\savebox{\\marxupbox}{"
-  a <- outputAlsoInBoxMode x
-  inBoxComputMode $ 
+inBox x = braces $ do
+  tex $ "\\savebox{\\marxupbox}{"
+  a <- x
+  tex $
     "}"
     ++ writeBox "wd"
     ++ writeBox "ht"
     ++ writeBox "dp"
-    ++ "\n"
+  tex $ "\\box\\marxupbox"
   b <- Tex getBoxSpec
 
   return (a,b)
   where writeBox l = "\\immediate\\write\\boxesfile{\\number\\"++ l ++"\\marxupbox}"
 
-renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
-renderWithBoxes bs mode (Tex t) = doc
-  where (_,_,doc) = runRWS (fromMulti $ t) mode (0,bs)
+renderWithBoxes :: [BoxSpec] -> Tex a -> String
+renderWithBoxes bs (Tex t) = doc
+  where (_,_,doc) = runRWS (fromMulti $ t) () (0,bs)
 
 renderSimple :: TeX -> String
-renderSimple = renderWithBoxes [] Regular
+renderSimple = renderWithBoxes []
   
-renderTex :: (Bool -> TeX) -> TeX -> IO String
-renderTex preamble body = do
-  let bxsTex = renderWithBoxes (repeat nilBoxSpec) OutsideBox (wholeDoc True)
+renderTex :: TeX -> IO String
+renderTex body = do
+  let bxsTex = renderWithBoxes (repeat nilBoxSpec) wholeDoc
       boxesName = "mpboxes"
       boxesTxt = boxesName ++ ".txt"
-      wholeDoc inBoxMode = do
-        outputAlsoInBoxMode (preamble inBoxMode)
-        inBoxComputMode $ "\\newwrite\\boxesfile"
-        texAlways "\\begin{document}"
-        inBoxComputMode $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n \\newsavebox{\\marxupbox}"
+      wholeDoc = do
+        tex $ "\\newwrite\\boxesfile"
+        tex $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n\\newsavebox{\\marxupbox}"
         body
-        inBoxComputMode "\n\\immediate\\closeout\\boxesfile"
-        texAlways "\\end{document}"
+        tex "\n\\immediate\\closeout\\boxesfile"
   writeFile (boxesName ++ ".tex") bxsTex
   system $ "latex " ++ boxesName
   boxes <- do
@@ -222,7 +204,7 @@ renderTex preamble body = do
         return $ getBoxInfo boxData
       else return []
   putStrLn $ "Number of boxes found: " ++ show (length boxes)
-  return $ renderWithBoxes boxes Regular $ (wholeDoc False)
+  return $ renderWithBoxes boxes $ wholeDoc
 
 getBoxInfo :: [Int] -> [BoxSpec]
 getBoxInfo [] = []

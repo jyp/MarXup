@@ -18,15 +18,12 @@ import Data.GraphViz.Attributes.Complete
   (Attribute(RankSep,Shape,Label,Margin,Width,Len,RankDir),
    Shape(..),Label(StrLabel),DPoint(..),RankDir(..))
 
-preamble inMP = do
+preamble body = do
   documentClass "article" []
   usepackage "inputenc" ["utf8x"]
-  unless inMP $ usepackage "tikz" []
+  usepackage "tikz" []
   usepackage "graphicx" []
-
--- arrow :: Object -> Object -> Diagram Incidence
--- arrow src trg = using (outline "black" . set endTip ToTip) $ do
---   edge src trg
+  env "document" body
 
 autoLab s i = do
   o <- labelObj s
@@ -105,7 +102,10 @@ b = Con "b"
 
 (≜) = binop 1 "="
 
-main = writeFile ("LaTeX.tex") =<< renderTex preamble «
+      
+main = writeFile "LaTeX.tex" =<< renderTex docu
+
+docu = preamble «
 
 @intro<-section«Intro»
 
