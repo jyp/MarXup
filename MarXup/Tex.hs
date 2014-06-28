@@ -184,30 +184,25 @@ renderWithBoxes bs (Tex t) = doc
 renderSimple :: TeX -> String
 renderSimple = renderWithBoxes []
   
-renderTex :: TeX -> IO String
-renderTex body = do
-  let bxsTex = renderWithBoxes (repeat nilBoxSpec) wholeDoc
-      boxesName = "mpboxes"
-      boxesTxt = boxesName ++ ".txt"
+renderTex :: String -> TeX -> IO ()
+renderTex fname body = do
+  let boxesTxt = fname ++ ".boxes"
+  boxes <- getBoxInfo . map read . lines <$> do
+    e <- doesFileExist boxesTxt
+    if e
+      then readFile boxesTxt
+      else return ""
+  putStrLn $ "Found " ++ show (length boxes) ++ " boxes"
+  let texSource = renderWithBoxes (boxes ++ repeat nilBoxSpec) wholeDoc
       wholeDoc = do
         tex $ "\\newwrite\\boxesfile"
         tex $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n\\newsavebox{\\marxupbox}"
         body
         tex "\n\\immediate\\closeout\\boxesfile"
-  writeFile (boxesName ++ ".tex") bxsTex
-  system $ "latex " ++ boxesName
-  boxes <- do
-    e <- doesFileExist boxesTxt
-    if e
-      then do
-        boxData <- map read . lines <$> readFile boxesTxt
-        return $ getBoxInfo boxData
-      else return []
-  putStrLn $ "Number of boxes found: " ++ show (length boxes)
-  return $ renderWithBoxes boxes $ wholeDoc
+  writeFile (fname ++ ".tex") texSource
 
 getBoxInfo :: [Int] -> [BoxSpec]
-getBoxInfo [] = []
 getBoxInfo (width:height:depth:bs) = BoxSpec (scale width) (scale height) (scale depth):getBoxInfo bs
   where scale x = fromIntegral x / 65536
+getBoxInfo _ = []
 

@@ -1,19 +1,13 @@
 
-mainTest: LaTeX.pdf
+all: LaTeX.pdf
 
-%.pdf: %.tex
-	pdflatex $<
-	pdflatex $<
-
-%.mp %.tex: %.hs
+%.pdf: %.hs
 	ghc --make $<
 	./$*
+	pdflatex $*
+	./$*
+	pdflatex $*
 
 %.hspp: %.hs
 	ghc -E $<
 
-simpleTest:
-	ghc -E Simple.hs
-	cat Simple.hspp
-	ghc --make Simple.hs
-	./Simple

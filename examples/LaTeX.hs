@@ -103,8 +103,8 @@ b = Con "b"
 (≜) = binop 1 "="
 
       
-main = writeFile "LaTeX.tex" =<< renderTex docu
-
+main = renderTex "LaTeX" docu
+       
 docu = preamble «
 
 @intro<-section«Intro»
