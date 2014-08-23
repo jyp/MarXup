@@ -43,6 +43,11 @@ texInMode mode = Tex . raw mode
 tex :: String -> TeX
 tex = texInMode (`elem` [Regular,InsideBox])
 
+texComment :: String -> TeX
+texComment s =
+  forM_ (lines s) $ \line ->
+    tex $ "% " <> line <> "\n"
+
 type TeX = Tex ()
 
 reference :: Label -> Tex ()
