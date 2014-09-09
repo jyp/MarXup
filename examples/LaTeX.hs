@@ -6,6 +6,8 @@ import MarXup.Latex.Math
 import MarXup.Math
 import MarXup.Tex
 import MarXup.DerivationTrees
+import MarXup.PrettyPrint as PP
+import MarXup.PrettyPrint.Core as PC
 import Control.Applicative
 import Data.Monoid
 import Control.Monad (unless)
@@ -14,9 +16,29 @@ import MarXup.Diagram.Graphviz
 import Control.Lens (set)
 import Data.GraphViz
 import Data.String
+import Data.Traversable
 import Data.GraphViz.Attributes.Complete
   (Attribute(RankSep,Shape,Label,Margin,Width,Len,RankDir),
    Shape(..),Label(StrLabel),DPoint(..),RankDir(..))
+
+data SExp = Atom String | SX [SExp]
+
+prettyS :: SExp -> Tex DOC
+prettyS (Atom x) = PP.text (textual x)
+prettyS (SX xs) = do
+  xs' <- traverse prettyS xs
+  parens $ PP.fill xs'
+
+expr :: TeX
+expr = do
+    d <- prettyS three
+    paragraph "1000"
+    PC.pretty 1000 d
+    paragraph "10"
+    PC.pretty 10 d
+  where
+  three = SX $ map Atom ["arstarsx","wftwfy","varstw"]
+  six = SX [ three , three , three ]
 
 preamble inMP = do
   documentClass "article" []
@@ -150,6 +172,10 @@ One can also draw diagrams:
 There is partial, rudimentary support for layout of graphs using graphviz.
 
 grDiag
+
+@section«Pretty Printer»
+
+@expr
 
 @concl<-section«Conclusion»
 

@@ -12,9 +12,6 @@ import MarXup.MultiRef
 import System.Process
 import System.Directory (doesFileExist)
 
-data MPOutFormat = SVG | EPS
-  deriving (Eq,Show)
-
 newtype Tex a = Tex {fromTex :: Multi a}
   deriving (Monad, MonadFix, Applicative, Functor)
 
@@ -38,7 +35,7 @@ instance Element (Tex a) where
   element = id
 
 texInMode ::  Mode -> String ->TeX
-texInMode mode = Tex . raw mode
+texInMode mode s = whenMode mode $ Tex $ raw s
 
 tex :: String -> TeX
 tex = texInMode (`elem` [Regular,InsideBox])
@@ -176,6 +173,10 @@ texAlways = texInMode (const True)
 inBoxComputMode :: String -> TeX
 inBoxComputMode = texInMode (`elem` [OutsideBox,InsideBox])
 
+whenMode :: Mode -> Tex () -> Tex ()
+whenMode mode act = do
+  interpretMode <- Tex ask
+  when (mode interpretMode) act
 
 inBox :: Tex a -> Tex (a, BoxSpec)
 inBox x = do
@@ -190,6 +191,23 @@ inBox x = do
   b <- Tex getBoxSpec
 
   return (a,b)
+  where writeBox l = "\\immediate\\write\\boxesfile{\\number\\"++ l ++"\\marxupbox}"
+
+
+justBox :: Tex a -> Tex BoxSpec
+justBox x = do
+  whenMode (`elem` [OutsideBox, InsideBox]) $ outputAlsoInBoxMode $ do
+    tex "\n\\savebox{\\marxupbox}{"
+    x
+    tex $ 
+      "}"
+      ++ writeBox "wd"
+      ++ writeBox "ht"
+      ++ writeBox "dp"
+      ++ "\n"
+  b <- Tex getBoxSpec
+
+  return b
   where writeBox l = "\\immediate\\write\\boxesfile{\\number\\"++ l ++"\\marxupbox}"
 
 renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String

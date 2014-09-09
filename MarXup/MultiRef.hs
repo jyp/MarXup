@@ -23,10 +23,8 @@ data BoxSpec = BoxSpec {boxWidth, boxHeight, boxDepth :: Double}
 nilBoxSpec :: BoxSpec
 nilBoxSpec = BoxSpec 0 0 0
 
-raw :: Mode -> String -> Multi ()
-raw mode s = do
-  interpretMode <- ask
-  when (mode interpretMode) $ tell s
+raw :: String -> Multi ()
+raw s = tell s
 
 getBoxSpec :: Multi BoxSpec
 getBoxSpec = do

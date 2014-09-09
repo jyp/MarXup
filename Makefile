@@ -2,6 +2,6 @@
 
 test:
 	cabal install
-	make -C examples
+	make  -B -C examples
 
 

@@ -72,5 +72,8 @@ library
   exposed-modules: MarXup.Diagram.Graphviz
   exposed-modules: MarXup.MultiRef
   exposed-modules: MarXup.Verbatim
+  exposed-modules: MarXup.PrettyPrint.Core
+  exposed-modules: MarXup.PrettyPrint
+  
 --  exposed-modules: MarXup.Pandoc (broken)
 
