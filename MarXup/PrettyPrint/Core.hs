@@ -91,7 +91,7 @@ layout d = env "tikzpicture" $ do
     forM_ (zip boxes $ computeWidths i boxes) $ \((t,box),x) -> do
         let y' = y - (mh - boxHeight box)
         tex $ "\\node[anchor=north west,inner sep=0] at (" ++ showDistance x ++ "," ++ showDistance y' ++ ")"
-        inBox $ braces $ t
+        braces $ t
         tex ";\n"
 
 pretty :: Double -> DOC -> TeX
