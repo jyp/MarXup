@@ -31,13 +31,15 @@ prettyS (SX xs) = do
 
 expr :: TeX
 expr = do
-    d <- prettyS three
+    d <- prettyS six
     paragraph "1000"
     PC.pretty 1000 d
+    paragraph "100"
+    PC.pretty 100 d
     paragraph "10"
     PC.pretty 10 d
   where
-  three = SX $ map Atom ["arstarsx","wftwfy","varstw"]
+  three = SX $ map Atom ["arstarsx","wftwfy","varstw","x","M"]
   six = SX [ three , three , three ]
 
 preamble inMP = do
@@ -156,6 +158,9 @@ The operators are overloaded to work on text as well:
 
 There is also special support for derivation trees:
 
+@section«Pretty Printer»
+@expr
+
 @section«Derivation Trees»
 
 Here is some derivation tree:
@@ -173,9 +178,6 @@ There is partial, rudimentary support for layout of graphs using graphviz.
 
 grDiag
 
-@section«Pretty Printer»
-
-@expr
 
 @concl<-section«Conclusion»
 
