@@ -6,7 +6,7 @@ import MarXup.Latex.Math
 import MarXup.Math
 import MarXup.Tex
 import MarXup.DerivationTrees
-import MarXup.PrettyPrint as PP
+import MarXup.PrettyPrint as PP hiding (width)
 import MarXup.PrettyPrint.Core as PC
 import Control.Applicative
 import Data.Monoid
@@ -23,11 +23,11 @@ import Data.GraphViz.Attributes.Complete
 
 data SExp = Atom String | SX [SExp]
 
-prettyS :: SExp -> Tex DOC
+prettyS :: SExp -> Tex Doc
 prettyS (Atom x) = PP.text (textual x)
 prettyS (SX xs) = do
   xs' <- traverse prettyS xs
-  parens $ PP.fill xs'
+  enclosure "(" ")" " " xs'
 
 expr :: TeX
 expr = do
@@ -35,7 +35,7 @@ expr = do
     paragraph "1000"
     PC.pretty 1000 d
     paragraph "100"
-    PC.pretty 100 d
+    PC.pretty 200 d
     paragraph "10"
     PC.pretty 10 d
   where
