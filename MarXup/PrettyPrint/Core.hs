@@ -124,18 +124,17 @@ layout d = env "tikzpicture" $ do
         braces $ t
         tex ";\n"
 
-pretty :: Double -> Doc -> TeX
-pretty w d = do
-  layout $ renderPretty 1 w d
+pretty :: Double -> Double -> Doc -> TeX
+pretty rfrac w d = do
+  layout $ renderPretty rfrac w d
 
-  {-
-getBoxes :: DOC -> Tex DOC
-getBoxes NIL = pure NIL
-getBoxes (d :<> e) =  (:<>) <$> getBoxes d <*> getBoxes e
-getBoxes (d :<|> e) =  (:<|>) <$> getBoxes d <*> getBoxes e
-getBoxes (TEXT (t,_)) = do
-  b <- justBox t
-  return (TEXT (t,b))
-getBoxes (NEST i d) = NEST i <$> getBoxes d
-getBoxes LINE = pure LINE
--}
+
+-- getBoxes :: Doc -> Tex Doc
+-- getBoxes Empty = pure Empty
+-- getBoxes (Cat d e) =  Cat <$> getBoxes d <*> getBoxes e
+-- getBoxes (Union d e) =  Union <$> getBoxes d <*> getBoxes e
+-- getBoxes (Tex (t,_)) = do
+--   b <- justBox t
+--   return (TEXT (t,b))
+-- getBoxes (NEST i d) = NEST i <$> getBoxes d
+-- getBoxes LINE = pure LINE
