@@ -33,11 +33,11 @@ expr :: TeX
 expr = do
     d <- prettyS six
     paragraph "1000"
-    PC.pretty 1000 d
+    PC.pretty 1 1000 d
     paragraph "100"
-    PC.pretty 200 d
+    PC.pretty 1 200 d
     paragraph "10"
-    PC.pretty 10 d
+    PC.pretty 1 10 d
   where
   three = SX $ map Atom ["arstarsx","wftwfy","varstw","x","M"]
   six = SX [ three , three , three ]
