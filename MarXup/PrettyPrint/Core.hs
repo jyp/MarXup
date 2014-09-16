@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 module MarXup.PrettyPrint.Core(Doc(..),pretty,group,flatten,space,spacing) where
 
 import Data.Monoid
@@ -62,7 +63,7 @@ fits w (SLine i x)              = True
 
 
 data Docs   = Nil
-            | Cons Double Doc Docs
+            | Cons !Double Doc Docs
 
 type Measure = Int
 merge :: [(Measure,SimpleDoc)] -> [(Measure,SimpleDoc)] -> [(Measure,SimpleDoc)]
@@ -72,7 +73,32 @@ merge (x:xs) (y:ys) = case (compare `on` fst) x y of
   LT -> x:merge xs (y:ys)
   GT -> y:merge (x:xs) ys
   EQ -> x:y:merge xs ys
-  
+
+(#) :: [a] -> (a -> b) -> [b]
+(#) = flip fmap
+
+data Token = Ln Double | Tx BoxTex
+data Process = Process {tokens :: [Token] -- in reverse order
+                       ,curCol :: !Double
+                       ,curLine :: !Int
+                       ,rest :: !Docs
+                       }
+
+processOne :: Process -> Either [Token] [Process]
+processOne (Process{..}) = case rest of
+  Nil -> Left $ reverse $ tokens
+  Cons i d ds -> case d of
+    Empty -> one $ Process{rest=ds,..}
+    Text s -> one $ Process{curCol = curCol + len s, tokens = Tx s:tokens,..}
+    Line _ -> Right $ [Process{curCol = i, curLine = curLine+1, tokens = Ln i:tokens,..}]
+    Cat x y -> one $ Process{rest = Cons i x $ Cons i y $ ds,..}
+    Nest j x -> one $ Process{rest = Cons (i+j) x ds,..}
+    Union x y -> Right $ [Process{rest = Cons i x ds,..}
+                 ,Process{rest = Cons i y ds,..}]
+    Column f -> one $ Process {rest = Cons i (f curCol) ds,..}
+    Nesting f -> one $ Process {rest = Cons i (f i) ds,..}
+  where one = processOne
+
 renderAll :: Double -> Double -> Doc -> [(Int,SimpleDoc)]
 renderAll rfrac w doc = rall 0 0 (Cons 0 doc Nil)
     where
@@ -82,13 +108,14 @@ renderAll rfrac w doc = rall 0 0 (Cons 0 doc Nil)
       -- rall :: n = indentation of current line
       --         k = current column
       --        (ie. (k >= n) && (k - n == count of inserted characters)
+      rall :: Double -> Double -> Docs -> [(Measure,SimpleDoc)]
       rall n k _ |  min (w - k) (r - k + n) < 0 = []
       rall _n _k Nil      = [(0,SEmpty)]
       rall n k (Cons i d ds)
         = case d of
             Empty       -> rall n k ds
-            Text s    -> let k' = k+len s in seq k' ((rall n k' ds) `fmap` \(l,x) -> (l,SText s x))
-            Line _      -> rall i i ds `fmap` \(l,x) -> (l+1,SLine i x)
+            Text s    -> let k' = k+len s in seq k' (rall n k' ds # \(l,x) -> (l,SText s x))
+            Line _      -> rall i i ds # \(l,x) -> (l+1,SLine i x)
             Cat x y     -> rall n k (Cons i x (Cons i y ds))
             Nest j x    -> let i' = i+j in seq i' (rall n k (Cons i' x ds))
             Union x y   -> rall n k (Cons i x ds) `merge` rall n k (Cons i y ds)
