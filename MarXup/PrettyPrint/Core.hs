@@ -64,7 +64,16 @@ fits w (SLine i x)              = True
 data Docs   = Nil
             | Cons Double Doc Docs
 
-renderAll :: Double -> Double -> Doc -> [SimpleDoc]
+type Measure = Int
+merge :: [(Measure,SimpleDoc)] -> [(Measure,SimpleDoc)] -> [(Measure,SimpleDoc)]
+merge [] xs = xs
+merge xs [] = xs
+merge (x:xs) (y:ys) = case (compare `on` fst) x y of
+  LT -> x:merge xs (y:ys)
+  GT -> y:merge (x:xs) ys
+  EQ -> x:y:merge xs ys
+  
+renderAll :: Double -> Double -> Doc -> [(Int,SimpleDoc)]
 renderAll rfrac w doc = rall 0 0 (Cons 0 doc Nil)
     where
       -- r :: the ribbon width in characters
@@ -74,15 +83,15 @@ renderAll rfrac w doc = rall 0 0 (Cons 0 doc Nil)
       --         k = current column
       --        (ie. (k >= n) && (k - n == count of inserted characters)
       rall n k _ |  min (w - k) (r - k + n) < 0 = []
-      rall _n _k Nil      = [SEmpty]
+      rall _n _k Nil      = [(0,SEmpty)]
       rall n k (Cons i d ds)
         = case d of
             Empty       -> rall n k ds
-            Text s    -> let k' = k+len s in seq k' (SText s <$> (rall n k' ds))
-            Line _      -> SLine i <$> (rall i i ds)
+            Text s    -> let k' = k+len s in seq k' ((rall n k' ds) `fmap` \(l,x) -> (l,SText s x))
+            Line _      -> rall i i ds `fmap` \(l,x) -> (l+1,SLine i x)
             Cat x y     -> rall n k (Cons i x (Cons i y ds))
             Nest j x    -> let i' = i+j in seq i' (rall n k (Cons i' x ds))
-            Union x y   -> rall n k (Cons i x ds) ++ rall n k (Cons i y ds)
+            Union x y   -> rall n k (Cons i x ds) `merge` rall n k (Cons i y ds)
             Column f    -> rall n k (Cons i (f k) ds)
             Nesting f   -> rall n k (Cons i (f i) ds)
 
@@ -101,9 +110,9 @@ measureWidth = maximum . map lineWidth . linify0
 
 renderPrettiest rfrac w doc = case allLayouts of
    [] -> SText (textual "OVERFLOW", BoxSpec 0 0 0) SEmpty -- ALT: fallback to renderPretty
-   _ -> best
+   (_,best):_ -> best
  where allLayouts = renderAll rfrac w doc
-       (_,best) = minimumBy (compare `on` fst) [((countLines d, measureWidth d),d) | d <- allLayouts]
+         
        
 
 renderPretty :: Double -> Double -> Doc -> SimpleDoc
