@@ -16,7 +16,7 @@ type Docu = Tex Doc
 text :: TeX -> Tex Doc
 text body = do
   b <- justBox body
-  return $ Text (body,b)
+  return $ Text $ TeX body b
 
 infixr 5 </>,<//>,<$$$>,<$$>
 infixr 6 <+>

@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module MarXup.PrettyPrint.Core(Doc(..),pretty,group,flatten,space,spacing) where
+module MarXup.PrettyPrint.Core(Doc(..),pretty,group,flatten,space,spacing,BoxTex(..)) where
 
 import Data.Monoid
 import MarXup (textual)
@@ -10,7 +10,7 @@ import MarXup.Diagram.Tikz (showDistance)
 import Data.Foldable (forM_)
 import Control.Applicative
 import Data.Function (on)
-import Data.List (minimumBy)
+import Data.List (minimumBy,sort)
 import Data.Either (partitionEithers)
 
 data BoxTex = TeX TeX BoxSpec | Spacing Double
@@ -55,7 +55,7 @@ flatten other           = other                     --Empty,Char,Text
 
 space = spacing 3.5
 
-spacing = Spacing
+spacing = Text . Spacing
 -- d = Text (hspace (showDistance d),BoxSpec {boxWidth = d, boxHeight = 0, boxDepth = 0})
 
 
@@ -65,49 +65,18 @@ hei (TeX _ x) = boxHeight x + boxDepth x
 hei (Spacing _) = 0
 
 -- | Does the first line of the document fit in the given width?
--- fits w _x        | w < 0         = False
--- fits _w SEmpty                   = True
--- fits w (SText s x)            = fits (w - len s) x
--- fits w (SLine i x)              = True
+fits w _x        | w < 0         = False
+fits _w SEmpty                   = True
+fits w (SText s x)            = fits (w - len s) x
+fits w (SLine i x)              = True
 
 
 data Docs   = Nil
             | Cons !Double Doc Docs
 
 
-merge :: Ord k => [k] -> [k] -> [k]
-merge [] xs = xs
-merge xs [] = xs
-merge (x:xs) (y:ys) = case compare x y of
-  LT -> x:merge xs (y:ys)
-  GT -> y:merge (x:xs) ys
-  EQ -> x:y:merge xs ys
 
 data Token = Ln Double | Tx BoxTex
-{-renderAll :: Double -> Double -> Doc -> [(Int,SimpleDoc)]
-renderAll rfrac w doc = rall 0 0 (Cons 0 doc Nil)
-    where
-      -- r :: the ribbon width in characters
-      r  = max 0 (min w (w * rfrac))
-      one :: Double -> Process -> Either [Token] [Process]
-      one k (Process{..}) = case rest of
-        _ |  min (w - k) (r - k + n) < 0 -> []
-        Nil -> Left $ reverse $ tokens
-        Cons i d ds -> case d of
-          Empty -> one k $ Process{rest=ds,..}
-          Text s -> let k' = k+len s in seq k' (one k' $ Process{tokens = Tx s:tokens,..})
-          Line _ -> Right $ [Process{curIndent=i,curLine = curLine+1, tokens = Ln i:tokens,..}]
-          Cat x y -> one k Process{rest = Cons i x $ Cons i y $ ds,..}
-          Nest j x -> one k Process{rest = Cons (i+j) x ds,..}
-          Union x y -> one k Process{rest = Cons i x ds,..} ++ Process{rest = Cons i y ds,..}]
-          Column f -> one k Process {rest = Cons i (f curCol) ds,..}
-          Nesting f -> one k Process {rest = Cons i (f i) ds,..}
--}
-
-
-mergeFilt (Left xs) _ = Left xs
-mergeFilt _ (Left xs) = Left xs
-mergeFilt (Right x) (Right y) = Right $ filtering $ merge x y
 
 data Process = Process {curIndent :: !Double
                        ,numToks :: Int
@@ -128,9 +97,9 @@ filtering xs = xs
 renderAll :: Double -> Double -> Doc -> SimpleDoc
 renderAll rfrac w doc = toksToSimple $ reverse $ loop [Process 0 0 [] $ Cons 0 doc Nil]
     where
-      loop [] = error "No possible layout"
+      loop [] = [Tx $ TeX (textual "OVERFLOW") (BoxSpec 0 0 0)] -- ALT: fallback to renderPretty
       loop ps = case dones of
-        [] -> loop conts
+        [] -> loop $ filtering $ sort $ conts
         (done:_) -> done
         where ps' = concatMap (\Process{..} -> rall numToks tokens curIndent curIndent rest) ps
               (dones,conts) = partitionEithers ps'
@@ -147,41 +116,14 @@ renderAll rfrac w doc = toksToSimple $ reverse $ loop [Process 0 0 [] $ Cons 0 d
       rall nts ts n k (Cons i d ds)
         = case d of
             Empty       -> rall nts ts n k ds
-            Text s    -> let k' = k+len s in seq k' (rall (nts+count s) (Tx s:ts) n k' ds)
-            Line _      -> [Right $ Process i nts (Ln i:ts) ds] 
+            Text s      -> let k' = k+len s in seq k' (rall (nts+count s) (Tx s:ts) n k' ds)
+            Line _      -> [Right $ Process i nts (Ln i:ts) ds]
             Cat x y     -> rall nts ts n k (Cons i x (Cons i y ds))
             Nest j x    -> let i' = i+j in seq i' (rall nts ts n k (Cons i' x ds))
             Union x y   -> rall nts ts n k (Cons i x ds) ++ rall nts ts n k (Cons i y ds)
             Column f    -> rall nts ts n k (Cons i (f k) ds)
             Nesting f   -> rall nts ts n k (Cons i (f i) ds)
 
-{-renderAll :: Double -> Double -> Doc -> [(Int,SimpleDoc)]
-renderAll rfrac w doc = rall 0 0 (Cons 0 doc Nil)
-    where
-      -- r :: the ribbon width in characters
-      r  = max 0 (min w (w * rfrac))
-
-      -- rall :: n = indentation of current line
-      --         k = current column
-      --        (ie. (k >= n) && (k - n == count of inserted characters)
-      rall :: Double -> Double -> Docs -> [(Measure,SimpleDoc)]
-      rall n k _ |  min (w - k) (r - k + n) < 0 = []
-      rall _n _k Nil      = [(0,SEmpty)]
-      rall n k (Cons i d ds)
-        = case d of
-            Empty       -> rall n k ds
-            Text s    -> let k' = k+len s in seq k' (rall n k' ds # \(l,x) -> (l,SText s x))
-            Line _      -> rall i i ds # \(l,x) -> (l+1,SLine i x)
-            Cat x y     -> rall n k (Cons i x (Cons i y ds))
-            Nest j x    -> let i' = i+j in seq i' (rall n k (Cons i' x ds))
-            Union x y   -> rall n k (Cons i x ds) `merge` rall n k (Cons i y ds)
-            Column f    -> rall n k (Cons i (f k) ds)
-            Nesting f   -> rall n k (Cons i (f i) ds)
--}
-      --nicest :: r = ribbon width, w = page width,
-      --          n = indentation of current line, k = current column
-      --          x and y, the (simple) documents to chose from.
-      --          precondition: first lines of x are longer than the first lines of y.
 
 countLines :: SimpleDoc -> Int
 countLines = length . linify0
@@ -191,13 +133,6 @@ measureWidth :: SimpleDoc -> Double
 measureWidth = maximum . map lineWidth . linify0
   where lineWidth (i,boxes) = i + sum (map len boxes)
 
--- renderPrettiest rfrac w doc = case allLayouts of
---    [] -> SText (textual "OVERFLOW", BoxSpec 0 0 0) SEmpty -- ALT: fallback to renderPretty
---    (_,best):_ -> best
---  where allLayouts = renderAll rfrac w doc
-         
-       
-{-
 renderPretty :: Double -> Double -> Doc -> SimpleDoc
 renderPretty rfrac w doc
     = best 0 0 (Cons 0 doc Nil)
@@ -230,7 +165,7 @@ renderPretty rfrac w doc
                         | otherwise     = y
                         where
                           width = min (w - k) (r - k + n)
--}
+
 linify0 d = linify d 0 []
 
 -- | Turn a simpledoc into a list of lines and indentation.
