@@ -78,11 +78,18 @@ data Docs   = Nil
 
 data Token = Ln Double | Tx BoxTex
 
-data Process = Process {curIndent :: !Double
-                       ,numToks :: Int
-                       ,tokens :: [Token] -- in reverse order
-                       ,rest :: !Docs
+data Process = Process {curIndent :: !Double -- current indentation
+                       ,numToks :: Int -- total number of non-space tokens produced
+                       ,tokens :: [Token] -- tokens produced, in reverse order
+                       ,rest :: !Docs -- rest of the input document to process
                        }
+-- The ⟨filtering⟩ step takes all process states starting at the current
+-- line, and discards those that are dominated.  A process state
+-- dominates another one if it was able to produce more tokens while
+-- having less indentation. This is implemented by first sorting the
+-- process states by following 'measure', and then applying the
+-- 'filtering' function.
+
 measure =  \Process{..} -> (curIndent, negate numToks)
 instance Eq Process where
   (==) = (==) `on` measure
@@ -97,27 +104,35 @@ filtering xs = xs
 renderAll :: Double -> Double -> Doc -> SimpleDoc
 renderAll rfrac w doc = toksToSimple $ reverse $ loop [Process 0 0 [] $ Cons 0 doc Nil]
     where
-      loop [] = [Tx $ TeX (textual "OVERFLOW") (BoxSpec 0 0 0)] -- ALT: fallback to renderPretty
+      loop [] = [Tx $ TeX (textual "Pretty print: OVERFLOW") (BoxSpec 0 0 0)]
       loop ps = case dones of
-        [] -> loop $ filtering $ sort $ conts
-        (done:_) -> done
-        where ps' = concatMap (\Process{..} -> rall numToks tokens curIndent curIndent rest) ps
-              (dones,conts) = partitionEithers ps'
+        [] -> loop $ filtering $ sort $ conts -- See the comment ⟨filtering⟩ above
+        (done:_) -> done -- here we could attempt to do a better choice. Seems to be fine for now.
+        where
+          -- advance all processes by one line (if possible)
+          ps' = concatMap (\Process{..} -> rall numToks tokens curIndent curIndent rest) ps
+          -- Have some processes reached the end?
+          (dones,conts) = partitionEithers ps'
+          
       -- r :: the ribbon width in characters
       r  = max 0 (min w (w * rfrac))
+
+      -- Automatically inserted spacing does not count as doing more production.
       count (Spacing _) = 0
       count (TeX _ _) = 1
+
+      -- Compute the state(s) after reaching the end of line.
       -- rall :: n = indentation of current line
       --         k = current column
       --        (ie. (k >= n) && (k - n == count of inserted characters)
       rall :: Int -> [Token] -> Double -> Double -> Docs -> [Either [Token] Process]
-      rall nts _ n k _ |  min (w - k) (r - k + n) < 0 = []
-      rall nts ts _n _k Nil      = [Left ts]
+      rall _ _  n k _ |  min (w - k) (r - k + n) < 0 = [] -- overflow: produce no output. Alternatively we could switch here to an "overflow" mode.
+      rall _ ts _n _k Nil      = [Left ts] -- Done!
       rall nts ts n k (Cons i d ds)
         = case d of
             Empty       -> rall nts ts n k ds
             Text s      -> let k' = k+len s in seq k' (rall (nts+count s) (Tx s:ts) n k' ds)
-            Line _      -> [Right $ Process i nts (Ln i:ts) ds]
+            Line _      -> [Right $ Process i nts (Ln i:ts) ds] -- "yield" when the end of line is reached
             Cat x y     -> rall nts ts n k (Cons i x (Cons i y ds))
             Nest j x    -> let i' = i+j in seq i' (rall nts ts n k (Cons i' x ds))
             Union x y   -> rall nts ts n k (Cons i x ds) ++ rall nts ts n k (Cons i y ds)
@@ -125,13 +140,19 @@ renderAll rfrac w doc = toksToSimple $ reverse $ loop [Process 0 0 [] $ Cons 0 d
             Nesting f   -> rall nts ts n k (Cons i (f i) ds)
 
 
-countLines :: SimpleDoc -> Int
-countLines = length . linify0
+-- countLines :: SimpleDoc -> Int
+-- countLines = length . linify0
 
+-- measureWidth :: SimpleDoc -> Double
+-- measureWidth = maximum . map lineWidth . linify0
+--   where lineWidth (i,boxes) = i + sum (map len boxes)
 
-measureWidth :: SimpleDoc -> Double
-measureWidth = maximum . map lineWidth . linify0
-  where lineWidth (i,boxes) = i + sum (map len boxes)
+-- The original function implemented by Daan Leijen. Wadler derives a
+-- similar function in his paper ("A prettier printer"). Unfortunately
+-- it does not produce pretty layouts: the assumptions that enable the
+-- amount of greediness implemented here do not hold after adding the
+-- Column and Nesting combinators. So this function tends to generate
+-- layouts with a long first line and a cramped column of stuff.
 
 renderPretty :: Double -> Double -> Doc -> SimpleDoc
 renderPretty rfrac w doc
@@ -166,6 +187,7 @@ renderPretty rfrac w doc
                         where
                           width = min (w - k) (r - k + n)
 
+linify0 :: SimpleDoc -> [(Double, [BoxTex])]
 linify0 d = linify d 0 []
 
 -- | Turn a simpledoc into a list of lines and indentation.
