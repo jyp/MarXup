@@ -10,7 +10,7 @@ import MarXup.Diagram.Tikz (showDistance)
 import Data.Foldable (forM_)
 import Control.Applicative
 import Data.Function (on)
-import Data.List (minimumBy,sort)
+import Data.List (partition,minimumBy,sort)
 import Data.Either (partitionEithers)
 
 data BoxTex = TeX TeX BoxSpec | Spacing Double
@@ -78,7 +78,8 @@ data Docs   = Nil
 
 data Token = Ln Double | Tx BoxTex
 
-data Process = Process {curIndent :: !Double -- current indentation
+data Process = Process {overflow :: Double
+                       ,curIndent :: !Double -- current indentation
                        ,numToks :: Int -- total number of non-space tokens produced
                        ,tokens :: [Token] -- tokens produced, in reverse order
                        ,rest :: !Docs -- rest of the input document to process
@@ -102,18 +103,26 @@ filtering (x:y:xs) | numToks x >= numToks y = filtering (x:xs)
 filtering xs = xs
 
 renderAll :: Double -> Double -> Doc -> SimpleDoc
-renderAll rfrac w doc = toksToSimple $ reverse $ loop [Process 0 0 [] $ Cons 0 doc Nil]
+renderAll rfrac w doc = toksToSimple $ reverse $ loop [Process 0 0 0 [] $ Cons 0 doc Nil]
     where
-      loop [] = [Tx $ TeX (textual "Pretty print: OVERFLOW") (BoxSpec 0 0 0)]
       loop ps = case dones of
-        [] -> loop $ filtering $ sort $ conts -- See the comment ⟨filtering⟩ above
-        (done:_) -> done -- here we could attempt to do a better choice. Seems to be fine for now.
+        ((_,done):_) -> done -- here we could attempt to do a better choice. Seems to be fine for now.
+        [] -> case conts of
+          (_:_) -> loop $ filtering $ sort $ conts -- See the comment ⟨filtering⟩ above
+          [] -> case conts'over of
+            (_:_) -> loop [minimumBy (compare `on` overflow) conts'over]
+            [] -> case dones'over of
+              ((_,done):_) -> done
+              [] -> [Tx $ TeX (textual "Pretty print: Panic") (BoxSpec 0 0 0)]
+
         where
           -- advance all processes by one line (if possible)
           ps' = concatMap (\Process{..} -> rall numToks tokens curIndent curIndent rest) ps
           -- Have some processes reached the end?
-          (dones,conts) = partitionEithers ps'
-          
+          (dones0,conts0) = partitionEithers ps'
+          (conts,conts'over) = partition (\p -> overflow p <= 0) conts0
+          (dones,dones'over) = partition (\(o,_) -> o <= 0) dones0
+
       -- r :: the ribbon width in characters
       r  = max 0 (min w (w * rfrac))
 
@@ -125,20 +134,19 @@ renderAll rfrac w doc = toksToSimple $ reverse $ loop [Process 0 0 [] $ Cons 0 d
       -- rall :: n = indentation of current line
       --         k = current column
       --        (ie. (k >= n) && (k - n == count of inserted characters)
-      rall :: Int -> [Token] -> Double -> Double -> Docs -> [Either [Token] Process]
-      rall _ _  n k _ |  min (w - k) (r - k + n) < 0 = [] -- overflow: produce no output. Alternatively we could switch here to an "overflow" mode.
-      rall _ ts _n _k Nil      = [Left ts] -- Done!
-      rall nts ts n k (Cons i d ds)
-        = case d of
+      rall :: Int -> [Token] -> Double -> Double -> Docs -> [Either (Double,[Token]) Process]
+      rall nts ts n k ds0 = case ds0 of
+         Nil ->  [Left $ (overflow,ts)] -- Done!
+         Cons i d ds -> case d of
             Empty       -> rall nts ts n k ds
             Text s      -> let k' = k+len s in seq k' (rall (nts+count s) (Tx s:ts) n k' ds)
-            Line _      -> [Right $ Process i nts (Ln i:ts) ds] -- "yield" when the end of line is reached
+            Line _      -> [Right $ Process overflow i nts (Ln i:ts) ds] -- "yield" when the end of line is reached
             Cat x y     -> rall nts ts n k (Cons i x (Cons i y ds))
             Nest j x    -> let i' = i+j in seq i' (rall nts ts n k (Cons i' x ds))
             Union x y   -> rall nts ts n k (Cons i x ds) ++ rall nts ts n k (Cons i y ds)
             Column f    -> rall nts ts n k (Cons i (f k) ds)
             Nesting f   -> rall nts ts n k (Cons i (f i) ds)
-
+        where overflow = negate $ min (w - k) (r - k + n)
 
 -- countLines :: SimpleDoc -> Int
 -- countLines = length . linify0
