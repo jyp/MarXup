@@ -159,10 +159,14 @@ fxref l@(SortedLabel s _) = do
   tex "~" -- non-breakable space here
   xref l
 
+pageref :: SortedLabel -> TeX
+pageref (SortedLabel _ l) = do
+  cmd "pageref" (reference l)
+  return ()
+  
 instance Element SortedLabel where
   type Target SortedLabel = TeX
   element x = fxref x >> return ()
-
 
 -----------------
 -- Generate boxes
