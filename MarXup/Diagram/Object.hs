@@ -57,7 +57,9 @@ shiftInDir :: Anchor -> Expr -> Point
 shiftInDir N d = 0 `Point` d
 shiftInDir S d = 0 `Point` negate d
 shiftInDir W d = negate d `Point` 0
+shiftInDir BaseW d = negate d `Point` 0
 shiftInDir E d  = d `Point` 0
+shiftInDir BaseE d  = d `Point` 0
 shiftInDir NW d = negate d `Point` d
 shiftInDir SE d = d `Point` negate d
 shiftInDir SW d = negate d `Point` negate d
