@@ -1,13 +1,12 @@
 
 all: LaTeX.pdf
 
-%.pdf: %.tex
-	pdflatex $<
-	pdflatex $<
-
-%.tex: %.hs
+%.pdf: %.hs
 	ghc --make $<
 	./$*
+	pdflatex $*
+	./$*
+	pdflatex $*
 
 %.hspp: %.hs
 	ghc -E $<

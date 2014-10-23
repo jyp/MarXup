@@ -23,6 +23,7 @@ instance Textual Tex where
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
 
+escape :: Char -> [Char]
 escape '\\' = "\\ensuremath{\\backslash{}}"
 escape '~' = "\\ensuremath{\\sim{}}"
 escape '<' = "\\ensuremath{<}"
@@ -34,11 +35,8 @@ instance Element (Tex a) where
   type Target (Tex a) = Tex a
   element = id
 
-texInMode ::  Mode -> String ->TeX
-texInMode mode s = whenMode mode $ Tex $ raw s
-
-tex :: String -> TeX
-tex = texInMode (`elem` [Regular,InsideBox])
+tex ::  String ->TeX
+tex = Tex . raw
 
 texComment :: String -> TeX
 texComment s =
@@ -171,32 +169,22 @@ instance Element SortedLabel where
 -----------------
 -- Generate boxes
 
-outputAlsoInBoxMode :: Tex a -> Tex a
-outputAlsoInBoxMode (Tex a) = Tex $ local moveInBox $ a
-         where moveInBox m = case m of
-                 OutsideBox -> InsideBox
-                 _ -> m
 
-texAlways = texInMode (const True)
-
-inBoxComputMode :: String -> TeX
-inBoxComputMode = texInMode (`elem` [OutsideBox,InsideBox])
-
-whenMode :: Mode -> Tex () -> Tex ()
-whenMode mode act = do
-  interpretMode <- Tex ask
-  when (mode interpretMode) act
+-- whenMode :: Mode -> Tex () -> Tex ()
+-- whenMode mode act = do
+--   interpretMode <- Tex ask
+--   when (mode interpretMode) act
 
 inBox :: Tex a -> Tex (a, BoxSpec)
-inBox x = do
-  inBoxComputMode $ "\n\\savebox{\\marxupbox}{"
-  a <- outputAlsoInBoxMode x
-  inBoxComputMode $ 
+inBox x = braces $ do
+  tex $ "\\savebox{\\marxupbox}{"
+  a <- x
+  tex $
     "}"
     ++ writeBox "wd"
     ++ writeBox "ht"
     ++ writeBox "dp"
-    ++ "\n"
+  tex $ "\\box\\marxupbox"
   b <- Tex getBoxSpec
 
   return (a,b)
@@ -205,7 +193,7 @@ inBox x = do
 
 justBox :: Tex a -> Tex BoxSpec
 justBox x = do
-  whenMode (`elem` [OutsideBox, InsideBox]) $ outputAlsoInBoxMode $ do
+  do
     tex "\n\\savebox{\\marxupbox}{"
     x
     tex $ 
@@ -219,40 +207,32 @@ justBox x = do
   return b
   where writeBox l = "\\immediate\\write\\boxesfile{\\number\\"++ l ++"\\marxupbox}"
 
-renderWithBoxes :: [BoxSpec] -> InterpretMode -> Tex a -> String
-renderWithBoxes bs mode (Tex t) = doc
-  where (_,_,doc) = runRWS (fromMulti $ t) mode (0,bs)
+renderWithBoxes :: [BoxSpec] -> Tex a -> String
+renderWithBoxes bs (Tex t) = doc
+  where (_,_,doc) = runRWS (fromMulti $ t) () (0,bs)
 
 renderSimple :: TeX -> String
-renderSimple = renderWithBoxes [] Regular
+renderSimple = renderWithBoxes []
   
-renderTex :: (Bool -> TeX) -> TeX -> IO String
-renderTex preamble body = do
-  let bxsTex = renderWithBoxes (repeat nilBoxSpec) OutsideBox (wholeDoc True)
-      boxesName = "mpboxes"
-      boxesTxt = boxesName ++ ".txt"
-      wholeDoc inBoxMode = do
-        outputAlsoInBoxMode (preamble inBoxMode)
-        inBoxComputMode $ "\\newwrite\\boxesfile"
-        texAlways "\\begin{document}"
-        inBoxComputMode $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n \\newsavebox{\\marxupbox}"
-        body
-        inBoxComputMode "\n\\immediate\\closeout\\boxesfile"
-        texAlways "\\end{document}"
-  writeFile (boxesName ++ ".tex") bxsTex
-  system $ "latex " ++ boxesName
-  boxes <- do
+renderTex :: String -> TeX -> IO ()
+renderTex fname body = do
+  let boxesTxt = fname ++ ".boxes"
+  boxes <- getBoxInfo . map read . lines <$> do
     e <- doesFileExist boxesTxt
     if e
-      then do
-        boxData <- map read . lines <$> readFile boxesTxt
-        return $ getBoxInfo boxData
-      else return []
-  putStrLn $ "Number of boxes found: " ++ show (length boxes)
-  return $ renderWithBoxes boxes Regular $ (wholeDoc False)
+      then readFile boxesTxt
+      else return ""
+  putStrLn $ "Found " ++ show (length boxes) ++ " boxes"
+  let texSource = renderWithBoxes (boxes ++ repeat nilBoxSpec) wholeDoc
+      wholeDoc = do
+        tex $ "\\newwrite\\boxesfile"
+        tex $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n\\newsavebox{\\marxupbox}"
+        body
+        tex "\n\\immediate\\closeout\\boxesfile"
+  writeFile (fname ++ ".tex") texSource
 
 getBoxInfo :: [Int] -> [BoxSpec]
-getBoxInfo [] = []
 getBoxInfo (width:height:depth:bs) = BoxSpec (scale width) (scale height) (scale depth):getBoxInfo bs
   where scale x = fromIntegral x / 65536
+getBoxInfo _ = []
 
