@@ -17,14 +17,9 @@ build-type:     Simple
 data-files:
      examples/LaTeX.hs
 
-
--- executable marxup
---   extensions: FlexibleInstances, TupleSections
---   main-is: Main.hs
---   build-depends: base>=4.2&&<=5
---   build-depends: pretty==1.1.*
---   build-depends: parsec>=3
---   build-depends: dlist>=0.5
+Flag graphviz
+  Description: Enable graphviz support
+  Default:     True
 
 executable marxup3
   extensions: FlexibleInstances, TupleSections
@@ -36,6 +31,10 @@ executable marxup3
   build-depends: dlist>=0.7
   
 library
+  if flag(graphviz)
+    build-depends: graphviz
+    exposed-modules: MarXup.Diagram.Graphviz
+    
   extensions: FlexibleInstances, TypeSynonymInstances, GADTs
   build-depends: base>=4.2&&<5
 --  build-depends: pandoc==1.5.*  (support broken)
@@ -51,7 +50,6 @@ library
   build-depends: typography-geometry
   build-depends: polynomials-bernstein==1.*
   build-depends: vector
-  build-depends: graphviz
   build-depends: text
 
   exposed-modules: MarXup
@@ -69,7 +67,6 @@ library
   exposed-modules: MarXup.Diagram.Point
   exposed-modules: MarXup.Diagram.Layout
   exposed-modules: MarXup.Diagram.Tikz
-  exposed-modules: MarXup.Diagram.Graphviz
   exposed-modules: MarXup.MultiRef
   exposed-modules: MarXup.Verbatim
   exposed-modules: MarXup.PrettyPrint.Core
