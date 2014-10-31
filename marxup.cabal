@@ -1,5 +1,5 @@
 name:           marxup
-version:        3.0.0
+version:        3.0.0.1
 category:       Text
 synopsis:       Markup language preprocessor for Haskell
 description:
@@ -34,6 +34,7 @@ executable marxup3
   build-depends: pretty==1.1.*
   build-depends: parsek==1.*
   build-depends: dlist>=0.7
+  other-modules: Config
   
 library
   extensions: FlexibleInstances, TypeSynonymInstances, GADTs
