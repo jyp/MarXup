@@ -5,7 +5,7 @@ synopsis:       Markup language preprocessor for Haskell
 description:
   Markup syntax preprocessor for Haskell. Steals ideas from the Scribble project (in Scheme).
   The package also provides a DSL to output Latex seamlessly from MarXup output.
-license:        GPL
+license:        GPL-2
 license-file:   LICENSE
 author:         Jean-Philippe Bernardy
 maintainer:     jeanphilippe.bernardy@gmail.com
