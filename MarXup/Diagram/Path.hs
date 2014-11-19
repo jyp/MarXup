@@ -96,8 +96,9 @@ cutBefore = onBeziers cutBefore'
 data Segment v = CurveTo (Point' v) (Point' v) (Point' v)
                    | StraightTo (Point' v)
                    | Cycle
-                   -- | Rounded (Maybe Constant)
-                   -- | HV point | VH point
+                     -- Other things also supported by tikz:
+                   --  Rounded (Maybe Constant)
+                   --  HV point | VH point
   deriving (Show,Eq)
 instance Functor Segment where
   fmap = fmapDefault
