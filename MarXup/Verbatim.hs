@@ -4,12 +4,18 @@ module MarXup.Verbatim where
 
 import MarXup
 import Control.Monad.Fix
+import Control.Monad (ap)
+import Control.Applicative
 
 data Verbatim a = Verbatim {fromVerbatim::String, value::a}
   deriving Functor
 
 instance Textual Verbatim where
     textual s = Verbatim s ()
+
+instance Applicative Verbatim where
+    pure = return
+    (<*>) = ap
 
 instance Monad Verbatim where
     return x = Verbatim "" x
