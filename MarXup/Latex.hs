@@ -56,12 +56,27 @@ authorinfo EPTCS as = mconcat $ intersperse and' $
     return ()
   where dquad = cmd0 "quad" <> cmd0 "quad"
         and' = cmd0 "and"
+authorinfo Beamer as = do
+  cmd "author" $ mconcat $ intersperse (cmd0 "and") $ flip map as $ \a -> do
+      textual $ authorName a
+      case elemIndex (authorInst a) institutions of
+        Nothing -> textual $ "error: could not find " ++ (authorInst a)
+        Just idx -> inst idx
+      -- No emails in beamer
+  cmd "institute" $
+      forM_ (zip institutions [0..]) $ \(i,idx) -> do
+        inst idx
+        textual i
+  return ()
+  where institutions = nub $ map authorInst $ as
+        inst i = cmd "inst" $ tex $ show (i+1)
+        
 authorinfo IEEE as = cmd "author" $ do
   cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace "1cm") $ map (textual . authorName) as
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
   cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
   where (AuthorInfo {authorInst = inst}:_) = as
-authorinfo _ {- Plain, EPTCS, Beamer -} as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
+authorinfo _ {- Plain -} as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
   where oneauthor (AuthorInfo name _ institution) = textual name <> newline <> textual institution
 
 keywords :: ClassFile -> [String] -> TeX
