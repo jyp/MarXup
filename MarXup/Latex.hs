@@ -3,7 +3,7 @@ module MarXup.Latex where
 
 import MarXup
 import MarXup.Verbatim
-import Control.Monad (forM_)
+import Control.Monad (forM_,when)
 import MarXup.Tex
 import Data.List (intersperse,groupBy,elemIndex,nub)
 import Data.Monoid
@@ -69,7 +69,8 @@ authorinfo Beamer as = do
         textual i
   return ()
   where institutions = nub $ map authorInst $ as
-        inst i = cmd "inst" $ tex $ show (i+1)
+        inst :: Int -> TeX
+        inst i = when (length institutions > 1) $ cmd "inst" $ tex $ show (i+1)
         
 authorinfo IEEE as = cmd "author" $ do
   cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace "1cm") $ map (textual . authorName) as
@@ -101,7 +102,7 @@ ldots :: TeX
 ldots = cmd "ldots" (return ())
 
 -- | Sectioning
-section,subsection,paragraph :: TeX -> Tex SortedLabel
+section,subsection,subsubsection,paragraph :: TeX -> Tex SortedLabel
 section s = cmd "section" s >> label "Sec."
 subsection s = cmd "subsection" s >> label "Sec."
 subsubsection s = cmd "subsubsection" s >> label "Sec."
