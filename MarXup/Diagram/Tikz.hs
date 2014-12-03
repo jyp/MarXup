@@ -30,11 +30,6 @@ instance Element (Diagram ()) where
   element d = do
    texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!)
    braces $ do
-    cmd0 "normalsize"
-      -- otherwise the boxes use "normalsize", while tikz inherits
-      -- the smaller or bigger size from the current scope. Actually,
-      -- every text styling should be reset, but I don't know how to
-      -- do that.
     env "tikzpicture" $
       Tex $ runDiagram d
 
