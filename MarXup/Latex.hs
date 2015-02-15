@@ -123,7 +123,17 @@ usepackage name opts  = cmd' "usepackage" opts (tex name)
 stdPreamble :: TeX
 stdPreamble = do
   usepackage "graphicx" []
+  usepackage "ifxetex" []
+  cmd0 "ifxetex"
+  usepackage "fontspec" []
+  usepackage "newunicodechar" []
+  mapM_ texLn ["\\newcommand{\\DeclareUnicodeCharacter}[2]{%"
+              ,"\\begingroup\\lccode`|=\\string\"#1\\relax"
+              ,"\\lowercase{\\endgroup\\newunicodechar{|}}{#2}%"
+              ,"}"]
+  cmd0 "else"
   usepackage "inputenc" ["utf8"]
+  cmd0 "fi"
   return ()
 
 documentClass :: String -> [String] -> TeX
@@ -247,5 +257,4 @@ lstinline opt (Verbatim s _) =
         opt' = tex $ mconcat . intersperse ", "
                $ "basicstyle=\\ttfamily" :  opt in
     backslash <> "lstinline" <> brackets opt' <> sep <> tex s <> sep
-
 
