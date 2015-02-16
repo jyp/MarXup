@@ -76,6 +76,7 @@ instance Floating Math where
     log = fct (cmd "mathnormal" "log")
     sin = fct (cmd "mathnormal" "sin")
     cos = fct (cmd "mathnormal" "cos")
+    tan = fct (cmd "mathnormal" "tan")
     asin = fct (cmd "mathnormal" "asin")
     acos = fct (cmd "mathnormal" "acos")
     atan = fct (cmd "mathnormal" "atan")
