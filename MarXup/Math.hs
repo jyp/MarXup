@@ -54,6 +54,7 @@ fct x = UnOp 6 (x <>) 7
 --------------
 -- Operators
 
+infixr 1 =:
 (=:) = binop 0 "="
 
 instance Num Math where
