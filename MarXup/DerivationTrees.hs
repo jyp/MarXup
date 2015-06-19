@@ -64,7 +64,7 @@ delayD :: Derivation -> Derivation
 delayD (Node r ps0) = Node r (map delayP ps)
     where ps = fmap (fmap delayD) ps0
           ps' = filter (not . isDelayed) ps
-          delayP (Delayed{..} ::> d) = defaultLink {steps = 1 + maximum (0 : map depth ps')} ::> d
+          delayP (Delayed ::> d) = defaultLink {steps = 1 + maximum (0 : map depth ps')} ::> d
           delayP p = p
 
 ----------------------------------------------------------
