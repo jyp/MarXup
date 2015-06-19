@@ -1,11 +1,10 @@
-let pkgs = (import <nixpkgs> {});
-    haskellPackages = pkgs.haskellPackages;
-    myPkg = haskellPackages.callPackage (import ./default.nix) {};
-in pkgs.myEnvFun {
-    name = myPkg.name;
-    buildInputs = 
-       [(haskellPackages.ghcWithPackages (hs: ([
-         hs.cabalInstall
-         hs.hscolour
-       ] ++ myPkg.propagatedNativeBuildInputs)))];
-     }
+    let pkgs = (import <nixpkgs> {});
+        haskellPackages = pkgs.recurseIntoAttrs(pkgs.haskellPackages.override {
+            overrides = self: super:
+            let callPackage = self.callPackage; in {
+                  glpk-hs = callPackage nix/glpk-hs.nix {};
+                  typography-geometry = callPackage nix/typography-geometry.nix {};
+                  thisPackage = callPackage (import ./default.nix) {};
+            };
+           });
+    in haskellPackages.thisPackage.env
