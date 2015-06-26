@@ -2,3 +2,9 @@
 *.hi
 *.o
 /dist
+/examples/LaTeX.tex
+/examples/LaTeX.ptb
+/examples/LaTeX.pdf
+/examples/LaTeX.log
+/examples/LaTeX.boxes
+/examples/LaTeX.aux

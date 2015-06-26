@@ -1,5 +1,5 @@
 name:           marxup
-version:        3.0.0.1
+version:        3.0.0.2
 category:       Text
 synopsis:       Markup language preprocessor for Haskell
 description:
@@ -49,6 +49,7 @@ library
   build-depends: directory>=1.2
   build-depends: typography-geometry
   build-depends: polynomials-bernstein==1.*
+  build-depends: haskell-src-exts
   build-depends: vector
   build-depends: text
 
@@ -56,6 +57,7 @@ library
   exposed-modules: MarXup.Tex
   exposed-modules: MarXup.Latex
   exposed-modules: MarXup.Latex.Math
+  exposed-modules: MarXup.LineUp
   exposed-modules: MarXup.Math
   exposed-modules: MarXup.Latex.Bib
   exposed-modules: MarXup.Beamer

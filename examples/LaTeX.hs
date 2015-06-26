@@ -5,6 +5,7 @@ import MarXup.Latex
 import MarXup.Latex.Math
 import MarXup.Math
 import MarXup.Tex
+import MarXup.LineUp
 import MarXup.DerivationTrees
 import MarXup.PrettyPrint as PP hiding (width)
 import MarXup.PrettyPrint.Core as PC
@@ -177,6 +178,15 @@ One can also draw diagrams:
 There is partial, rudimentary support for layout of graphs using graphviz.
 
 grDiag
+
+@section«Haskell»
+
+There is simple support for lhs2tex-style stuff
+
+@haskell«
+function ::  a ->  b
+typeSig      x =   magic
+»
 
 
 @concl<-section«Conclusion»
