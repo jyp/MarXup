@@ -1,11 +1,11 @@
-{-# OPTIONS_GHC -XTypeSynonymInstances -XOverloadedStrings -XRecursiveDo -pgmF marxup3 -F #-}
+{-# OPTIONS_GHC -XTypeSynonymInstances -XOverloadedStrings -XRecursiveDo -pgmF dist/build/marxup3/marxup3 -F #-}
 
 import MarXup
 import MarXup.Latex
 import MarXup.Latex.Math
 import MarXup.Math
 import MarXup.Tex
-import MarXup.LineUp
+import MarXup.LineUp.Haskell
 import MarXup.DerivationTrees
 import MarXup.PrettyPrint as PP hiding (width)
 import MarXup.PrettyPrint.Core as PC
@@ -48,6 +48,7 @@ preamble body = do
   usepackage "inputenc" ["utf8x"]
   usepackage "tikz" []
   usepackage "graphicx" []
+  usepackage "polytable" []
   env "document" body
 
 autoLab s i = do
@@ -184,8 +185,8 @@ grDiag
 There is simple support for lhs2tex-style stuff
 
 @haskell«
-function ::  a ->  b
-typeSig      x =   magic
+function ::  a  ->  b
+typeSig      x  =   magic
 »
 
 

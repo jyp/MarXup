@@ -58,6 +58,7 @@ library
   exposed-modules: MarXup.Latex
   exposed-modules: MarXup.Latex.Math
   exposed-modules: MarXup.LineUp
+  exposed-modules: MarXup.LineUp.Haskell
   exposed-modules: MarXup.Math
   exposed-modules: MarXup.Latex.Bib
   exposed-modules: MarXup.Beamer
@@ -76,3 +77,11 @@ library
   
 --  exposed-modules: MarXup.Pandoc (broken)
 
+executable marxup-example
+  hs-source-dirs: examples
+  main-is: LaTeX.hs
+  build-depends: marxup
+  build-depends: base
+  build-depends: lens
+  build-depends: graphviz
+  

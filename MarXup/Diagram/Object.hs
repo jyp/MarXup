@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, KindSignatures, OverloadedStrings, EmptyDataDecls, MultiParamTypeClasses, FlexibleContexts, OverlappingInstances, TypeSynonymInstances, FlexibleInstances   #-}
+{-# LANGUAGE DataKinds, KindSignatures, OverloadedStrings, EmptyDataDecls, MultiParamTypeClasses, FlexibleContexts, TypeSynonymInstances, FlexibleInstances   #-}
 
 module MarXup.Diagram.Object where
 
