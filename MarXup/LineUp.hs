@@ -25,13 +25,14 @@ lineup input = do
     showCol 0 = "B"
     showCol n = show n
     declColumn :: String -> TeX
-    declColumn c = cmdn_ "column" [tex c,tex "@{}l@{}"]
+    declColumn c = cmdn_ "column" [tex c,tex "@{}l@{\\;}"]
     printLine :: [[Tok]] -> TeX
     printLine xs = do
       forM_ (zip xs [(0::Int)..]) $ \ (ts,tab) -> {-when (not (null ts)) $-} do
         cmdn' ">" [showCol tab] []
-        forM_ ts render
-        tex "\\;"
+        forM_ ts $ \t -> do 
+          render t
+          tex "\\;"
       cmdn' "<" ["E"] []
       texLn "\\\\"
       return ()

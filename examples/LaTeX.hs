@@ -185,8 +185,8 @@ grDiag
 There is simple support for lhs2tex-style stuff
 
 @haskell«
-function ::  a  ->  b
-typeSig      x  =   magic
+autoLab s i = do  o <- labelObj s
+                  autoLabel o i
 »
 
 
