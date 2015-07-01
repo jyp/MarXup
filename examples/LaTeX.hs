@@ -187,6 +187,7 @@ There is simple support for lhs2tex-style stuff
 @haskell«
 autoLab s i = do  o <- labelObj s
                   autoLabel o i
+   where x = whatever
 »
 
 

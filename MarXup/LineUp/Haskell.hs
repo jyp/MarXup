@@ -10,6 +10,7 @@ import MarXup.LineUp
 import MarXup.Tex
 import MarXup.Verbatim
 
+
 haskell :: Verbatim a -> Tex ()
 haskell = haskellCust defaultParseMode printTok
 

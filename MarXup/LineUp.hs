@@ -20,36 +20,56 @@ lineup input = do
     forM_ (zip allTabStops [(1::Int)..]) $ \(_col,tab) -> 
       declColumn (show tab)
     declColumn "E"
+    texLn "%"
     mapM_ printLine array
   where
     showCol 0 = "B"
     showCol n = show n
     declColumn :: String -> TeX
     declColumn c = cmdn_ "column" [tex c,tex "@{}l@{\\;}"]
+
+    lastIndex :: (a -> Bool) -> [a] -> Int
+    lastIndex p xs = length (takeWhile p xs) - 1
+
     printLine :: [[Tok]] -> TeX
     printLine xs = do
-      forM_ (zip xs [(0::Int)..]) $ \ (ts,tab) -> {-when (not (null ts)) $-} do
-        cmdn' ">" [showCol tab] []
-        forM_ ts $ \t -> do 
-          render t
-          tex "\\;"
+      let lastEmpty = lastIndex null xs
+      forM_ (zip xs [(0::Int)..]) $ \(ts,colName) -> do
+         if (null ts)
+             then when (colName == lastEmpty && colName > 0) $ do
+                    cmdn' ">" [showCol colName] []
+                    cmd0 "quad"
+             else do cmdn' ">" [showCol colName] []
+                     forM_ ts $ \t -> do 
+                       render t
+                       tex "\\;"
       cmdn' "<" ["E"] []
       texLn "\\\\"
       return ()
 
-
+    -- The input, grouped in lines and columns
     array :: [[[Tok]]]
     array = map tabify input
 
+    isRelative = case array of
+       [] -> []
+       (x:xs) -> zip x (repeat False) : [[(c,not (null p) && null c) | (p,c) <- zip prev cur] |  (prev,cur) <- zip xs (x:xs)] 
 
+    -- which columns have nothing at all in them?
+    emptyColumns :: [Bool]
+    emptyColumns = map and $ transpose $ map (map null) array
+
+    -- Is the token preceded by two spaces or starts a line?
     isAligning :: [Tok] -> [(Bool,Tok)]
     isAligning [] = []
     isAligning (x:xs) = (True,x) :
                         [(startCol t2 > 1 + endCol t1,t2) | (t1,t2) <- zip (x:xs) xs]
 
+    -- The tab stops in a line
     tabStops :: [Tok] -> [Int]
     tabStops xs = [startCol x | (align,x) <- isAligning xs, align]
 
+    -- all the tab stops
     allTabStops :: [Int]
     allTabStops = sort $ nub $ concatMap tabStops input
 
