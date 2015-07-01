@@ -4,8 +4,6 @@ module Config where
 import Data.Configurator
 import Data.Configurator.Types (Value (..),Configured (..))
 import System.IO.Unsafe
-import Data.Traversable
-import Control.Applicative
 
 data List a = L [a]
 

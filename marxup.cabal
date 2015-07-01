@@ -10,8 +10,6 @@ license-file:   LICENSE
 author:         Jean-Philippe Bernardy
 maintainer:     jeanphilippe.bernardy@gmail.com
 Cabal-Version:  >= 1.8
-tested-with:    GHC==6.12.1
-tested-with:    GHC==7.4.1
 build-type:     Simple
 
 data-files:
