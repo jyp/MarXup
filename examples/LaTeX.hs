@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -XTypeSynonymInstances -XOverloadedStrings -XRecursiveDo -pgmF ../dist/build/marxup-lit/marxup-lit -F #-}
+{-# OPTIONS_GHC -XTypeSynonymInstances -XOverloadedStrings -XRecursiveDo -pgmF dist/build/marxup3/marxup3 -F #-}
 
 import MarXup
 import MarXup.Latex

@@ -29,14 +29,14 @@ render = toList
 
 oPos :: SourcePos -> Doc
 oPos EOF = mempty
-oPos p = text "{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}"
+oPos p = text "\n{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}\n"
 
 oText :: String -> Doc
 oText x = text "textual" <+> text (show x)
 
 oConcat :: [Doc] -> Doc
-oConcat [] = text "(return ())"
-oConcat [x] = parens x
+oConcat [] = text "return ()"
+oConcat [x] = x
 oConcat l = text "do" <+> braces (text "rec" <+> braces (hcat (punctuate (text ";") binds)) <> text ";" <> ret)
   where binds = init l
         ret = last l
@@ -50,7 +50,7 @@ rHaskells xs = mconcat $ map rHaskell xs
 rHaskell :: Haskell -> DList Char
 rHaskell (HaskChunk s) = text s
 rHaskell (HaskLn pos) = oPos pos <> text "\n"
-rHaskell (Quote xs) = oConcat $ map rMarxup xs
+rHaskell (Quote xs) = parens $ oConcat $ map rMarxup xs
 rHaskell (List xs) = brackets $ rHaskells xs
 rHaskell (Parens xs) = parens $ rHaskells xs
 rHaskell (String xs) = doubleQuotes $ text xs
