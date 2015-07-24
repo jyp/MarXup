@@ -85,11 +85,11 @@ library
   
 --  exposed-modules: MarXup.Pandoc (broken)
 
-executable marxup-example
-  hs-source-dirs: examples
-  main-is: LaTeX.hs
-  build-depends: marxup
-  build-depends: base
-  build-depends: lens
-  build-depends: graphviz
+-- executable marxup-example
+--   hs-source-dirs: examples
+--   main-is: LaTeX.hs
+--   build-depends: marxup
+--   build-depends: base
+--   build-depends: lens
+--   build-depends: graphviz
   
