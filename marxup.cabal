@@ -19,6 +19,11 @@ Flag graphviz
   Description: Enable graphviz support
   Default:     True
 
+Flag example
+  Description: Compile example. This will generally not work unless you know what you're doing.
+  manual: True
+  Default:     False
+
 executable marxup3
   extensions: FlexibleInstances, TupleSections
   main-is: Main3.hs
@@ -85,11 +90,15 @@ library
   
 --  exposed-modules: MarXup.Pandoc (broken)
 
--- executable marxup-example
---   hs-source-dirs: examples
---   main-is: LaTeX.hs
---   build-depends: marxup
---   build-depends: base
---   build-depends: lens
---   build-depends: graphviz
+executable marxup-example
+   if  flag(example)
+     buildable: True
+   else
+     buildable: False
+   hs-source-dirs: examples
+   main-is: LaTeX.hs
+   build-depends: marxup
+   build-depends: base
+   build-depends: lens
+   build-depends: graphviz
   
