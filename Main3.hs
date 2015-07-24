@@ -49,7 +49,7 @@ rHaskells xs = mconcat $ map rHaskell xs
 
 rHaskell :: Haskell -> DList Char
 rHaskell (HaskChunk s) = text s
-rHaskell (HaskLn pos) = oPos pos <> text "\n"
+rHaskell (HaskLn pos) = oPos pos
 rHaskell (Quote xs) = parens $ oConcat $ map rMarxup xs
 rHaskell (List xs) = brackets $ rHaskells xs
 rHaskell (Parens xs) = parens $ rHaskells xs
