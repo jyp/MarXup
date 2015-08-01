@@ -20,33 +20,35 @@ mkcols = sequence_ . intersperse newcol
 vspace, hspace :: String -> TeX
 vspace = cmd "vspace" . textual
 hspace = cmd "hspace" . textual
+
+hfill :: TeX
 hfill = cmd0 "hfill"
 
 title :: TeX -> TeX
 title = cmd "title"
 
-
-data ClassFile = Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
-  deriving Eq
 type AuthorInfoStyle = ClassFile
 
 data AuthorInfo = AuthorInfo {authorName :: String, authorEmail :: String, authorInst :: String}
 
+authorinfo :: [AuthorInfo] -> Tex ()
+authorinfo as = do c<-askClass; authorinfo' c as
+
 -- | author info in as triplets name, institution, email
-authorinfo :: AuthorInfoStyle -> [AuthorInfo] -> TeX
-authorinfo LNCS as = do
+authorinfo' :: AuthorInfoStyle -> [AuthorInfo] -> TeX
+authorinfo' LNCS as = do
   cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
   cmd "institute" $ mconcat $ intersperse (cmd0 "and") $ map textual $ insts
   where oneauthor AuthorInfo{..} = textual authorName <> (if length insts > 1 then cmd "inst" (textual $ show $ 1 + instIdx) else mempty)
            where Just instIdx = elemIndex authorInst insts
         insts = nub $ map authorInst as
 
-authorinfo SIGPlan as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
+authorinfo' SIGPlan as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
     let names = map authorName g
         emails = mconcat $ intersperse (cmd0 "and") $ map (textual . authorEmail) g
     cmdn "authorinfo" [mconcat $ intersperse (cmd0 "and") $ map textual names, textual institution, emails]
     return ()
-authorinfo EPTCS as = mconcat $ intersperse and' $
+authorinfo' EPTCS as = mconcat $ intersperse and' $
   flip map (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
     cmd "author" $ do
       mconcat $ intersperse dquad $ map (textual . authorName) g
@@ -55,7 +57,7 @@ authorinfo EPTCS as = mconcat $ intersperse and' $
     return ()
   where dquad = cmd0 "quad" <> cmd0 "quad"
         and' = cmd0 "and"
-authorinfo Beamer as = do
+authorinfo' Beamer as = do
   cmd "author" $ mconcat $ intersperse (cmd0 "and") $ flip map as $ \a -> do
       textual $ authorName a
       case elemIndex (authorInst a) institutions of
@@ -71,31 +73,34 @@ authorinfo Beamer as = do
         inst :: Int -> TeX
         inst i = when (length institutions > 1) $ cmd "inst" $ tex $ show (i+1)
         
-authorinfo IEEE as = cmd "author" $ do
+authorinfo' IEEE as = cmd "author" $ do
   cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace "1cm") $ map (textual . authorName) as
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
   cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
   where (AuthorInfo {authorInst = inst}:_) = as
-authorinfo _ {- Plain -} as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
+authorinfo' _ {- Plain -} as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
   where oneauthor (AuthorInfo name _ institution) = textual name <> newline <> textual institution
 
-keywords :: ClassFile -> [String] -> TeX
-keywords Plain ks = do
-  paragraph "keywords"
-  mconcat $ intersperse ", " $ map textual ks
-  return ()
-keywords LNCS ks = do
-  cmd "keywords" $ mconcat $ intersperse ", " $ map textual ks
-keywords IEEE ks = env "IEEEkeywords" $ do
-  mconcat $ intersperse ", " $ map textual ks
-keywords SIGPlan ks = do
-  cmd0 "keywords"
-  mconcat $ intersperse ", " $ map textual ks
-keywords _ _ = return ()
+keywords :: [String] -> TeX
+keywords ks = do
+  classFile <- askClass
+  case classFile of
+    Plain -> do
+      paragraph "keywords"
+      mconcat $ intersperse ", " $ map textual ks
+      return ()
+    LNCS -> do cmd "keywords" $ mconcat $ intersperse ", " $ map textual ks
+    IEEE -> env "IEEEkeywords" $ do mconcat $ intersperse ", " $ map textual ks
+    SIGPlan -> do cmd0 "keywords"
+                  mconcat $ intersperse ", " $ map textual ks
+    _ -> return ()
 
 
+newline :: TeX
 newline = backslash <> backslash
+newcol :: TeX
 newcol = tex "&"
+newpara :: Tex ()
 newpara = texLines ["",""]
 
 maketitle :: Tex ()

@@ -12,7 +12,10 @@ import MarXup.MultiRef
 import System.Process
 import System.Directory (doesFileExist)
 
-newtype Tex a = Tex {fromTex :: Multi a}
+data ClassFile = Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
+  deriving Eq
+
+newtype Tex a = Tex {fromTex :: Multi ClassFile a}
   deriving (Monad, MonadFix, Applicative, Functor)
 
 ---------------------------------
@@ -207,15 +210,15 @@ justBox x = do
   return b
   where writeBox l = "\\immediate\\write\\boxesfile{\\number\\"++ l ++"\\marxupbox}"
 
-renderWithBoxes :: [BoxSpec] -> Tex a -> String
-renderWithBoxes bs (Tex t) = doc
-  where (_,_,doc) = runRWS (fromMulti $ t) () (0,bs)
+renderWithBoxes :: ClassFile -> [BoxSpec] -> Tex a -> String
+renderWithBoxes classFile bs (Tex t) = doc
+  where (_,_,doc) = runRWS (fromMulti $ t) classFile (0,bs)
 
-renderSimple :: TeX -> String
-renderSimple = renderWithBoxes []
+renderSimple :: ClassFile -> Tex a -> String
+renderSimple classFile = renderWithBoxes classFile []
   
-renderTex :: String -> TeX -> IO ()
-renderTex fname body = do
+renderTex :: ClassFile -> String -> TeX -> IO ()
+renderTex classFile fname body = do
   let boxesTxt = fname ++ ".boxes"
   boxes <- getBoxInfo . map read . lines <$> do
     e <- doesFileExist boxesTxt
@@ -223,13 +226,16 @@ renderTex fname body = do
       then readFile boxesTxt
       else return ""
   putStrLn $ "Found " ++ show (length boxes) ++ " boxes"
-  let texSource = renderWithBoxes (boxes ++ repeat nilBoxSpec) wholeDoc
+  let texSource = renderWithBoxes classFile (boxes ++ repeat nilBoxSpec) wholeDoc
       wholeDoc = do
         tex $ "\\newwrite\\boxesfile"
         tex $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n\\newsavebox{\\marxupbox}"
         body
         tex "\n\\immediate\\closeout\\boxesfile"
   writeFile (fname ++ ".tex") texSource
+
+askClass :: Tex ClassFile
+askClass = Tex ask
 
 getBoxInfo :: [Int] -> [BoxSpec]
 getBoxInfo (width:height:depth:bs) = BoxSpec (scale width) (scale height) (scale depth):getBoxInfo bs

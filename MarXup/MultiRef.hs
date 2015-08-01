@@ -7,8 +7,8 @@ import "mtl" Control.Monad.RWS.Lazy
 import Control.Applicative
 import Control.Arrow (first)
 
-newtype Multi a = Multi {fromMulti :: RWS () String (References,[BoxSpec]) a }
-  deriving (Functor, Monad, Applicative, MonadWriter String, MonadState (References,[BoxSpec]), MonadFix)
+newtype Multi config a = Multi {fromMulti :: RWS config String (References,[BoxSpec]) a }
+  deriving (Functor, Monad, MonadReader config, Applicative, MonadWriter String, MonadState (References,[BoxSpec]), MonadFix)
 
 -----------------------------------
 -- Basic datatype and semantics
@@ -23,10 +23,10 @@ data BoxSpec = BoxSpec {boxWidth, boxHeight, boxDepth :: Double}
 nilBoxSpec :: BoxSpec
 nilBoxSpec = BoxSpec 0 0 0
 
-raw :: String -> Multi ()
+raw :: String -> Multi config ()
 raw s = tell s
 
-getBoxSpec :: Multi BoxSpec
+getBoxSpec :: Multi config BoxSpec
 getBoxSpec = do
   (refs,bs) <- get
   case bs of
@@ -38,7 +38,7 @@ getBoxSpec = do
 
 
 -- Reference management
-newLabel :: Multi Label -- create a new label
+newLabel :: Multi config Label -- create a new label
 newLabel = do x <- fst <$> get;  modify (first (+1)); return x
 
 type References = Int -- how many labels have been allocated
