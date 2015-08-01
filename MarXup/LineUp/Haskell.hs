@@ -32,6 +32,7 @@ printTok t = let s = textual $ showToken t
                  pragma = cmd "mathrm" s
                  symbol = cmd "mathnormal" s
   in case t of
+        -- _ -> cmd "mathrm" $ textual $ show t -- Debug
         VarId _ -> ident
         QVarId _ -> ident
         IDupVarId _ -> ident
@@ -39,7 +40,7 @@ printTok t = let s = textual $ showToken t
         ConId _ -> ident
         QConId _ -> ident
         DVarId _ -> ident
-        VarSym _ -> ident
+        VarSym "<|>" -> tex "<\\!\\|\\!>"
         ConSym _ -> ident
         QVarSym _ -> ident
         QConSym _ -> ident

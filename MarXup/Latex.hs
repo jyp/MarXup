@@ -10,7 +10,6 @@ import Data.Monoid
 import Control.Applicative
 import Data.Function (on)
 
-
 -- | Separate the arguments with '\\'
 mkrows,mkcols :: [TeX] -> TeX
 mkrows ls = sequence_ $ intersperse newline ls
@@ -81,6 +80,10 @@ authorinfo _ {- Plain -} as = cmd "author" $ mconcat $ intersperse (cmd0 "and") 
   where oneauthor (AuthorInfo name _ institution) = textual name <> newline <> textual institution
 
 keywords :: ClassFile -> [String] -> TeX
+keywords Plain ks = do
+  paragraph "keywords"
+  mconcat $ intersperse ", " $ map textual ks
+  return ()
 keywords LNCS ks = do
   cmd "keywords" $ mconcat $ intersperse ", " $ map textual ks
 keywords IEEE ks = env "IEEEkeywords" $ do

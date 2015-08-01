@@ -51,14 +51,6 @@ lineup input = do
     array :: [[[Tok]]]
     array = map tabify input
 
-    isRelative = case array of
-       [] -> []
-       (x:xs) -> zip x (repeat False) : [[(c,not (null p) && null c) | (p,c) <- zip prev cur] |  (prev,cur) <- zip xs (x:xs)] 
-
-    -- which columns have nothing at all in them?
-    emptyColumns :: [Bool]
-    emptyColumns = map and $ transpose $ map (map null) array
-
     -- Is the token preceded by two spaces or starts a line?
     isAligning :: [Tok] -> [(Bool,Tok)]
     isAligning [] = []
