@@ -65,7 +65,7 @@ defaultPathOptions = PathOptions
   ,_decoration = Decoration ""
   }
 
-newtype Diagram a = Dia (RWST Env () (Var,LPState) Multi a)
+newtype Diagram a = Dia (RWST Env () (Var,LPState) (Multi ClassFile) a)
   deriving (Monad, Applicative, Functor, MonadReader Env)
 
 type Dia = Diagram ()
@@ -79,7 +79,7 @@ instance MonadState LPState Diagram where
 -------------
 -- Diagrams
 
-runDiagram :: Diagram a -> Multi a
+runDiagram :: Diagram a -> Multi ClassFile a
 runDiagram (Dia diag) = do
   rec (a,(_,problem),_) <- runRWST diag (Env solution 1 defaultPathOptions)
                                         (Var 0,LP Min M.empty [] M.empty M.empty)
@@ -95,6 +95,7 @@ diaRawTex (Tex t) = Dia $ lift t
 diaRaw :: String -> Dia
 diaRaw = diaRawTex . tex
 
+relax :: Constant -> Diagram a -> Diagram a
 relax factor = local (over diaTightness (/ factor)) 
 
 instance Monoid (Diagram ()) where
@@ -114,6 +115,11 @@ rawNewVar = Dia $ do
       (Var x,y) <- get
       put $ (Var (x+1),y)
       return $ Var x
+
+newVar :: Diagram Expr
+newVar = do
+  [v] <- newVars [ContVar]
+  return v
 
 newVars :: [VarKind] -> Diagram [Expr]
 newVars kinds = newVars' (zip kinds (repeat Free))
