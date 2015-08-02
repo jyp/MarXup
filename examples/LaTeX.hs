@@ -15,7 +15,7 @@ import Control.Monad (unless)
 import MarXup.Diagram
 import MarXup.Diagram.Graphviz
 import Control.Lens (set)
-import Data.GraphViz
+import Data.GraphViz hiding (Plain)
 import Data.String
 import Data.Traversable
 import Data.GraphViz.Attributes.Complete
@@ -129,7 +129,7 @@ b = Con "b"
 (≜) = binop 1 "="
 
       
-main = renderTex "LaTeX" docu
+main = renderTex Plain "LaTeX" docu
        
 docu = preamble «
 

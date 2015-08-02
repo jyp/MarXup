@@ -226,8 +226,8 @@ Point x1 y1 .<. Point x2 y2 = do
   y1 <== y2
 
 -- | Forces the point to be inside the (bounding box) of the object.
-inside :: Point -> Box -> Diagram ()
-inside p o = do
+insideBox :: Anchored a => Point -> a -> Diagram ()
+insideBox p o = do
   (o # SW) .<. p
   p .<. (o # NE)
 
@@ -235,7 +235,7 @@ inside p o = do
 -- point.
 autoLabel :: Box -> Incidence -> Diagram ()
 autoLabel lab (Incidence pt norm) = do
-  pt `inside` lab
+  pt `insideBox` lab
   minimize =<< orthoDist (lab#Center) (pt + norm)
 
 -- | @labeledEdge label source target@
@@ -250,6 +250,7 @@ labeledEdge source target lab = autoLabel lab =<< edge source target
 
 --example:      spread hdist 30 ps
 
+spread :: (t -> t -> Expr) -> Expr -> [t] -> Diagram ()
 spread f d (x:y:xs) = do
   f x y === d
   spread f d (y:xs)
@@ -266,3 +267,9 @@ arrow :: Object -> Object -> Diagram Incidence
 arrow src trg = using (outline "black" . set endTip LatexTip) $ do
   edge src trg
 
+boundingBox :: [Object] -> Diagram Anchorage
+boundingBox os = do
+  bx <- box
+  mapM_ (`insideBox` bx) (map (# NW) os)
+  mapM_ (`insideBox` bx) (map (# SE) os)
+  return bx
