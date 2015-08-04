@@ -3,7 +3,7 @@ module MarXup.Latex where
 
 import MarXup
 import MarXup.Verbatim
-import Control.Monad (forM_,when)
+import Control.Monad (forM_,when,forM)
 import MarXup.Tex
 import Data.List (intersperse,groupBy,elemIndex,nub)
 import Data.Monoid
@@ -150,9 +150,28 @@ documentClass docClass options = cmd' "documentclass" options (tex docClass)
 ----------
 -- Lists
 
+{-# DEPRECATED item, enumerate, itemize "Since Aug 2015. Use itemList, enumList, descList instead "#-}
 item = cmd0 "item"
 enumerate = env "enumerate"
 itemize = env "itemize"
+
+itemList :: [TeX] -> TeX
+itemList [] = mempty
+itemList xs = env "itemize" $ forM_ xs $ \x -> do
+  cmd0 "item"
+  x
+
+enumList :: [TeX] -> TeX
+enumList [] = mempty
+enumList xs = env "enumerate" $ forM_ xs $ \x -> do
+  cmd0 "item"
+  x
+
+descList :: [(TeX,TeX)] -> TeX
+descList [] = mempty
+descList xs = env "enumerate" $ forM_ xs $ \(lab,x) -> do
+  cmdm "item" [lab] []
+  x
 
 ------------------------
 -- Various environments
