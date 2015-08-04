@@ -58,7 +58,7 @@ rHaskell (String xs) = doubleQuotes $ text xs
 rMarxup :: MarXup -> Doc
 rMarxup (TextChunk s) = oText s
 rMarxup (Unquote var val) = maybe mempty (\x -> text (x <> "<-")) var <>
-                            text "element" <+> parens (hcat $ map (parens . rHaskells) val)
+                            text "element" <+> parens (hcat $ map (parens . rHaskell) val)
 rMarxup (Comment _) = mempty
 rMarxup (TextLn pos) = oText "\n" <> oPos pos
 

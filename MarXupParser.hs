@@ -15,8 +15,8 @@ import Config
 ------------------
 -- Simple printing combinators, which do not add nor remove line breaks
 
-data Haskell = HaskChunk String | HaskLn SourcePos | Quote [MarXup] | List [Haskell] | Parens [Haskell] | String String
-data MarXup = TextChunk String | Unquote (Maybe String) [[Haskell]] | Comment String | TextLn SourcePos
+data Haskell = HaskChunk String | HaskLn SourcePos | Quote [MarXup] | List [Haskell] | Parens [Haskell] | String String deriving (Show)
+data MarXup = TextChunk String | Unquote (Maybe String) [Haskell] | Comment String | TextLn SourcePos deriving (Show)
 
 ----------------------------------------------
 -- Parsing combinators
@@ -74,18 +74,18 @@ isIdentChar x = isAlphaNum x || (x `elem` "\'_")
 pIdent :: Parser String
 pIdent = munch1 isIdentChar <?> "identifier"
 
-pArgument :: Parser [Haskell]
-pArgument = (pArg "()" <|> (pArg "[]") <|> (box <$> pTextArg) <|> (box <$> pString)) <?> "argument"
+pArgument :: Parser Haskell
+pArgument = (Parens <$> pArg "()" <|> (List <$> pArg "[]") <|> pTextArg <|> pString) <?> "argument"
 
-pId :: Parser [Haskell]
-pId = (box . HaskChunk) <$> pIdent
+pId :: Parser Haskell
+pId = HaskChunk <$> pIdent
 
 pElement :: Parser MarXup
 pElement = 
   label "Haskell element" $ do
     choice $ map string $ antiQuoteStrings
     var <- (Just <$> (pIdent <* string "<-")) <<|> pure Nothing
-    val <- ((:) <$> pId <*> manyGreedy pArgument) <|> (box <$> pArg "()")
+    val <- ((:) <$> pId <*> manyGreedy pArgument) <|> pArg "()"
     return $ Unquote var val
 
 commentString :: String
@@ -141,7 +141,6 @@ pChunk :: [Char] -> Parser String
 pChunk stops = munch1 (not . (`elem` stops))
 
 
-{-
 -- Tests
 testHask = parse "<interactive>" pHask completeResults "arst « text @z<-fct[x](y) awft"
 testHask2 = parse "<interactive>" pHask completeResults "ars(t) « text @z<-fct[x](y) » awft"
@@ -150,4 +149,3 @@ testText3 = parse "<interactive>" pTextArg completeResults "« 1 @x 2 @y 3 @x 4 
 testElem = parse "<interactive>" pElement completeResults "@x<-fct(x « yop »)[y]"
 testChunk = parse "<interactive>" pHaskChunk completeResults "t"
 testArg = parse "<interactive>" (pArg "()") completeResults "()"
--}
