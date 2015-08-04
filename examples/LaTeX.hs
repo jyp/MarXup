@@ -179,6 +179,7 @@ One can also draw diagrams:
 There is partial, rudimentary support for layout of graphs using graphviz.
 
 grDiag
+%% This is deactivated for now; it requires graphviz to be installed
 
 @section«Haskell»
 
