@@ -100,7 +100,7 @@ cmdn' cmd options args = do
   when (null args) $ tex "{}" -- so that this does not get glued with the next thing.
   return res
 
--- | Command with tex options and many arguments
+-- | Command with tex options and several arguments
 cmdm :: String -> [Tex a] -> [Tex a] -> Tex [a]
 cmdm cmd options args = do
   backslash >> tex cmd
@@ -110,6 +110,7 @@ cmdm cmd options args = do
   return res
 
 
+-- | Command with string options and several arguments; no result
 cmdn'_ :: String -> [String] -> [TeX] -> Tex ()
 cmdn'_ cmd options args = cmdn' cmd options args >> return ()
 
@@ -117,6 +118,7 @@ cmdn'_ cmd options args = cmdn' cmd options args >> return ()
 cmdn :: String -> [Tex a] -> Tex [a]
 cmdn c args = cmdn' c [] args
 
+-- | Command with n arguments, no result
 cmdn_ :: String -> [TeX] -> Tex ()
 cmdn_ cmd args = cmdn'_ cmd [] args
 
@@ -126,13 +128,13 @@ env x = env' x []
 
 -- | Environment with options
 env' :: String -> [String] -> Tex a -> Tex a
-env' e opts body = env'' e opts [] body
+env' e opts body = env'' e (map textual opts) [] body
 
--- | Environment with a tex option
-env'' :: String -> [String] -> [TeX] -> Tex a -> Tex a
+-- | Environment with tex options and tex arguments
+env'' :: String -> [TeX] -> [TeX] -> Tex a -> Tex a
 env'' e opts args body = do
   cmd "begin" $ tex e
-  when (not $ null opts) $ brackets $ sequence_ $ map tex $ intersperse "," opts
+  when (not $ null opts) $ brackets $ sequence_ $ intersperse (tex ",") opts
   mapM_ braces args
   x <- body
   cmd "end" $ tex e
