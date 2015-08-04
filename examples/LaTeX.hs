@@ -188,8 +188,8 @@ There is simple support for lhs2tex-style stuff
 autoLab s i = do  o <- labelObj s
                   autoLabel o i
                   print (1<+>2) ' '
-   where x = whatever
-         ops = [(<|>),(<>),(<+>)]
+   where  x    = whatever
+          ops  = [(<|>),(<>),(<+>)]
 »
 
 

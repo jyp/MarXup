@@ -24,9 +24,9 @@ haskellInlineCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVe
    ParseOk toks -> mconcat $ map render $ mkSpaces $ map (mkTok custPrintTok) toks
    ParseFailed location err -> textual (show location ++ show err)
 
+mkTok :: (t -> (Float, TeX, Float)) -> Loc t -> Tok
 mkTok custPrintTok (Loc l t) = Tok (srcSpanStartColumn l) (srcSpanEndColumn l) before txt after
   where (before,txt,after) = custPrintTok t
- 
 
 haskellCust :: ParseMode -> (PrintTok) -> Verbatim a -> Tex ()
 haskellCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVerbatim v) of
@@ -84,11 +84,11 @@ printTok t = let s = textual $ showToken t
         LeftCurly    -> leftParen
         RightCurly   -> rightParen
         VRightCurly -> rightParen
-        LeftSquare   -> rightParen
+        LeftSquare   -> leftParen
         RightSquare          -> rightParen
         ParArrayLeftSquare   -> leftParen
         ParArrayRightSquare -> rightParen
-        Comma -> symbol
+        Comma -> rightParen
         Underscore -> symbol
         BackQuote -> symbol
         Dot -> symbol

@@ -94,4 +94,3 @@ mkSpaces ts = [ Tok (startCol l) (endCol l) 0
                 (render l <>
                  tex ("\\mskip " ++ show (min (postSpace l) (preSpace r)) ++ "mu" )) 0
               | (l,r) <- zip ts (tail ts) ] ++ [last ts]
-   where muPerEm = 18
