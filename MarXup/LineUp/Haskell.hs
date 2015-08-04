@@ -14,24 +14,41 @@ import Data.Monoid
 haskell :: Verbatim a -> Tex ()
 haskell = haskellCust defaultParseMode printTok
 
-haskellCust :: ParseMode -> (Token -> TeX) -> Verbatim a -> Tex ()
+haskellInline :: Verbatim a -> Tex ()
+haskellInline = haskellInlineCust defaultParseMode printTok
+
+type PrintTok = Token -> (Float,TeX,Float)
+
+haskellInlineCust :: ParseMode -> (PrintTok) -> Verbatim a -> Tex ()
+haskellInlineCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVerbatim v) of
+   ParseOk toks -> mconcat $ map render $ mkSpaces $ map (mkTok custPrintTok) toks
+   ParseFailed location err -> textual (show location ++ show err)
+
+mkTok custPrintTok (Loc l t) = Tok (srcSpanStartColumn l) (srcSpanEndColumn l) before txt after
+  where (before,txt,after) = custPrintTok t
+ 
+
+haskellCust :: ParseMode -> (PrintTok) -> Verbatim a -> Tex ()
 haskellCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVerbatim v) of
-  ParseOk toks -> lineup (map (map tokInfo) lins)
+  ParseOk toks -> lineup (map (map (mkTok custPrintTok)) lins)
     where lins = groupBy ((==) `on` (srcSpanStartLine . loc)) toks
-          tokInfo :: Loc Token -> Tok
-          tokInfo (Loc l t) = Tok (srcSpanStartColumn l) (srcSpanEndColumn l) (custPrintTok t)
   ParseFailed location err -> textual (show location ++ show err)
 
-printTok :: Token -> TeX
+printTok :: PrintTok
 printTok t = let s = textual $ showToken t
-                 ident = cmd "mathsf" s
-                 unquote = cmd "mathsf" s
-                 quote = cmd "mathtt" s
-                 literal = cmd "mathrm" s
-                 string = cmd "texttt" s
-                 keyword = cmd "mathbf" s
-                 pragma = cmd "mathrm" s
-                 symbol = cmd "mathnormal" s
+                 ident = regular $ cmd "mathsf" s
+                 unquote = regular $ cmd "mathsf" s
+                 quote = regular $ cmd "mathtt" s
+                 literal = regular $ cmd "mathrm" s
+                 string = regular $ cmd "texttt" s
+                 keyword = regular $ cmd "mathbf" s
+                 pragma = regular $ cmd "mathrm" s
+                 symbol = regular $ cmd "mathnormal" s
+                 regular tx = (5,tx,5)
+                 leftParen  = (5,cmd "mathnormal" s,0)
+                 rightParen = (0,cmd "mathnormal" s,5)
+                 special x = regular $ cmd "mathnormal" $ tex x
+                 debug = regular $ textual "[" <> ( cmd "mathnormal" $ textual $ show t) <> textual "]"
   in case t of
         -- _ -> cmd "mathrm" $ textual $ show t -- Debug
         VarId _ -> ident
@@ -41,8 +58,11 @@ printTok t = let s = textual $ showToken t
         ConId _ -> ident
         QConId _ -> ident
         DVarId _ -> ident
-        VarSym "<|>" -> tex "<\\!\\mid\\!>"
-        VarSym "++" -> tex "+\\!+"
+        VarSym "<>" -> special "<\\!>"
+        VarSym "<|>" -> special "<\\!\\mid\\!>"
+        VarSym "<$>" -> special "<\\!\\mid\\!>"
+        VarSym "<+>" -> special "<{\\mkern-12mu}+{\\mkern-12mu}>"
+        VarSym "++" -> special "+\\!+"
         ConSym _ -> ident
         QVarSym _ -> ident
         QConSym _ -> ident
@@ -56,18 +76,18 @@ printTok t = let s = textual $ showToken t
         DoubleTokHash _ -> literal
         CharacterHash _ -> literal
         StringHash _ -> literal
-        LeftParen    -> symbol
-        RightParen -> symbol
-        LeftHashParen        -> symbol
+        LeftParen    -> leftParen
+        RightParen -> rightParen
+        LeftHashParen  -> symbol
         RightHashParen -> symbol
         SemiColon    -> symbol
-        LeftCurly    -> symbol
-        RightCurly   -> symbol
-        VRightCurly -> symbol
-        LeftSquare   -> symbol
-        RightSquare          -> symbol
-        ParArrayLeftSquare   -> symbol
-        ParArrayRightSquare -> symbol
+        LeftCurly    -> leftParen
+        RightCurly   -> rightParen
+        VRightCurly -> rightParen
+        LeftSquare   -> rightParen
+        RightSquare          -> rightParen
+        ParArrayLeftSquare   -> leftParen
+        ParArrayRightSquare -> rightParen
         Comma -> symbol
         Underscore -> symbol
         BackQuote -> symbol
@@ -79,11 +99,11 @@ printTok t = let s = textual $ showToken t
         Equals -> symbol
         Backslash -> symbol
         Bar -> symbol
-        LeftArrow -> cmd0 "leftarrow"
-        RightArrow -> cmd0 "rightarrow"
+        LeftArrow -> regular $ cmd0 "leftarrow"
+        RightArrow -> regular $ cmd0 "rightarrow"
         At -> symbol
         Tilde -> symbol
-        DoubleArrow -> cmd0 "Rightarrow"
+        DoubleArrow -> regular $ cmd0 "Rightarrow"
         Minus -> symbol
         Exclamation -> symbol
         Star -> symbol
@@ -179,4 +199,4 @@ printTok t = let s = textual $ showToken t
         KW_Jvm -> keyword
         KW_Js -> keyword
         KW_CApi -> keyword
-        _ -> cmd "mathnormal" s
+        _ -> debug

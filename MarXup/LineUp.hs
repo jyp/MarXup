@@ -1,16 +1,22 @@
+{-# LANGUAGE RecordWildCards #-}
 module MarXup.LineUp where
 
 import Data.List
 import Data.Foldable
 import Control.Monad (when)
+import Data.Monoid
 
 import MarXup.Tex
 
 data Tok = Tok {
   startCol :: Int,
   endCol :: Int,
-  render :: TeX
+  preSpace :: Float, -- max amount of space which should come before this token, in mu
+  render :: TeX,
+  postSpace :: Float -- max amount of space which should come after this token, in mu
   }
+
+
 
 lineup :: [[Tok]] -> TeX
 lineup input = do
@@ -42,14 +48,13 @@ lineup input = do
              else do cmdn' ">" [showCol colName] []
                      forM_ ts $ \t -> do 
                        render t
-                       tex "\\;"
       cmdn' "<" ["E"] []
       texLn "\\\\"
       return ()
 
     -- The input, grouped in lines and columns
     array :: [[[Tok]]]
-    array = map tabify input
+    array = map (tabify . mkSpaces) input
 
     -- Is the token preceded by two spaces or starts a line?
     isAligning :: [Tok] -> [(Bool,Tok)]
@@ -77,3 +82,16 @@ lineup input = do
     tabify' xs (t:ts) = clearMeta col:tabify' xs' ts
       where (col,xs') = break (\(align,s) -> align && (startCol s >= t)) xs
 
+
+-- | Transform a list of tokens to move the spacing info into the TeX
+-- field of the tokens (spacing goes after the texts)
+mkSpaces :: [Tok] -> [Tok]
+mkSpaces [] = []
+-- mkSpaces ts = [ Tok startCol endCol
+--                 0 (tex (show preSpace) <> render <> tex (show postSpace) <> tex "\\;") 0
+--               | Tok{..} <- ts]
+mkSpaces ts = [ Tok (startCol l) (endCol l) 0
+                (render l <>
+                 tex ("\\mskip " ++ show (min (postSpace l) (preSpace r)) ++ "mu" )) 0
+              | (l,r) <- zip ts (tail ts) ] ++ [last ts]
+   where muPerEm = 18
