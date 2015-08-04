@@ -38,8 +38,9 @@ displayMath = env "displaymath"
 mathsf :: Tex a -> Tex a
 mathsf = cmd "mathsf"
 
-mathpreamble :: ClassFile -> TeX
-mathpreamble sty = do
+mathpreamble :: TeX
+mathpreamble = do
+  sty <- askClass
   usepackage "graphicx" []
   usepackage "amsmath"  []
   unless (sty == LNCS) $ usepackage "amsthm"   []
@@ -63,14 +64,21 @@ mathbox = mbox . ensureMath
 newtheorem :: String -> TeX -> TeX
 newtheorem ident txt = cmd "newtheorem" (tex ident) >> braces txt
 
+-- | @deflike referent nv name statement@:
+-- Environement of name @nv@, which should be refered as @referent@
 deflike :: String -> String -> TeX -> TeX -> Tex SortedLabel
-deflike reference nv name statement = env'' nv [] [name] $ do
-  statement
-  label reference
+deflike referent nv name statement = do
+  cls <- askClass
+  let header =  case cls of
+                  SIGPlan -> env'' nv [name] []
+                  _ -> env'' nv [] [name]
+  header $ do
+    statement
+    label referent
 
 thmlike :: String -> String -> TeX -> TeX -> TeX -> Tex SortedLabel
-thmlike reference nv name statement proof = do
-  x <- deflike reference nv name statement
+thmlike referent nv name statement proof = do
+  x <- deflike referent nv name statement
   env "proof" proof
   return x
 
