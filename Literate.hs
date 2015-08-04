@@ -37,7 +37,7 @@ rHaskell _ = mempty
 
 rMarxup :: MarXup -> Doc
 rMarxup (TextLn pos) = oPos pos <> text "\n"
-rMarxup (Unquote _ [[HaskChunk "haskell"],[Quote code]]) = mconcat $ map rInlineHask code
+rMarxup (Unquote _ [HaskChunk "haskell",Quote code]) = mconcat $ map rInlineHask code
 rMarxup _ = mempty
 
 rInlineHask :: MarXup -> Doc
