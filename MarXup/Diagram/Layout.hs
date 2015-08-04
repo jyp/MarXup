@@ -21,18 +21,35 @@ import MarXup.Tex
 
 type LPState = LP Var Constant
 
+-- | Solution of the linear programming problem
 type Solution = Map Var Double
+
+
 type Constant = Double
 
 -- | Expressions are linear functions of the variables
 type Expr = LinExpr Var Constant
 
+-- | Tikz decoration
 newtype Decoration = Decoration String
+
+
+-- | Tikz line tip
 data LineTip = ToTip | CircleTip | NoTip | StealthTip | LatexTip | ReversedTip LineTip | BracketTip | ParensTip
+
+-- | Tikz color
 type Color = String
+
+-- | Tikz line cap
 data LineCap = ButtCap | RectCap | RoundCap
+
+-- | Tikz line join
 data LineJoin = MiterJoin | RoundJoin | BevelJoin
+
+-- | Tikz dash pattern
 type DashPattern = [(Constant,Constant)]
+
+-- | Path drawing options
 data PathOptions = PathOptions
                      {_drawColor :: Maybe Color
                      ,_fillColor :: Maybe Color
@@ -96,7 +113,7 @@ diaRaw :: String -> Dia
 diaRaw = diaRawTex . tex
 
 relax :: Constant -> Diagram a -> Diagram a
-relax factor = local (over diaTightness (/ factor)) 
+relax factor = local (over diaTightness (/ factor))
 
 instance Monoid (Diagram ()) where
   mempty = return ()
