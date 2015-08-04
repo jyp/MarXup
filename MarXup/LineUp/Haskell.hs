@@ -9,7 +9,7 @@ import MarXup
 import MarXup.LineUp
 import MarXup.Tex
 import MarXup.Verbatim
-
+import Data.Monoid
 
 haskell :: Verbatim a -> Tex ()
 haskell = haskellCust defaultParseMode printTok
@@ -28,6 +28,7 @@ printTok t = let s = textual $ showToken t
                  unquote = cmd "mathsf" s
                  quote = cmd "mathtt" s
                  literal = cmd "mathrm" s
+                 string = cmd "texttt" s
                  keyword = cmd "mathbf" s
                  pragma = cmd "mathrm" s
                  symbol = cmd "mathnormal" s
@@ -40,14 +41,15 @@ printTok t = let s = textual $ showToken t
         ConId _ -> ident
         QConId _ -> ident
         DVarId _ -> ident
-        VarSym "<|>" -> tex "<\\!\\|\\!>"
+        VarSym "<|>" -> tex "<\\!\\mid\\!>"
+        VarSym "++" -> tex "+\\!+"
         ConSym _ -> ident
         QVarSym _ -> ident
         QConSym _ -> ident
         IntTok _ -> literal
         FloatTok _ -> literal
-        Character _ -> literal
-        StringTok _ -> literal
+        Character _ -> string
+        StringTok _ -> string
         IntTokHash _ -> literal
         WordTokHash _ -> literal
         FloatTokHash _ -> literal
@@ -81,7 +83,7 @@ printTok t = let s = textual $ showToken t
         RightArrow -> cmd0 "rightarrow"
         At -> symbol
         Tilde -> symbol
-        DoubleArrow -> cmd0 "Leftarrow"
+        DoubleArrow -> cmd0 "Rightarrow"
         Minus -> symbol
         Exclamation -> symbol
         Star -> symbol
