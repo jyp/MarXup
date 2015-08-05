@@ -63,6 +63,7 @@ printTok t = let s = textual $ showToken t
         VarSym "<$>" -> special "<\\!\\mid\\!>"
         VarSym "<+>" -> special "<{\\mkern-12mu}+{\\mkern-12mu}>"
         VarSym "++" -> special "+\\!+"
+        VarSym _ -> symbol
         ConSym _ -> ident
         QVarSym _ -> ident
         QConSym _ -> ident
