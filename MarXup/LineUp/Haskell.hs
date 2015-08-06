@@ -60,7 +60,7 @@ printTok t = let s = textual $ showToken t
         DVarId _ -> ident
         VarSym "<>" -> special "<\\!>"
         VarSym "<|>" -> special "<\\!\\mid\\!>"
-        VarSym "<$>" -> special "<\\!\\mid\\!>"
+        VarSym "<$>" -> special "<\\!\\$\\!>"
         VarSym "<+>" -> special "<{\\mkern-12mu}+{\\mkern-12mu}>"
         VarSym "++" -> special "+\\!+"
         VarSym _ -> symbol
