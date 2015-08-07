@@ -181,9 +181,13 @@ There is partial, rudimentary support for layout of graphs using graphviz.
 grDiag
 %% This is deactivated for now; it requires graphviz to be installed
 
+@cmd0"newpage"
+
 @section«Haskell»
 
-There is simple support for lhs2tex-style stuff
+There is simple support for lhs2tex-style stuff.
+
+Another paragaph.
 
 @haskell«
 autoLab s i = do  o <- labelObj s
@@ -192,7 +196,7 @@ autoLab s i = do  o <- labelObj s
    where  x    = whatever
           ops  = [(<|>),(<>),(<+>)]
 »
-
+some text after
 
 @concl<-section«Conclusion»
 

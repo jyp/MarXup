@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module MarXup.LineUp where
+module MarXup.LineUp (Tok(..),lineup,mkSpaces) where
 
 import Data.List
 import Data.Foldable
@@ -17,17 +17,21 @@ data Tok = Tok {
   }
 
 
+displayPar :: [Char] -> Tex ()
+displayPar len = braces $ tex $ "\\parskip=0pt\\parindent=0pt\\par\\vskip \\" ++ len ++ "\\noindent"
 
 lineup :: [[Tok]] -> TeX
 lineup input = do
-  cmd0 "noindent"
+  displayPar "abovedisplayskip"
   cmd "ensuremath" $ env "pboxed" $ do
     declColumn "B"
     forM_ (zip allTabStops [(1::Int)..]) $ \(_col,tab) -> 
       declColumn (show tab)
     declColumn "E"
     texLn "%"
-    mapM_ printLine array
+    sequence_ $ intersperse (texLn "\\\\") $ map printLine array
+  displayPar "belowdisplayskip"
+  tex "\\ignorespaces"
   where
     showCol 0 = "B"
     showCol n = show n
@@ -49,7 +53,6 @@ lineup input = do
                      forM_ ts $ \t -> do 
                        render t
       cmdn' "<" ["E"] []
-      texLn "\\\\"
       return ()
 
     -- The input, grouped in lines and columns
