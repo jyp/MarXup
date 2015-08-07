@@ -17,12 +17,9 @@ data Tok = Tok {
   }
 
 
-displayPar :: [Char] -> Tex ()
-displayPar len = braces $ tex $ "\\parskip=0pt\\parindent=0pt\\par\\vskip \\" ++ len ++ "\\noindent"
-
 lineup :: [[Tok]] -> TeX
-lineup input = do
-  displayPar "abovedisplayskip"
+lineup input = env'' "list" [] [mempty,tex "\\setlength\\leftmargin{1em}"] $ do
+  texLn "\\item\\relax"
   cmd "ensuremath" $ env "pboxed" $ do
     declColumn "B"
     forM_ (zip allTabStops [(1::Int)..]) $ \(_col,tab) -> 
@@ -30,8 +27,6 @@ lineup input = do
     declColumn "E"
     texLn "%"
     sequence_ $ intersperse (texLn "\\\\") $ map printLine array
-  displayPar "belowdisplayskip"
-  tex "\\ignorespaces"
   where
     showCol 0 = "B"
     showCol n = show n
