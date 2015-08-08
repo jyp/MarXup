@@ -16,7 +16,7 @@ import Config
 -- Simple printing combinators, which do not add nor remove line breaks
 
 data Haskell = HaskChunk String | HaskLn SourcePos | Quote [MarXup] | List [Haskell] | Parens [Haskell] | String String deriving (Show)
-data MarXup = TextChunk String | Unquote (Maybe String) [Haskell] | Comment String | TextLn SourcePos deriving (Show)
+data MarXup = TextChunk String | Unquote (Maybe (SourcePos,String)) [(SourcePos,Haskell)] | Comment String deriving (Show)
 
 ----------------------------------------------
 -- Parsing combinators
@@ -24,7 +24,7 @@ data MarXup = TextChunk String | Unquote (Maybe String) [Haskell] | Comment Stri
 anyQuoteStrings :: [String]
 anyQuoteStrings = concatMap (\(x,y) -> [x,y]) quoteStrings
 
-pTextChunk = TextChunk <$> pChunk' ("\n" : commentString : antiQuoteStrings ++ anyQuoteStrings) <?> "Text chunk"
+pTextChunk = TextChunk <$> pChunk' (commentString : antiQuoteStrings ++ anyQuoteStrings) <?> "Text chunk"
 pHaskChunk = HaskChunk <$> pChunk' (map box "\n\"[]()" ++ map fst quoteStrings) <?> "Haskell chunk"
     -- we keep track of balancing
 
@@ -33,9 +33,13 @@ pWPos = do
   char '\n'
   getPosition
 
+withPos :: Parser a -> Parser (SourcePos,a)
+withPos p = do
+  x <- p
+  pos <- getPosition
+  return (pos,x)
+
 pHaskLn = HaskLn <$> pWPos -- before each newline, tell GHC where we are.
-pTextLn = TextLn <$> pWPos
-  -- add code to output a newline; and insert a newline in the code.
 
 box = (:[])
 
@@ -59,7 +63,7 @@ pHask = many ((List <$> pArg "[]") <|>
 pTextArg' :: String -> String -> Parser Haskell
 pTextArg' open close = Quote <$> (label "quoted text" $
   string open *>
-  (many (pElement <|> pTextChunk <|> pTextLn <|> pComment))
+  (many (pElement <|> pTextChunk <|> pComment))
   <* string close)
 
 pTextArg :: Parser Haskell
@@ -84,8 +88,9 @@ pElement :: Parser MarXup
 pElement = 
   label "Haskell element" $ do
     choice $ map string $ antiQuoteStrings
-    var <- (Just <$> (pIdent <* string "<-")) <<|> pure Nothing
-    val <- ((:) <$> pId <*> manyGreedy pArgument) <|> pArg "()"
+    var <- (Just <$> (withPos pIdent <* string "<-")) <<|> pure Nothing
+    val <- ((:) <$> withPos pId <*> manyGreedy (withPos pArgument)) <|>
+           (box <$> withPos (Parens <$> pArg "()"))
     return $ Unquote var val
 
 commentString :: String

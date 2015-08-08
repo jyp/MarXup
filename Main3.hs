@@ -29,7 +29,8 @@ render = toList
 
 oPos :: SourcePos -> Doc
 oPos EOF = mempty
-oPos p = text "\n{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}\n"
+oPos p = text "\n{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}\n" <>
+         Data.DList.replicate (sourceCol p) ' '
 
 oText :: String -> Doc
 oText x = text "textual" <+> text (show x)
@@ -55,12 +56,15 @@ rHaskell (List xs) = brackets $ rHaskells xs
 rHaskell (Parens xs) = parens $ rHaskells xs
 rHaskell (String xs) = doubleQuotes $ text xs
 
+rArg :: (SourcePos, Haskell) -> Doc
+rArg (pos,h) = oPos pos <> parens (rHaskell h)
+
 rMarxup :: MarXup -> Doc
 rMarxup (TextChunk s) = oText s
-rMarxup (Unquote var val) = maybe mempty (\x -> text (x <> "<-")) var <>
-                            text "element" <+> parens (hcat $ map (parens . rHaskell) val)
+rMarxup (Unquote var val) =
+  maybe mempty (\(pos,x) -> oPos pos <> text (x <> "<-")) var <>
+  text "element" <+> parens (hcat $ map rArg val)
 rMarxup (Comment _) = mempty
-rMarxup (TextLn pos) = oText "\n" <> oPos pos
 
 main :: IO ()
 main = do

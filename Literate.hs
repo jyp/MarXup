@@ -36,12 +36,10 @@ rHaskell (Quote xs) = mconcat $ map rMarxup xs
 rHaskell _ = mempty
 
 rMarxup :: MarXup -> Doc
-rMarxup (TextLn pos) = oPos pos <> text "\n"
-rMarxup (Unquote _ [HaskChunk "haskell",Quote code]) = mconcat $ map rInlineHask code
+rMarxup (Unquote _ [(_,HaskChunk "haskell"),(_,Quote code)]) = mconcat $ map rInlineHask code
 rMarxup _ = mempty
 
 rInlineHask :: MarXup -> Doc
-rInlineHask (TextLn pos) = oPos pos <> text "\n"
 rInlineHask (TextChunk x) = text x
 rInlineHask _ = mempty
 
