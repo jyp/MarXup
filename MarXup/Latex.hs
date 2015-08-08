@@ -95,6 +95,14 @@ keywords ks = do
                   mconcat $ intersperse ", " $ map textual ks
     _ -> return ()
 
+acknowledgements :: Tex a -> Tex a
+acknowledgements body = do
+  classFile <- askClass
+  case classFile of
+    SIGPlan -> cmd0 "acks" >> body
+    _ -> do paragraph "acknowledgements"
+            body
+
 
 newline :: TeX
 newline = backslash <> backslash
