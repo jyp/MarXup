@@ -109,7 +109,7 @@ newline = backslash <> backslash
 newcol :: TeX
 newcol = tex "&"
 newpara :: Tex ()
-newpara = texLines ["",""]
+newpara = texLn "\\par"
 
 maketitle :: Tex ()
 maketitle = cmd "maketitle" $ return ()
