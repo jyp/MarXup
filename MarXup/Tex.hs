@@ -3,14 +3,14 @@
 module MarXup.Tex where
 
 import MarXup
-import "mtl" Control.Monad.Reader
-import "mtl" Control.Monad.RWS
+import Control.Monad.Reader
+import Control.Monad.RWS
 import Control.Applicative
 import GHC.Exts( IsString(..) )
-import Data.List (intersperse)
+import Data.List (intersperse,intercalate)
 import MarXup.MultiRef
-import System.Process
 import System.Directory (doesFileExist)
+import Data.Char (isSpace)
 
 data ClassFile = Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
   deriving Eq
@@ -21,7 +21,14 @@ newtype Tex a = Tex {fromTex :: Multi ClassFile a}
 ---------------------------------
 -- MarXup interface
 instance Textual Tex where
-    textual s = tex $ concatMap escape s
+  textual s = case lines s of
+    [] -> mempty
+    (x:xs) | all isSpace x -> process $ intercalate "\n" xs
+    -- Ignore the 1st blank line of a Marxup chunk This means that to
+    -- create a paragraph after an element, one needs a double blank
+    -- line.
+    _ -> process s
+   where process = tex . concatMap escape
 
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
@@ -52,7 +59,7 @@ reference :: Label -> Tex ()
 reference l = tex (show l)
 
 instance Monoid (TeX) where
-  mempty = textual ""
+  mempty = tex ""
   mappend = (>>)
 
 instance IsString (TeX) where
