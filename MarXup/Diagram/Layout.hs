@@ -192,6 +192,7 @@ satAll p xs = do
   mapM_ (p m) xs
   return m
 
+-- | Minimum or maximum of a list of expressions.
 maximVar, minimVar :: [Expr] -> Diagram Expr
 maximVar = satAll (>==)
 minimVar = satAll (<==)

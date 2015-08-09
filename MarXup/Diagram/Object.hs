@@ -21,24 +21,25 @@ data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
 -- | Box-shaped object. (a subtype)
 type Box = Object
 
-newtype Anchorage = Anchorage {boxAnchors :: Anchor -> Point}
+newtype Anchorage = Anchorage {fromAnchorage :: Anchor -> Point}
 data Object = Object {objectOutline :: Path, objectAnchorage :: Anchorage}
 
 class Anchored a where
-  anchors :: a -> Anchor -> Point
+  anchors :: a -> Anchorage
+  
 infix 8 #
 
 (#) :: Anchored a => a -> Anchor -> Point
-(#) = anchors
+(#) = fromAnchorage . anchors
 
 instance Anchored Anchorage where
-  anchors = boxAnchors
+  anchors = id
 
 instance Anchored Object where
-  anchors = anchors . objectAnchorage
+  anchors = objectAnchorage
 
 instance Anchored Point where
-  anchors p _ = p
+  anchors p = Anchorage $ \_ -> p
 
 -- | Horizontal distance between objects
 hdist :: Anchored a => a -> a -> Expr
@@ -89,9 +90,7 @@ point = do
 
 -- | A point anchorage (similar to a box of zero width and height)
 pointBox :: Diagram Anchorage
-pointBox = do
-  p <- point
-  return $ Anchorage $ \a -> case a of _ -> p
+pointBox = anchors <$> point
 
 -- | A box. Anchors are aligned along a grid.
 box :: Diagram Anchorage
@@ -132,12 +131,13 @@ hrule = do
   height o === 0
   return o
 
+height, width, ascent, descent :: Anchored a => a -> Expr
 height o = ypart (o # N - o # S)
 width o = xpart (o # E - o # W)
 ascent o = ypart (o # N - o # Base)
 descent o = ypart (o # Base - o # S)
 
--- fitsVerticallyIn :: Anchorage -> Anchorage -> Diagram ()
+fitsIn, fitsHorizontallyIn, fitsVerticallyIn :: (Anchored a, Anchored b) => a -> b -> Diagram ()
 o `fitsVerticallyIn` o' = do
   let dyN = ypart $ o' # N - o # N
       dyS = ypart $ o # S - o' # S
@@ -146,7 +146,6 @@ o `fitsVerticallyIn` o' = do
   minimize dyS
   dyS >== 0
 
--- fitsHorizontallyIn :: Anchorage -> Anchorage -> Diagram ()
 o `fitsHorizontallyIn` o' = do
   let dyW = xpart $ o # W - o' # W
       dyE = xpart $ o' # E - o # E
@@ -159,6 +158,7 @@ a `fitsIn` b = do
   a `fitsHorizontallyIn` b
   a `fitsVerticallyIn` b
 
+-- | A circle
 circleShape :: Diagram Object
 circleShape = do
   anch <- box
@@ -202,13 +202,17 @@ texBox t = do
   height  l === constant (h + desc)
   return l
 
-data Incidence = Incidence { incidencePoint, incidenceNormal :: Point }
-swap :: Incidence -> Incidence
-swap (Incidence p v) = Incidence p (negate v)
+-- | A vector with an origin
+data OVector = OVector { vectorOrigin, vectorMagnitude :: Point }
+
+-- | Turn the orientation by 180 degrees
+turn180 :: OVector -> OVector
+turn180 (OVector p v) = OVector p (negate v)
 
 -- | Traces a straight edge between two objects.
--- The midpoint is returned, as well as a normal vector.
-edge :: Object -> Object -> Diagram Incidence
+-- A vector originated at the midpoint and pointing perpendicular to
+-- the edge is returned.
+edge :: Object -> Object -> Diagram OVector
 edge source target = do
   let points@[a,b] = [source # Center,target # Center]
       link = polyline points
@@ -218,7 +222,7 @@ edge source target = do
   sa' <- freeze sourceArea
   ta' <- freeze targetArea
   frozenPath $ (l' `cutAfter` ta') `cutBefore` sa'
-  return $ Incidence (avg points) (rotate90 (b-a))
+  return $ OVector (avg points) (rotate90 (b-a))
 
 (.<.) :: Point -> Point -> Diagram ()
 Point x1 y1 .<. Point x2 y2 = do
@@ -232,9 +236,9 @@ insideBox p o = do
   p .<. (o # NE)
 
 -- | @autoLabel label i@ Layouts the label at the given incidence
--- point.
-autoLabel :: Box -> Incidence -> Diagram ()
-autoLabel lab (Incidence pt norm) = do
+-- vector.
+autoLabel :: Box -> OVector -> Diagram ()
+autoLabel lab (OVector pt norm) = do
   pt `insideBox` lab
   minimize =<< orthoDist (lab#Center) (pt + norm)
 
@@ -247,15 +251,17 @@ labeledEdge source target lab = autoLabel lab =<< edge source target
 -------------------
 -- Even higher-level primitives:
 
-
---example:      spread hdist 30 ps
+-- | Spread a number of objects by a given distance. example: @spread
+-- hdist 30 ps@
 
 spread :: (t -> t -> Expr) -> Expr -> [t] -> Diagram ()
 spread f d (x:y:xs) = do
   f x y === d
   spread f d (y:xs)
-spread f _ _ = return ()
+spread _ _ _ = return ()
 
+-- | A node: a labeled circle
+node :: TeX -> Diagram Object
 node lab = do
   l <- extend 4 <$> texBox lab
   c <- draw $ circleShape
@@ -263,11 +269,13 @@ node lab = do
   l # Center .=. c # Center
   return c
 
-arrow :: Object -> Object -> Diagram Incidence
+-- | Draw an arrow between two objects
+arrow :: Object -> Object -> Diagram OVector
 arrow src trg = using (outline "black" . set endTip LatexTip) $ do
   edge src trg
 
-boundingBox :: [Object] -> Diagram Anchorage
+-- | Bounding box of a number of anchored values
+boundingBox :: Anchored a => [a] -> Diagram Anchorage
 boundingBox os = do
   bx <- box
   mapM_ (`insideBox` bx) (map (# NW) os)
