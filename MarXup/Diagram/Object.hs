@@ -137,6 +137,7 @@ width o = xpart (o # E - o # W)
 ascent o = ypart (o # N - o # Base)
 descent o = ypart (o # Base - o # S)
 
+-- | Make one object fit (snugly) in the other.
 fitsIn, fitsHorizontallyIn, fitsVerticallyIn :: (Anchored a, Anchored b) => a -> b -> Diagram ()
 o `fitsVerticallyIn` o' = do
   let dyN = ypart $ o' # N - o # N
@@ -278,6 +279,6 @@ arrow src trg = using (outline "black" . set endTip LatexTip) $ do
 boundingBox :: Anchored a => [a] -> Diagram Anchorage
 boundingBox os = do
   bx <- box
-  mapM_ (`insideBox` bx) (map (# NW) os)
-  mapM_ (`insideBox` bx) (map (# SE) os)
+  mapM_ (`fitsIn` bx) os
+  stroke "red" $ rectangleShape bx
   return bx
