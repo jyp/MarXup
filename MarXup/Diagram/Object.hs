@@ -280,5 +280,4 @@ boundingBox :: Anchored a => [a] -> Diagram Anchorage
 boundingBox os = do
   bx <- box
   mapM_ (`fitsIn` bx) os
-  stroke "red" $ rectangleShape bx
   return bx
