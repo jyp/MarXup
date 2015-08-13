@@ -252,12 +252,20 @@ labeledEdge source target lab = autoLabel lab =<< edge source target
 -------------------
 -- Even higher-level primitives:
 
--- | Spread a number of objects by a given distance. example: @spread
--- hdist 30 ps@
+nodeDistance = 5
 
+leftOf :: Object -> Object -> Diagram ()
+a `leftOf` b = spread hdist nodeDistance [a,b]
+
+topOf :: Object -> Object -> Diagram ()
+a `topOf` b =  spread vdist nodeDistance [b,a]
+
+-- | Spread a number of objects by *minimum* a given distance. example: @spread
+-- hdist 30 ps@
 spread :: (t -> t -> Expr) -> Expr -> [t] -> Diagram ()
 spread f d (x:y:xs) = do
-  f x y === d
+  f x y >== d
+  minimize $ f x y
   spread f d (y:xs)
 spread _ _ _ = return ()
 
@@ -276,8 +284,8 @@ arrow src trg = using (outline "black" . set endTip LatexTip) $ do
   edge src trg
 
 -- | Bounding box of a number of anchored values
-boundingBox :: Anchored a => [a] -> Diagram Anchorage
+boundingBox :: Anchored a => [a] -> Diagram Object
 boundingBox os = do
   bx <- box
   mapM_ (`fitsIn` bx) os
-  return bx
+  rectangleShape bx
