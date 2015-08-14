@@ -92,7 +92,7 @@ testDiagram = do
               ]
   autoLab "bing" =<< arrow a a'
   autoLab "bang" =<< arrow b b'
-  autoLab "oops" . swap =<< arrow a b
+  autoLab "oops" . turn180 =<< arrow a b
   autoLab "pif" =<< arrow a' a''
   autoLab "paf" =<< arrow b' b'' 
 
