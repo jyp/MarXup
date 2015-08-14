@@ -190,11 +190,32 @@ There is simple support for lhs2tex-style stuff.
 Another paragaph.
 
 @haskell«
+
+exp   (  rstarts
+         arsaeritsrst
+         arstarst)
+»
+
+@haskell«
+
+exp (  rstarts
+       arsaeritsrst
+       arstarst)
+»
+
+@haskell«
+
+(  rstarts
+   arsaeritsrst
+   arstarst)
+
 autoLab s i = do  o <- labelObj s
                   autoLabel o i
                   print (1<+>2) ' '
    where  x    = whatever
-          ops  = [(<|>),(<>),(<+>)]
+          ops  = [    (<|>),(<>),
+                      (<+>)]
+
 »
 some text after
 
