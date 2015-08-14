@@ -31,7 +31,7 @@ lineup input = env'' "list" [] [mempty,tex "\\setlength\\leftmargin{1em}"] $ do
     showCol 0 = "B"
     showCol n = show n
     declColumn :: String -> TeX
-    declColumn c = cmdn_ "column" [tex c,tex "@{}l@{\\;}"]
+    declColumn c = cmdn_ "column" [tex c,tex "@{}>{}l<{}@{}"]
 
     lastIndex :: (a -> Bool) -> [a] -> Int
     lastIndex p xs = length (takeWhile p xs) - 1
@@ -42,10 +42,11 @@ lineup input = env'' "list" [] [mempty,tex "\\setlength\\leftmargin{1em}"] $ do
       forM_ (zip xs [(0::Int)..]) $ \(ts,colName) -> do
          if (null ts)
              then when (colName == lastEmpty && colName > 0) $ do
-                    cmdn' ">" [showCol colName] []
-                    cmd0 "quad"
+                    -- cmdn' ">" [showCol colName] []
+                    -- cmd0 "quad"
+                    return ()
              else do cmdn' ">" [showCol colName] []
-                     forM_ ts $ \t -> do 
+                     braces $ forM_ ts $ \t -> do 
                        render t
       cmdn' "<" ["E"] []
       return ()
@@ -81,7 +82,8 @@ lineup input = env'' "list" [] [mempty,tex "\\setlength\\leftmargin{1em}"] $ do
       where (col,xs') = break (\(align,s) -> align && (startCol s >= t)) xs
 
 
--- | Transform a list of tokens to move the spacing info into the TeX
+
+--- | Transform a list of tokens to move the spacing info into the TeX
 -- field of the tokens (spacing goes after the texts)
 mkSpaces :: [Tok] -> [Tok]
 mkSpaces [] = []
