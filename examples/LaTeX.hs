@@ -210,7 +210,7 @@ exp (  rstarts
    arstarst)
 
 autoLab s i = do  o <- labelObj s
-                  autoLabel o i
+                  autoLabel o2 i1
                   print (1<+>2) ' '
    where  x    = whatever
           ops  = [    (<|>),(<>),

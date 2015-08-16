@@ -10,6 +10,7 @@ import MarXup.LineUp
 import MarXup.Tex
 import MarXup.Verbatim
 import Data.Monoid
+import Data.Char (isDigit)
 
 haskell :: Verbatim a -> Tex ()
 haskell = haskellCust defaultParseMode printTok
@@ -34,9 +35,15 @@ haskellCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVerbatim
     where lins = groupBy ((==) `on` (srcSpanStartLine . loc)) toks
   ParseFailed location err -> textual (show location ++ show err)
 
+splitTok :: String -> (String, Maybe String)
+splitTok input = (reverse prefix, if null suffix then Nothing else Just (reverse suffix))
+  where (suffix,prefix) = span isDigit (reverse input)
+
 printTok :: PrintTok
 printTok t = let s = textual $ showToken t
-                 ident = regular $ cmd "mathsf" s
+                 ident = regular $ case splitTok $ showToken t of
+                              (_,Nothing) -> cmd "mathsf" s
+                              (pref,Just suff) -> cmd "mathsf" (textual pref) <> tex "_" <> braces (textual suff)
                  unquote = regular $ cmd "mathsf" s
                  quote = regular $ cmd "mathtt" s
                  literal = regular $ cmd "mathrm" s
