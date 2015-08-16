@@ -205,10 +205,6 @@ exp (  rstarts
 
 @haskell«
 
-(  rstarts
-   arsaeritsrst
-   arstarst)
-
 autoLab s i = do  o <- labelObj s
                   autoLabel o2 i1
                   print (1<+>2) ' '
