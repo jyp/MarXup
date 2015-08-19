@@ -48,12 +48,6 @@ mathpreamble = do
   usepackage "stmaryrd" [] -- has ⟦ and ⟧
   usepackage "mathpartir" [] -- mathpar environment
 
-  unless (sty == LNCS || sty == Beamer) $ do
-    newtheorem "theorem" "Theorem"
-    newtheorem "corollary" "Corollary"
-    newtheorem "lemma" "Lemma"
-    newtheorem "definition" "Definition"
-    newtheorem "proposition" "Proposition"
 
 mathpar :: [[TeX]] -> TeX
 mathpar = env "mathpar" . mkrows . map mk . filter (not . null)
@@ -61,13 +55,12 @@ mathpar = env "mathpar" . mkrows . map mk . filter (not . null)
 
 mathbox = mbox . ensureMath
 
-newtheorem :: String -> TeX -> TeX
-newtheorem ident txt = cmd "newtheorem" (tex ident) >> braces txt
 
--- | @deflike referent nv name statement@:
--- Environement of name @nv@, which should be refered as @referent@
-deflike :: String -> String -> TeX -> TeX -> Tex SortedLabel
-deflike referent nv name statement = do
+-- | @deflike referent nv header name statement@:
+-- Environement of name @nv@, which should be refered as @referent@.
+deflike :: String -> String -> String -> TeX -> TeX -> Tex SortedLabel
+deflike referent nv header name statement = do
+  newtheorem nv header
   cls <- askClass
   let header =  case cls of
                   SIGPlan -> env'' nv [name] []
@@ -76,30 +69,34 @@ deflike referent nv name statement = do
     statement
     label referent
 
-thmlike :: String -> String -> TeX -> TeX -> TeX -> Tex SortedLabel
-thmlike referent nv name statement proof = do
-  x <- deflike referent nv name statement
+thmlike :: String -> String -> String -> TeX -> TeX -> TeX -> Tex SortedLabel
+thmlike referent nv header name statement proof = do
+  x <- deflike referent nv header name statement
   env "proof" proof
   return x
 
 theorem,lemma ::  TeX -> TeX -> TeX -> Tex SortedLabel
-theorem = thmlike "Thm." "theorem"
-lemma = thmlike "Lem." "lemma"
+theorem = thmlike "Thm." "theorem" "Theorem"
+lemma = thmlike "Lem." "lemma" "Lemma"
 
-definition,corollary :: TeX -> TeX -> Tex SortedLabel
-definition = deflike "Def." "definition"
-corollary = deflike "Cor." "corollary"
-proposition = deflike "Prop." "proposition"
-example = deflike "Ex." "example"
+definition,corollary,proposition,example :: TeX -> TeX -> Tex SortedLabel
+definition = deflike "Def." "definition" "Definition"
+corollary = deflike "Cor." "corollary" "Corollary"
+proposition = deflike "Prop." "proposition" "Proposition"
+example = deflike "Ex." "example" "Example"
 
 -- Other stuff
 oxford :: Tex a -> Tex a
 oxford = bigParenthesize (textual "⟦") (textual "⟧")
 
+multiline' :: [TeX] -> Tex ()
 multiline' body = env "multline*" $ mkrows body
 
+frac :: TeX -> TeX -> Tex ()
 frac x y = cmdn_ "frac" [x,y]
 
+centerVertically :: Tex a -> Tex a
 centerVertically = ensureMath . cmd "vcenter" . cmd "hbox"
 
+qedhere :: Tex ()
 qedhere = cmd0 "qedhere"

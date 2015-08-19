@@ -11,11 +11,38 @@ import Data.List (intersperse,intercalate)
 import MarXup.MultiRef
 import System.Directory (doesFileExist)
 import Data.Char (isSpace)
+import Data.Map (assocs)
 
 data ClassFile = Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
   deriving Eq
 
-newtype Tex a = Tex {fromTex :: Multi ClassFile a}
+
+------------------------------------
+-- MetaData
+
+data Key = PreClass String | PrePackage Int String | PreTheorem String String   -- priority
+  deriving (Ord,Eq)
+
+newtheorem :: String -> String -> TeX
+newtheorem ident txt = do
+  sty <- askClass
+  unless ((sty == LNCS || sty == Beamer) && ident `elem` ["theorem", "corollary", "lemma", "definition", "proposition"]) $ do
+  Tex $ metaData (PreTheorem ident txt) ""
+
+usepkg :: String -> Int -> String -> TeX
+usepkg ident prio options = Tex $ metaData (PrePackage prio ident) options
+
+documentClass :: String -> [String] -> TeX
+documentClass docClass options = Tex $ metaData (PreClass docClass) (intercalate "," options)
+
+
+renderKey :: Key -> String -> String
+renderKey o options = case o of
+  PreClass name -> "\\documentclass{" ++ name ++ "}" ++ "[" ++ options ++ "]"
+  PrePackage _ name -> "\\usepackage{" ++ name ++ "}" ++ "[" ++ options ++ "]"
+  PreTheorem ident txt  -> "\\newtheorem{" ++ ident ++ "}{" ++ txt ++ "}"
+
+newtype Tex a = Tex {fromTex :: Multi ClassFile Key a}
   deriving (Monad, MonadFix, Applicative, Functor)
 
 ---------------------------------
@@ -23,12 +50,12 @@ newtype Tex a = Tex {fromTex :: Multi ClassFile a}
 instance Textual Tex where
   textual s = case lines s of
     [] -> mempty
-    (x:xs) | all isSpace x -> process $ intercalate "\n" xs
-    -- Ignore the 1st blank line of a Marxup chunk This means that to
-    -- create a paragraph after an element, one needs a double blank
-    -- line.
-    _ -> process s
-   where process = tex . concatMap escape
+    (x:xs) | all isSpace x -> tex (' ' : process (intercalate "\n" xs))
+    -- The 1st blank line of a MarXup chunk is replaced by a
+    -- space. This means that to create a paragraph after an element,
+    -- one needs a double blank line.
+    _ -> tex (process s)
+   where process = concatMap escape
 
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
@@ -127,7 +154,7 @@ cmdn c args = cmdn' c [] args
 
 -- | Command with n arguments, no result
 cmdn_ :: String -> [TeX] -> Tex ()
-cmdn_ cmd args = cmdn'_ cmd [] args
+cmdn_ theCmd args = cmdn'_ theCmd [] args
 
 -- | Environment
 env :: String -> Tex a -> Tex a
@@ -220,12 +247,14 @@ justBox x = do
   where writeBox l = "\\immediate\\write\\boxesfile{\\number\\"++ l ++"\\marxupbox}"
 
 renderWithBoxes :: ClassFile -> [BoxSpec] -> Tex a -> String
-renderWithBoxes classFile bs (Tex t) = doc
-  where (_,_,doc) = runRWS (fromMulti $ t) classFile (0,bs)
+renderWithBoxes classFile bs (Tex t) = (preamble ++ doc)
+  where (_,(_,_,metaDatum),doc) = runRWS (fromMulti $ t) classFile (0,bs,mempty)
+        preamble :: String
+        preamble = unlines $ map (uncurry renderKey) $ assocs metaDatum
 
 renderSimple :: ClassFile -> Tex a -> String
 renderSimple classFile = renderWithBoxes classFile []
-  
+
 renderTex :: ClassFile -> String -> TeX -> IO ()
 renderTex classFile fname body = do
   let boxesTxt = fname ++ ".boxes"

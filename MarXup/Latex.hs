@@ -5,10 +5,11 @@ import MarXup
 import MarXup.Verbatim
 import Control.Monad (forM_,when,forM)
 import MarXup.Tex
-import Data.List (intersperse,groupBy,elemIndex,nub)
+import Data.List (intersperse,groupBy,elemIndex,nub,intercalate)
 import Data.Monoid
 import Control.Applicative
 import Data.Function (on)
+import MarXup.MultiRef (metaData)
 
 -- | Separate the arguments with '\\'
 mkrows,mkcols :: [TeX] -> TeX
@@ -34,7 +35,7 @@ data AuthorInfo = AuthorInfo {authorName :: String, authorEmail :: String, autho
 authorinfo :: [AuthorInfo] -> Tex ()
 authorinfo as = do c<-askClass; authorinfo' c as
 
--- | author info in as triplets name, institution, email
+-- | author info as triplets name, institution, email
 authorinfo' :: AuthorInfoStyle -> [AuthorInfo] -> TeX
 authorinfo' LNCS as = do
   cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
@@ -72,7 +73,7 @@ authorinfo' Beamer as = do
   where institutions = nub $ map authorInst $ as
         inst :: Int -> TeX
         inst i = when (length institutions > 1) $ cmd "inst" $ tex $ show (i+1)
-        
+
 authorinfo' IEEE as = cmd "author" $ do
   cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace "1cm") $ map (textual . authorName) as
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
@@ -151,9 +152,6 @@ stdPreamble = do
   usepackage "inputenc" ["utf8"]
   cmd0 "fi"
   return ()
-
-documentClass :: String -> [String] -> TeX
-documentClass docClass options = cmd' "documentclass" options (tex docClass)
 
 ----------
 -- Lists

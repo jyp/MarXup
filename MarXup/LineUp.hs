@@ -26,6 +26,7 @@ marx False = '-'
 
 lineup :: [[Tok]] -> TeX
 lineup input = env'' "list" [] [mempty,tex "\\setlength\\leftmargin{1em}"] $ do
+  usepkg "polytable" 100 ""
   texLn ""
   texLines $ map (("% " ++) . map marx . drop 1 . isIndentTab ) array
   

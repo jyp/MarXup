@@ -82,7 +82,7 @@ defaultPathOptions = PathOptions
   ,_decoration = Decoration ""
   }
 
-newtype Diagram a = Dia (RWST Env () (Var,LPState) (Multi ClassFile) a)
+newtype Diagram a = Dia (RWST Env () (Var,LPState) (Multi ClassFile Key) a)
   deriving (Monad, Applicative, Functor, MonadReader Env)
 
 type Dia = Diagram ()
@@ -96,7 +96,7 @@ instance MonadState LPState Diagram where
 -------------
 -- Diagrams
 
-runDiagram :: Diagram a -> Multi ClassFile a
+runDiagram :: Diagram a -> Multi ClassFile Key a
 runDiagram (Dia diag) = do
   rec (a,(_,problem),_) <- runRWST diag (Env solution 1 defaultPathOptions)
                                         (Var 0,LP Min M.empty [] M.empty M.empty)

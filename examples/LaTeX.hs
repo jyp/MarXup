@@ -46,9 +46,7 @@ expr = do
 preamble body = do
   documentClass "article" []
   usepackage "inputenc" ["utf8x"]
-  usepackage "tikz" []
   usepackage "graphicx" []
-  usepackage "polytable" []
   env "document" body
 
 autoLab s i = do
