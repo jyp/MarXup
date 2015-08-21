@@ -70,8 +70,9 @@ printTok t = let s = textual $ showToken t
         VarSym ">=" -> special "\\geq" -- ≥
         VarSym "<>" -> special "<\\!>"
         VarSym "<|>" -> special "<\\!\\mid\\!>"
-        VarSym "<$>" -> special "<\\!\\$\\!>"
         VarSym "<+>" -> special "<{\\mkern-12mu}+{\\mkern-12mu}>"
+        VarSym "<*>" -> special "<{\\mkern-12mu}*{\\mkern-12mu}>"
+        VarSym "<$>" -> special "<{\\mkern-12mu}\\${\\mkern-12mu}>"
         VarSym "++" -> special "+\\!+"
         VarSym _ -> symbol
         ConSym _ -> ident
