@@ -43,7 +43,6 @@ mathpreamble = do
   sty <- askClass
   usepackage "graphicx" []
   usepackage "amsmath"  []
-  unless (sty == LNCS) $ usepackage "amsthm"   []
   usepackage "amssymb"  []   -- extra symbols such as □
   usepackage "stmaryrd" [] -- has ⟦ and ⟧
   usepackage "mathpartir" [] -- mathpar environment
@@ -62,6 +61,7 @@ deflike :: String -> String -> String -> TeX -> TeX -> Tex SortedLabel
 deflike referent nv header name statement = do
   newtheorem nv header
   cls <- askClass
+  unless (cls == LNCS) $ usepkg "amsthm" 100 []
   let header =  case cls of
                   SIGPlan -> env'' nv [name] []
                   _ -> env'' nv [] [name]

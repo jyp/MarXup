@@ -29,8 +29,8 @@ newtheorem ident txt = do
   unless ((sty == LNCS || sty == Beamer) && ident `elem` ["theorem", "corollary", "lemma", "definition", "proposition"]) $ do
   Tex $ metaData (PreTheorem ident txt) ""
 
-usepkg :: String -> Int -> String -> TeX
-usepkg ident prio options = Tex $ metaData (PrePackage prio ident) options
+usepkg :: String -> Int -> [String] -> TeX
+usepkg ident prio options = Tex $ metaData (PrePackage prio ident) (intercalate "," options)
 
 documentClass :: String -> [String] -> TeX
 documentClass docClass options = Tex $ metaData (PreClass docClass) (intercalate "," options)
