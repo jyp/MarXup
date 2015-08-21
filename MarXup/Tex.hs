@@ -38,8 +38,8 @@ documentClass docClass options = Tex $ metaData (PreClass docClass) (intercalate
 
 renderKey :: Key -> String -> String
 renderKey o options = case o of
-  PreClass name -> "\\documentclass{" ++ name ++ "}" ++ "[" ++ options ++ "]"
-  PrePackage _ name -> "\\usepackage{" ++ name ++ "}" ++ "[" ++ options ++ "]"
+  PreClass name -> "\\documentclass[" ++ options ++ "]{" ++ name ++ "}"
+  PrePackage _ name -> "\\usepackage[" ++ options ++ "]{" ++ name ++ "}"
   PreTheorem ident txt  -> "\\newtheorem{" ++ ident ++ "}{" ++ txt ++ "}"
 
 newtype Tex a = Tex {fromTex :: Multi ClassFile Key a}
