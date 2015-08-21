@@ -113,7 +113,10 @@ diaRaw :: String -> Dia
 diaRaw = diaRawTex . tex
 
 relax :: Constant -> Diagram a -> Diagram a
-relax factor = local (over diaTightness (/ factor))
+relax factor = tighten (1/factor)
+
+tighten :: Constant -> Diagram a -> Diagram a
+tighten factor = local (over diaTightness (* factor))
 
 instance Monoid (Diagram ()) where
   mempty = return ()
