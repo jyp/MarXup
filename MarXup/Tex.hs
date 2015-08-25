@@ -45,16 +45,18 @@ renderKey o options = case o of
 newtype Tex a = Tex {fromTex :: Multi ClassFile Key a}
   deriving (Monad, MonadFix, Applicative, Functor)
 
+
+
+
 ---------------------------------
 -- MarXup interface
 instance Textual Tex where
-  textual s = case lines s of
-    [] -> mempty
-    (x:xs) | all isSpace x -> tex (' ' : process (concatMap (++ "\n") xs))
+  textual s = case break (== '\n') s of
     -- The 1st blank line of a MarXup chunk is replaced by a
     -- space. This means that to create a paragraph after an element,
     -- one needs a double blank line.
-    _ -> tex (process s)
+    (l,'\n':s') | all isSpace l -> tex (' ' : process s')
+    _ -> tex $ process s
    where process = concatMap escape
 
 kern :: String -> TeX
