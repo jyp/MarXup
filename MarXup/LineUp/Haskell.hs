@@ -36,8 +36,10 @@ haskellCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVerbatim
   ParseFailed location err -> textual (show location ++ show err)
 
 splitTok :: String -> (String, Maybe String)
-splitTok input = (reverse prefix, if null suffix then Nothing else Just (reverse suffix))
-  where (suffix,prefix) = span isDigit (reverse input)
+splitTok input = (reverse prefix ++ primes, if null numbers then Nothing else Just (reverse numbers))
+  where (numbers,prefix) = span isDigit revNonPrimes
+        (primes,revNonPrimes) = span (== '\'') revIn
+        revIn = reverse input
 
 printTok :: PrintTok
 printTok t = let s = textual $ showToken t
