@@ -35,8 +35,8 @@ pWPos = do
 
 withPos :: Parser a -> Parser (SourcePos,a)
 withPos p = do
-  x <- p
   pos <- getPosition
+  x <- p
   return (pos,x)
 
 pHaskLn = HaskLn <$> pWPos -- before each newline, tell GHC where we are.

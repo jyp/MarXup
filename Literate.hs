@@ -4,7 +4,7 @@ import System.Environment
 import Data.Monoid
 import Data.DList hiding (foldr, map)
 import MarXupParser
-
+import Data.List (isPrefixOf)
 ------------------
 -- Simple printing combinators, which do not add nor remove line breaks
 
@@ -22,7 +22,7 @@ render = toList
 
 oPos :: SourcePos -> Doc
 oPos EOF = mempty
-oPos p = text "{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}"
+oPos p = text "{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}\n"
 
 ----------------------------------------------
 -- Top-level generation
@@ -36,7 +36,7 @@ rHaskell (Quote xs) = mconcat $ map rMarxup xs
 rHaskell _ = mempty
 
 rMarxup :: MarXup -> Doc
-rMarxup (Unquote _ [(_,HaskChunk "haskell"),(_,Quote code)]) = mconcat $ map rInlineHask code
+rMarxup (Unquote _ [(_,HaskChunk fct),(position,Quote code)]) | "haskell" `isPrefixOf` fct = oPos position <> foldMap rInlineHask code
 rMarxup _ = mempty
 
 rInlineHask :: MarXup -> Doc

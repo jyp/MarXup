@@ -36,7 +36,7 @@ render x = unDL x ""
 -- Output combinators
     
 oPos :: SourcePos -> Doc
-oPos p = text "{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}"
+oPos p = text "{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}\n"
     
 oText :: String -> Doc
 oText x = text "textual" <+> text (show x)
@@ -62,7 +62,7 @@ pWPos :: Parser Doc
 pWPos = do 
   char '\n'
   pos <- getPosition
-  return $ oPos pos <> text "\n"
+  return $ oPos pos
 
 pTextChunk = (oText <$> pChunk "\n{}@")
 
