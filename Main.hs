@@ -152,9 +152,6 @@ main = do
 main :: IO ()
 main = do
   x : y : z : _ <- getArgs
-  putStrLn x
-  putStrLn y
-  putStrLn z
   p <- parseFromFile pHask y
   case p of 
     Left err -> do
