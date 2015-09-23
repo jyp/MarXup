@@ -69,8 +69,5 @@ rMarxup (Comment _) = mempty
 main :: IO ()
 main = do
   x : y : z : _ <- getArgs
-  putStrLn x
-  putStrLn y
-  putStrLn z
   parseFile y $ \res -> writeFile z $ render (rHaskells res)
 
