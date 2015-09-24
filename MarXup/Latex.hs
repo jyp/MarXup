@@ -19,8 +19,8 @@ mkrows ls = sequence_ $ intersperse newline ls
 mkcols = sequence_ . intersperse newcol
 
 vspace, hspace :: String -> TeX
-vspace = cmd "vspace" . textual
-hspace = cmd "hspace" . textual
+vspace = cmd "vspace" . tex
+hspace = cmd "hspace" . tex
 
 hfill :: TeX
 hfill = cmd0 "hfill"

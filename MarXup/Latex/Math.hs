@@ -62,10 +62,10 @@ deflike referent nv header name statement = do
   newtheorem nv header
   cls <- askClass
   unless (cls == LNCS) $ usepkg "amsthm" 100 []
-  let header =  case cls of
-                  SIGPlan -> env'' nv [name] []
-                  _ -> env'' nv [] [name]
-  header $ do
+  let envir body = case cls of
+        SIGPlan -> env'' nv [name] [] (hspace "0cm" >> body)
+        _ -> env'' nv [] [name] body
+  envir $ do
     statement
     label referent
 
