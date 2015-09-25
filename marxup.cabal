@@ -33,16 +33,6 @@ executable marxup
   build-depends: parsek==1.*
   build-depends: dlist>=0.7
   other-modules: Config, MarXupParser
-  
-executable marxup-lit
-  extensions: FlexibleInstances, TupleSections
-  main-is: Literate.hs
-  build-depends: configurator>=0.2&&<2
-  build-depends: base>=4.2&&<=58
-  build-depends: pretty==1.1.*
-  build-depends: parsek==1.*
-  build-depends: dlist>=0.7
-  other-modules: Config, MarXupParser
 
 library
   if flag(graphviz)

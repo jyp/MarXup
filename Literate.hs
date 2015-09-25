@@ -1,28 +1,10 @@
-import Text.ParserCombinators.Parsek.Position
+module Literate where
 
-import System.Environment
 import Data.Monoid
 import Data.DList hiding (foldr, map)
 import MarXupParser
 import Data.List (isPrefixOf)
-------------------
--- Simple printing combinators, which do not add nor remove line breaks
-
-type Doc = DList Char
-
-text = fromList
-x <+> y =  x <> text " " <> y
-
-int x = text $ show x
-render :: Doc -> String
-render = toList
-
-------------------------------------------
--- Output combinators
-
-oPos :: SourcePos -> Doc
-oPos EOF = mempty
-oPos p = text "{-# LINE" <+> int (sourceLine p) <+> text (show (sourceName p)) <+> text "#-}\n"
+import Output
 
 ----------------------------------------------
 -- Top-level generation
@@ -42,9 +24,4 @@ rMarxup _ = mempty
 rInlineHask :: MarXup -> Doc
 rInlineHask (TextChunk x) = text x
 rInlineHask _ = mempty
-
-main :: IO ()
-main = do
-  x : y : z : _ <- getArgs
-  parseFile y $ \res -> writeFile z $ render (rHaskells res)
 
