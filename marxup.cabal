@@ -24,9 +24,9 @@ Flag example
   manual: True
   Default:     False
 
-executable marxup3
+executable marxup
   extensions: FlexibleInstances, TupleSections
-  main-is: Main3.hs
+  main-is: Main.hs
   build-depends: configurator>=0.2&&<2
   build-depends: base>=4.2&&<=58
   build-depends: pretty==1.1.*
