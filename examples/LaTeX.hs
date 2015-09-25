@@ -181,6 +181,10 @@ grDiag
 
 @cmd0"newpage"
 
+@section«Plots»
+
+@(simplePlot [(.1,13),(.35,135),(.23,122)])
+
 @section«Haskell»
 
 There is simple support for lhs2tex-style stuff.

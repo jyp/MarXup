@@ -70,6 +70,7 @@ library
   exposed-modules: MarXup.Diagram
   exposed-modules: MarXup.Diagram.Object
   exposed-modules: MarXup.Diagram.Path
+  exposed-modules: MarXup.Diagram.Plot
   exposed-modules: MarXup.Diagram.Point
   exposed-modules: MarXup.Diagram.Layout
   exposed-modules: MarXup.Diagram.Tikz
