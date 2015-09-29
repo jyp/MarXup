@@ -32,8 +32,8 @@ vAxis bx = axisGen (bx # SW) (bx # NW) E
 lint :: Constant -> Expr -> Expr -> Expr
 lint p origin target = (p*-(target-origin)) + origin
 
-plot :: Box -> [(Double,Double)] -> Diagram ()
-plot bx input = forM_ input $ \(x,y) -> do
+scatterPlot :: Box -> [(Double,Double)] -> Diagram ()
+scatterPlot bx input = forM_ input $ \(x,y) -> do
   pt <- using (fill "black") $ circleShape
   let lx = xpart (bx # SW)
       ly = ypart (bx # SW)
@@ -46,11 +46,7 @@ plot bx input = forM_ input $ \(x,y) -> do
 simplePlot :: [Double] -> [Double] -> [(Double,Double)] -> Diagram Box
 simplePlot _ _ [] = do
   labelObj $ textual "NO DATA"
-simplePlot xs _ _ | length xs < 2 = do
-  labelObj $ textual "Not enough points on x axis"
-simplePlot _ xs _ | length xs < 2 = do
-  labelObj $ textual "Not enough points on y axis"
-simplePlot xs ys input = do
+simplePlot xs0 ys0 input = do
   bx <- rectangleShape =<< box
   
   let maxx = maximum xs
@@ -58,8 +54,11 @@ simplePlot xs ys input = do
       maxy = maximum ys
       miny = minimum ys
       normalize (x,y) = (scale minx maxx x, scale miny maxy y)
+      xs = if length xs0 < 2 then bnds (map fst input) else xs0
+      ys = if length ys0 < 2 then bnds (map snd input) else ys0
+      bnds zs = [minimum zs, maximum zs]
   hAxis bx $ mkSteps xs
   vAxis bx $ mkSteps ys
-  plot bx $ map normalize input
+  scatterPlot bx $ map normalize input
   return bx
 
