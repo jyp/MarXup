@@ -8,44 +8,58 @@ import MarXup.Tex
 import Control.Monad (forM_,when)
 
 
-axisGen :: Point -> Point -> Anchor -> [TeX] -> Diagram ()
+axisGen :: Point -> Point -> Anchor -> [(Double,TeX)] -> Diagram ()
 axisGen origin target anch labels = do
-  using (set endTip ToTip) $ path $ polyline [origin,target]
+  draw $ using (set endTip ToTip) $ path $ polyline [origin,target]
   when (not $ null $ labels) $ do
-    forM_ [0..length labels] $ \i -> do
-      l <- labelObj $ labels !! i
-      l # anch .=. ((fromIntegral i / fromIntegral (length labels - 1)) *- (target - origin)) + origin
+    forM_ labels $ \(p,txt) -> do
+      l <- labelObj txt
+      l # anch .=. Point (lint p (xpart origin) (xpart target))
+                         (lint p (ypart origin) (ypart target))
 
-axisSteps :: Point -> Point -> Anchor -> Double -> Double -> Int -> Diagram ()
-axisSteps origin target anch lo hi npts =
-  axisGen origin target anch [textual $ show (lo+(hi-lo)*fromIntegral i/fromIntegral npts) | i <- [0..npts] ]
+scale minx maxx x = (x - minx) / (maxx - minx)
 
-hAxis :: Box -> Double -> Double -> Int -> Diagram ()
-hAxis bx lo hi npts = axisSteps (bx # SW) (bx # SE) N lo hi npts
+mkSteps :: [Double] -> [(Double,TeX)]
+mkSteps xs = [(scale minx maxx x, textual $ show x) | x <- xs]
+  where maxx = maximum xs
+        minx = minimum xs
 
-vAxis :: Box -> Double -> Double -> Int -> Diagram ()
-vAxis bx lo hi npts = axisSteps (bx # SW) (bx # NW) E lo hi npts
+hAxis :: Box -> [(Double, TeX)] -> Diagram ()
+hAxis bx = axisGen (bx # SW) (bx # SE) N
+vAxis :: Box -> [(Double, TeX)] -> Diagram ()
+vAxis bx = axisGen (bx # SW) (bx # NW) E
 
 lint :: Constant -> Expr -> Expr -> Expr
 lint p origin target = (p*-(target-origin)) + origin
 
 plot :: Box -> [(Double,Double)] -> Diagram ()
 plot bx input = forM_ input $ \(x,y) -> do
-  pt <- circleShape
+  pt <- using (fill "black") $ circleShape
   let lx = xpart (bx # SW)
       ly = ypart (bx # SW)
       hx = xpart (bx # NE)
       hy = ypart (bx # NE)
+  width pt === constant 3
   pt # Center .=. Point (lint x lx hx) (lint y ly hy)
 
 
-simplePlot :: [(Double,Double)] -> Diagram ()
-simplePlot [] = do
+simplePlot :: [Double] -> [Double] -> [(Double,Double)] -> Diagram Box
+simplePlot _ _ [] = do
   labelObj $ textual "NO DATA"
-  return ()
-simplePlot input = do
+simplePlot xs _ _ | length xs < 2 = do
+  labelObj $ textual "Not enough points on x axis"
+simplePlot _ xs _ | length xs < 2 = do
+  labelObj $ textual "Not enough points on y axis"
+simplePlot xs ys input = do
   bx <- rectangleShape =<< box
-  draw $ do
-    hAxis bx 0 (maximum $ map fst $ input) 2
-    vAxis bx 0 (maximum $ map snd $ input) 2
-    plot bx input
+  
+  let maxx = maximum xs
+      minx = minimum xs
+      maxy = maximum ys
+      miny = minimum ys
+      normalize (x,y) = (scale minx maxx x, scale miny maxy y)
+  hAxis bx $ mkSteps xs
+  vAxis bx $ mkSteps ys
+  plot bx $ map normalize input
+  return bx
+

@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -XTypeSynonymInstances -XOverloadedStrings -XRecursiveDo -pgmF dist/build/marxup3/marxup3 -F #-}
+{-# OPTIONS_GHC -XTypeSynonymInstances -XOverloadedStrings -XRecursiveDo -pgmF dist/build/marxup/marxup -F #-}
 
 import MarXup
 import MarXup.Latex
@@ -13,6 +13,7 @@ import Control.Applicative
 import Data.Monoid
 import Control.Monad (unless)
 import MarXup.Diagram
+import MarXup.Diagram.Plot
 import MarXup.Diagram.Graphviz
 import Control.Lens (set)
 import Data.GraphViz hiding (Plain)
@@ -23,6 +24,12 @@ import Data.GraphViz.Attributes.Complete
    Shape(..),Label(StrLabel),DPoint(..),RankDir(..))
 
 data SExp = Atom String | SX [SExp]
+
+aPlot :: Diagram ()
+aPlot = do
+  bx <- simplePlot (map (/10) [0,2..10]) [0,50..200] [(0.1,13),(0.35,135),(0.23,122)]
+  width bx === constant 200
+  height bx === constant 100
 
 prettyS :: SExp -> Tex Doc
 prettyS (Atom x) = PP.text (textual x)
@@ -49,10 +56,6 @@ preamble body = do
   usepackage "graphicx" []
   env "document" body
 
-autoLab s i = do
-  o <- labelObj s
-  autoLabel o i
-
 (▸) = flip (#)
 
 grDiag = graph Dot gr
@@ -69,7 +72,7 @@ gr = DotGraph False True Nothing
       ,edg "D" "A" "4"])
 
 testDiagram = do
-  -- draw $ path $ circle (Point 0 0) 5
+  draw $ path $ circle (Point 0 0) 5
   a   <- labelObj $ ensureMath $ "a"
   b   <- labelObj $ ensureMath $ "b"
   a'  <- draw $ circleShape -- labelObj $ ensureMath $ "c"
@@ -170,49 +173,32 @@ Here is some derivation tree:
 @section«Diagrams»
 
 One can also draw diagrams:
-@testDiagram
 
 @section«Graphviz»
 
 There is partial, rudimentary support for layout of graphs using graphviz.
 
-grDiag
+@grDiag
 %% This is deactivated for now; it requires graphviz to be installed
 
-@cmd0"newpage"
 
 @section«Plots»
 
-@(simplePlot [(.1,13),(.35,135),(.23,122)])
+@aPlot
 
+@cmd0"newpage"
 @section«Haskell»
 
 There is simple support for lhs2tex-style stuff.
 
 Another paragaph.
 
-@haskell«
-
-exp   (  rstarts
-         arsaeritsrst
-         arstarst)
-»
 
 @haskell«
 
-exp (  rstarts
-       arsaeritsrst
-       arstarst)
-»
-
-@haskell«
-
-autoLab s i = do  o <- labelObj s
-                  autoLabel o2 i1
-                  print (1<+>2) ' '
-   where  x    = whatever
-          ops  = [    (<|>),(<>),
-                      (<+>)]
+autoLab s i = do
+  o <- labelObj s
+  autoLabel o i
 
 »
 some text after
