@@ -68,6 +68,7 @@ printTok t = let s = textual $ showToken t
         QConId _ -> ident
         DVarId _ -> ident
         VarSym "==" -> special "\\equiv" -- ≡
+        VarSym "=~" -> special "\\cong" -- ≅
         VarSym "<=" -> special "\\leq" -- ≤
         VarSym ">=" -> special "\\geq" -- ≥
         VarSym "<>" -> special "<\\!>"
