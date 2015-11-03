@@ -5,9 +5,9 @@ import MarXup.Latex
 import MarXup.Tex
 import MarXup
 import Data.Monoid
-import Data.Ratio
 import Control.Monad (unless)
 
+align :: [[TeX]] -> Tex ()
 align  = env "align*" . mkrows . map mkcols
 
 array :: [String] -> String -> [[TeX]] -> TeX
@@ -30,7 +30,9 @@ ensureMath = cmd "ensuremath"
 mbox = cmd "mbox"
 fbox :: TeX -> TeX
 fbox = cmd "fbox"
+superscript :: Tex () -> TeX
 superscript y = tex "^" <> braces y
+subscript :: Tex () -> TeX
 subscript x = tex "_" <> braces x
 
 displayMath = env "displaymath"
@@ -40,18 +42,18 @@ mathsf = cmd "mathsf"
 
 mathpreamble :: TeX
 mathpreamble = do
-  sty <- askClass
-  usepackage "graphicx" []
   usepackage "amsmath"  []
   usepackage "amssymb"  []   -- extra symbols such as □
   usepackage "stmaryrd" [] -- has ⟦ and ⟧
-  usepackage "mathpartir" [] -- mathpar environment
 
 
 mathpar :: [[TeX]] -> TeX
-mathpar = env "mathpar" . mkrows . map mk . filter (not . null)
- where mk = foldr1 (\x y -> x <> cmd0 "and" <> y)
+mathpar ps = do
+   usepkg "mathpartir" 100 []
+   env "mathpar" . mkrows . map mk . filter (not . null) $ ps
+  where mk = foldr1 (\x y -> x <> cmd0 "and" <> y)
 
+mathbox :: Tex a -> Tex a
 mathbox = mbox . ensureMath
 
 
