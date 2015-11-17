@@ -36,7 +36,7 @@ scale minx maxx x = (x - minx) / (maxx - minx)
 
 -- | Make a number of steps
 mkSteps :: Transform -> (Double -> String) -> [Double] -> [(Double,TeX)]
-mkSteps tx showFct xs = [(x, textual $ showFct x0) | x0 <- xs, let x = tx x0]
+mkSteps tx showFct xs = zip xs (map (textual . showFct) xs)
 
 -- | render an horizontal axis on the given box
 hAxis :: Box -> [(Double, TeX)] -> Diagram ()
@@ -46,6 +46,7 @@ hAxis bx = axisGen (bx # SW) (bx # SE) N
 vAxis :: Box -> [(Double, TeX)] -> Diagram ()
 vAxis bx = axisGen (bx # SW) (bx # NW) E
 
+-- | Draw axes. Coordinates in the [0,1] fit the box.
 axes :: Box -> Vec2 [(Double, TeX)] -> Diagram ()
 axes bx zs = d1 >> d2
   where Vec2 d1 d2 = (Vec2 hAxis vAxis) <*> pure bx <*> zs
@@ -66,16 +67,6 @@ scatterPlot bx input = forM_ input $ \(Vec2 x y) -> do
   width pt === constant 3
   pt # Center .=. Point (lint x lx hx) (lint y ly hy)
 
--- | @xformPlot transforms bounds marks inputdata@. Draw a 2d scatterplot. @marks@ is a
--- list of points to mark on the axes.
-xformPlot :: Vec2 Transform -> Vec2 [Double] -> [Vec2 Double] -> Diagram Box
-xformPlot _ _ [] = do
-  labelObj $ textual "NO DATA"
-xformPlot t z input = do
-  bx <- rectangleShape =<< box
-  axes bx (mkSteps <$> t <*> (Vec2 show show) <*> z)
-  scatterPlot bx $ map (t <*>) input
-  return bx
 
 type AxisGen = (Double -> Double -> (Double, [Double], Double), Transform)
 
@@ -92,13 +83,25 @@ frst (x,_,_) = x
 scnd (_,x,_) = x
 thrd (_,_,x) = x
 
+type ShowFct = Double -> String
+
+mkAxes :: Vec2 ShowFct -> Vec2 AxisGen -> Vec2 Double -> Vec2 Double -> (Vec2 [(Double,TeX)], Vec2 Transform)
+mkAxes showFct axGen lo hi = (marks, xform)
+  where axisInfo = fst <$> axGen <*> lo <*> hi
+        zs = scnd <$> axisInfo
+        minz = frst <$> axisInfo
+        maxz = thrd <$> axisInfo
+        xform = (.) <$> scales <*> (snd <$> axGen)
+        marks = (mkSteps <$> xform <*> showFct <*> zs)
+        scales = scale <$> minz <*> maxz
+
 -- | Draw a 2D scatter plot, given an axis specification and a data
 -- set
-plot :: Vec2 AxisGen -> [Vec2 Double] -> Diagram Box
-plot gt input = xformPlot ((.) <$> (scale <$> minz <*> maxz) <*> (snd <$> gt)) zs input
-  where axisInfo = (fst <$> gt) <*> (minimum <$> input') <*> (maximum <$> input')
-        minz = frst <$> axisInfo
-        zs = scnd <$> axisInfo
-        input' = sequenceA input
-        maxz = thrd <$> axisInfo
-
+simplePlot :: Vec2 ShowFct -> Vec2 AxisGen -> [Vec2 Double] -> Diagram Box
+simplePlot showFct axGen input = do
+  bx <- rectangleShape =<< box
+  axes bx marks
+  scatterPlot bx (map (xform <*>) input)
+  return bx
+  where input' = sequenceA input
+        (marks,xform) = mkAxes showFct axGen (minimum <$> input') (maximum <$> input')
