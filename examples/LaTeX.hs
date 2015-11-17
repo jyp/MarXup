@@ -27,9 +27,10 @@ data SExp = Atom String | SX [SExp]
 
 aPlot :: Diagram ()
 aPlot = do
-  bx <- plot (simplLinAxis 0.1,simplLinAxis 50)  [(0.1,13),(0.35,135),(0.23,122)]
+  bx <- plot (vec (simplLinAxis 0.1,simplLinAxis 50))  (map vec [(0.1,13),(0.35,135),(0.23,122)])
   width bx === constant 200
   height bx === constant 100
+  where vec (x,y) = Vec2 x y
 
 prettyS :: SExp -> Tex Doc
 prettyS (Atom x) = PP.text (textual x)

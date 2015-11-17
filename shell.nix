@@ -10,8 +10,9 @@
            });
     in pkgs.stdenv.mkDerivation {
     name = haskellPackages.thisPackage.name;
-    buildInputs = 
-       [(haskellPackages.ghcWithPackages (hs: ([
+    buildInputs =
+       [pkgs.graphviz
+        (haskellPackages.ghcWithPackages (hs: ([
          hs.cabal-install
          hs.hdevtools
          hs.alex
