@@ -35,8 +35,8 @@ scale :: forall a. Fractional a => a -> a -> a -> a
 scale minx maxx x = (x - minx) / (maxx - minx)
 
 -- | Make a number of steps
-mkSteps :: Transform -> (Double -> String) -> [Double] -> [(Double,TeX)]
-mkSteps tx showFct xs = zip xs (map (textual . showFct) xs)
+mkSteps :: Transform -> ShowFct -> [Double] -> [(Double,TeX)]
+mkSteps tx showFct xs = zip (map tx xs) (map (textual . ($ []) .  showFct) xs)
 
 -- | render an horizontal axis on the given box
 hAxis :: Box -> [(Double, TeX)] -> Diagram ()
@@ -83,7 +83,7 @@ frst (x,_,_) = x
 scnd (_,x,_) = x
 thrd (_,_,x) = x
 
-type ShowFct = Double -> String
+type ShowFct = Double -> ShowS
 
 mkAxes :: Vec2 ShowFct -> Vec2 AxisGen -> Vec2 Double -> Vec2 Double -> (Vec2 [(Double,TeX)], Vec2 Transform)
 mkAxes showFct axGen lo hi = (marks, xform)

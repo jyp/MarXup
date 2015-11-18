@@ -22,12 +22,15 @@ import Data.Traversable
 import Data.GraphViz.Attributes.Complete
   (Attribute(RankSep,Shape,Label,Margin,Width,Len,RankDir),
    Shape(..),Label(StrLabel),DPoint(..),RankDir(..))
+import Numeric (showFFloat)
 
 data SExp = Atom String | SX [SExp]
 
 aPlot :: Diagram ()
 aPlot = do
-  bx <- plot (vec (simplLinAxis 0.1,simplLinAxis 50))  (map vec [(0.1,13),(0.35,135),(0.23,122)])
+  bx <- simplePlot (pure $ showFFloat (Just 1))
+                   (vec (simplLinAxis 0.1,simplLinAxis 50))
+                   (map vec [(0.1,13),(0.35,135),(0.23,122)])
   width bx === constant 200
   height bx === constant 100
   where vec (x,y) = Vec2 x y
