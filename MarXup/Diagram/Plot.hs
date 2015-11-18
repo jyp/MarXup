@@ -89,11 +89,13 @@ mkAxes :: Vec2 ShowFct -> Vec2 AxisGen -> Vec2 Double -> Vec2 Double -> (Vec2 [(
 mkAxes showFct axGen lo hi = (marks, xform)
   where axisInfo = fst <$> axGen <*> lo <*> hi
         zs = scnd <$> axisInfo
-        minz = frst <$> axisInfo
-        maxz = thrd <$> axisInfo
-        xform = (.) <$> scales <*> (snd <$> axGen)
-        marks = (mkSteps <$> xform <*> showFct <*> zs)
+        minz = t <*> (frst <$> axisInfo)
+        maxz = t <*> (thrd <$> axisInfo)
+        xform :: Vec2 (Double -> Double)
+        xform = (.) <$> scales <*> t
+        marks = mkSteps <$> xform <*> showFct <*> zs
         scales = scale <$> minz <*> maxz
+        t = snd <$> axGen
 
 -- | Draw a 2D scatter plot, given an axis specification and a data
 -- set
