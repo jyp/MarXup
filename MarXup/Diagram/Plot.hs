@@ -21,7 +21,7 @@ instance Applicative Vec2 where
 -- anchor.
 axisGen :: Point -> Point -> Anchor -> [(Double,TeX)] -> Diagram ()
 axisGen origin target anch labels = do
-  draw {-$ using (set endTip ToTip)-} $ path $ polyline [origin,target]
+  draw {- using (set endTip ToTip) -} $ path $ polyline [origin,target]
   when (not $ null $ labels) $ do
     forM_ labels $ \(p,txt) -> do
       l0 <- labelObj txt
@@ -75,7 +75,6 @@ scatterPlot bx input = forM_ input $ \(Vec2 x y) -> do
 -- the axis.
 type AxisGen a = (a -> a -> (a, [a], a), Transform a)
 
--- TODO: compute lower bound intelligently
 logAxis :: Double -> AxisGen Double
 logAxis base = (\lo hi -> let lo' :: Int
                               lo' = floor (t lo)
