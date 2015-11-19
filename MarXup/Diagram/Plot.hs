@@ -21,7 +21,7 @@ instance Applicative Vec2 where
 -- anchor.
 axisGen :: Point -> Point -> Anchor -> [(Double,TeX)] -> Diagram ()
 axisGen origin target anch labels = do
-  draw $ using (set endTip ToTip) $ path $ polyline [origin,target]
+  draw {-$ using (set endTip ToTip)-} $ path $ polyline [origin,target]
   when (not $ null $ labels) $ do
     forM_ labels $ \(p,txt) -> do
       l0 <- labelObj txt
@@ -77,12 +77,21 @@ type AxisGen a = (a -> a -> (a, [a], a), Transform a)
 
 -- TODO: compute lower bound intelligently
 logAxis :: Double -> AxisGen Double
-logAxis base = (\_lo hi -> (1,takeWhile (< hi) (map (base ^^) [(0::Integer)..]),hi)
-               ,\x -> log x / log base)
+logAxis base = (\lo hi -> let lo' :: Int
+                              lo' = floor (t lo)
+                              hi' = ceiling (t hi)
+                          in (u lo',(map u [lo'..hi']),u hi')
+               ,t)
+               where t x = log x / log base
+                     u x = base ^^ x
 
 simplLinAxis :: Double -> AxisGen Double
-simplLinAxis step = (\_lo hi -> (0,takeWhile (< hi) $ map (*step) [0..],hi),
+simplLinAxis step = (\_lo hi -> let hi' :: Int
+                                    hi' = ceiling (t hi)
+                                in (0,map u [0..hi'],u hi'),
                      id)
+               where t x = x / step
+                     u x = step * fromIntegral x
 
 
 type ShowFct a = a -> ShowS

@@ -30,7 +30,7 @@ aPlot :: Diagram ()
 aPlot = do
   bx <- simplePlot (Vec2 (showFFloat (Just 1)) (showEFloat (Just 0)))
                    (vec (simplLinAxis 0.1,logAxis 10))
-                   (map vec [(0.1,13),(0.35,135),(0.23,1202)])
+                   (map vec [(0.1,139),(0.35,10035),(0.23,1202)])
   width bx === constant 200
   height bx === constant 100
   where vec (x,y) = Vec2 x y
