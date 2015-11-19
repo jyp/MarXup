@@ -26,7 +26,10 @@ instance Foldable Point' where
 instance Functor Point' where
   fmap = fmapDefault
 
-  
+instance Applicative Point' where
+  pure x = Point x x
+  Point f g <*> Point x y = Point (f x) (g y)
+
 type Point = Point' Expr
 instance Group a => Num (Point' a) where
   negate = neg

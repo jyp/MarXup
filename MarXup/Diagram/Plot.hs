@@ -58,15 +58,26 @@ lint p origin target = (p*-(target-origin)) + origin
 -- | Draw a scatterplot in the given box.
 -- Input data in the [0,1] interval fits the box.
 scatterPlot :: Box -> [Vec2 Double] -> Diagram ()
-scatterPlot bx input = forM_ input $ \(Vec2 x y) -> do
+scatterPlot bx input = forM_ input $ \z -> do
   pt <- using (fill "black") $ circleShape
-  let lx = xpart (bx # SW)
-      ly = ypart (bx # SW)
-      hx = xpart (bx # NE)
-      hy = ypart (bx # NE)
   width pt === constant 3
-  pt # Center .=. Point (lint x lx hx) (lint y ly hy)
+  pt # Center .=. interpBox bx (v2p z)
 
+v2p :: forall a. Vec2 a -> Point' a
+v2p (Vec2 x y) = Point x y
+
+
+interpBox :: forall a. Anchored a => a -> Point' Constant -> Point' Expr
+interpBox bx z = lint <$> z <*> bx#SW <*> bx#NE
+
+functionPlot :: Box -> Int -> Equiv a Double -> (a -> a) -> Diagram ()
+functionPlot bx nsteps t f = draw $ path $ polyline points
+  where points = do
+           xi <- (map ( (/fromIntegral nsteps) . fromIntegral) [0..nsteps])
+           let x = backward t xi
+               y = f x
+               yi = forward t y
+           return $ interpBox bx (Point xi yi)
 
 -- | An axis generator is a pair of
 -- 1. a function taking a lo and a hi bound and returning a lo, hi,
@@ -74,6 +85,14 @@ scatterPlot bx input = forM_ input $ \(Vec2 x y) -> do
 -- transformation function mapping raw coordinates into coordinates of
 -- the axis.
 type AxisGen a = (a -> a -> (a, [a], a), Transform a)
+
+data Equiv a b = Equiv {forward :: a -> b, backward :: b -> a}
+
+axisMarks lo hi trans = (u lo',(map u [lo'..hi']),u hi')
+  where u = forward trans
+        t = backward trans
+        lo' = floor (t lo)
+        hi' = ceiling (t hi)
 
 logAxis :: Double -> AxisGen Double
 logAxis base = (\lo hi -> let lo' :: Int
