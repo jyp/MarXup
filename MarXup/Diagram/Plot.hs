@@ -2,12 +2,12 @@
 module MarXup.Diagram.Plot where
 
 import MarXup.Diagram
-import Control.Lens hiding ((#))
+-- import Control.Lens hiding (set)
 import MarXup
 import MarXup.Tex
 import Control.Monad (forM_,when)
 
-type Transform a = a -> Double
+type Transform a = Equiv a Constant
 
 data Vec2 a = Vec2 a a
   deriving (Functor)
@@ -19,7 +19,7 @@ instance Applicative Vec2 where
 -- | Generic axis rendering. @axisGen origin target anchor labels@
 -- traces an axis from origin to target, attaching the labels at
 -- anchor.
-axisGen :: Point -> Point -> Anchor -> [(Double,TeX)] -> Diagram ()
+axisGen :: Point -> Point -> Anchor -> [(Constant,TeX)] -> Diagram ()
 axisGen origin target anch labels = do
   draw {- using (set endTip ToTip) -} $ path $ polyline [origin,target]
   when (not $ null $ labels) $ do
@@ -31,23 +31,24 @@ axisGen origin target anch labels = do
                          (lint p (ypart origin) (ypart target))
 
 -- | @scale minx maxx@ maps the interval [minx,maxx] to [0,1]
-scale :: forall a. Fractional a => a -> a -> a -> a
-scale minx maxx x = (x - minx) / (maxx - minx)
+scale :: forall b. Fractional b => b -> b -> Equiv b b
+scale minx maxx = Equiv (\x -> (x - minx) / (maxx - minx))
+                        (\x -> x * (maxx - maxx) + minx)
 
 -- | Make a number of steps
-mkSteps :: Transform a -> ShowFct a -> [a] -> [(Double,TeX)]
-mkSteps tx showFct xs = zip (map tx xs) (map (textual . ($ []) .  showFct) xs)
+mkSteps :: Transform a -> ShowFct a -> [a] -> [(Constant,TeX)]
+mkSteps tx showFct xs = zip (map (forward tx) xs) (map (textual . ($ []) .  showFct) xs)
 
 -- | render an horizontal axis on the given box
-hAxis :: Box -> [(Double, TeX)] -> Diagram ()
+hAxis :: Box -> [(Constant, TeX)] -> Diagram ()
 hAxis bx = axisGen (bx # SW) (bx # SE) N
 
 -- | render a vertical axis on the given box
-vAxis :: Box -> [(Double, TeX)] -> Diagram ()
+vAxis :: Box -> [(Constant, TeX)] -> Diagram ()
 vAxis bx = axisGen (bx # SW) (bx # NW) E
 
 -- | Draw axes. Coordinates in the [0,1] fit the box.
-axes :: Box -> Vec2 [(Double, TeX)] -> Diagram ()
+axes :: Box -> Vec2 [(Constant, TeX)] -> Diagram ()
 axes bx zs = d1 >> d2
   where Vec2 d1 d2 = (Vec2 hAxis vAxis) <*> pure bx <*> zs
 
@@ -57,7 +58,7 @@ lint p origin target = (p*-(target-origin)) + origin
 
 -- | Draw a scatterplot in the given box.
 -- Input data in the [0,1] interval fits the box.
-scatterPlot :: Box -> [Vec2 Double] -> Diagram ()
+scatterPlot :: Box -> [Vec2 Constant] -> Diagram ()
 scatterPlot bx input = forM_ input $ \z -> do
   pt <- using (fill "black") $ circleShape
   width pt === constant 3
@@ -70,7 +71,11 @@ v2p (Vec2 x y) = Point x y
 interpBox :: forall a. Anchored a => a -> Point' Constant -> Point' Expr
 interpBox bx z = lint <$> z <*> bx#SW <*> bx#NE
 
-functionPlot :: Box -> Int -> Equiv a Double -> (a -> a) -> Diagram ()
+-- | @functionPlot bx n xform f@.
+-- Plot the function @f@ on the box @bx@,
+-- using @n@ steps (precision). @xform@ is the axis transformation given by @mkAxes@.
+
+functionPlot :: Box -> Int -> Transform a -> (a -> a) -> Diagram ()
 functionPlot bx nsteps t f = draw $ path $ polyline points
   where points = do
            xi <- (map ( (/fromIntegral nsteps) . fromIntegral) [0..nsteps])
@@ -79,62 +84,54 @@ functionPlot bx nsteps t f = draw $ path $ polyline points
                yi = forward t y
            return $ interpBox bx (Point xi yi)
 
--- | An axis generator is a pair of
--- 1. a function taking a lo and a hi bound and returning a lo, hi,
--- and a list of intermediate steps to mark on the graph.  2. a
--- transformation function mapping raw coordinates into coordinates of
--- the axis.
-type AxisGen a = (a -> a -> (a, [a], a), Transform a)
-
 data Equiv a b = Equiv {forward :: a -> b, backward :: b -> a}
 
+after :: Equiv b c -> Equiv a b -> Equiv a c
+(Equiv f g) `after` (Equiv h i) = Equiv (f . h) (i . g)
+
+axisMarks :: a -> a -> Equiv a Constant -> (a,[a],a)
 axisMarks lo hi trans = (u lo',(map u [lo'..hi']),u hi')
-  where u = forward trans
-        t = backward trans
-        lo' = floor (t lo)
-        hi' = ceiling (t hi)
+  where u = backward trans
+        t = forward trans
+        lo' = fromIntegral $ floor (t lo)
+        hi' = fromIntegral $ ceiling (t hi)
 
-logAxis :: Double -> AxisGen Double
-logAxis base = (\lo hi -> let lo' :: Int
-                              lo' = floor (t lo)
-                              hi' = ceiling (t hi)
-                          in (u lo',(map u [lo'..hi']),u hi')
-               ,t)
-               where t x = log x / log base
-                     u x = base ^^ x
+logAxis :: Constant -> Transform Constant
+logAxis base = Equiv t u
+     where t x = log x / log base
+           u x = base ** x
 
-simplLinAxis :: Double -> AxisGen Double
-simplLinAxis step = (\_lo hi -> let hi' :: Int
-                                    hi' = ceiling (t hi)
-                                in (0,map u [0..hi'],u hi'),
-                     id)
-               where t x = x / step
-                     u x = step * fromIntegral x
-
+simplLinAxis :: Constant -> Transform Constant
+simplLinAxis step = Equiv (/step) (*step)
 
 type ShowFct a = a -> ShowS
 
-mkAxes :: Vec2 (ShowFct a) -> Vec2 (AxisGen a) -> Vec2 a -> Vec2 a -> (Vec2 [(Double,TeX)], Vec2 (Transform a))
-mkAxes showFct axGen lows highs = (marks, xform)
-  where axisInfo = fst <$> axGen <*> lows <*> highs
-        zs = mrks <$> axisInfo
+mkAxes :: Vec2 (Transform a) -> Vec2 a -> Vec2 a -> (Vec2 [a], Vec2 (Transform a))
+mkAxes axesXform lows highs = (mrks <$> axisInfo,
+                               after <$> (scale <$> minz <*> maxz) <*> axesXform)
+  where axisInfo = axisMarks <$> lows <*> highs <*> axesXform
         minz = t <*> (lo <$> axisInfo)
         maxz = t <*> (hi <$> axisInfo)
-        xform = (.) <$> scales <*> t
-        marks = mkSteps <$> xform <*> showFct <*> zs
-        scales = scale <$> minz <*> maxz
-        t = snd <$> axGen
+        t = forward <$> axesXform
         lo (x,_,_) = x
         mrks (_,x,_) = x
         hi (_,_,x) = x
 
--- | Draw a 2D scatter plot, given an axis specification and a data
--- set
-simplePlot :: Ord a => Vec2 (ShowFct a) -> Vec2 (AxisGen a) -> [Vec2 a] -> Diagram Box
-simplePlot showFct axGen input = do
+type PlotCanvas a = (Box, Vec2 (Transform a))
+
+preparePlot :: Vec2 (ShowFct a) -> Vec2 (Transform a) -> Vec2 a -> Vec2 a -> Diagram (PlotCanvas a)
+preparePlot showFct axesXform lo hi = do
   bx <- rectangleShape =<< box
   axes bx marks
-  scatterPlot bx (map (xform <*>) input)
+  return (bx,xform)
+  where marks = mkSteps <$> xform <*> showFct <*> marks0
+        (marks0,xform) = mkAxes axesXform lo hi
+
+-- | Draw a 2D scatter plot, given an axis specification and a data
+-- set
+simplePlot :: Ord a => Vec2 (ShowFct a) -> Vec2 (Transform a) -> [Vec2 a] -> Diagram Box
+simplePlot showFct axesXform input = do
+  (bx,xform) <- preparePlot showFct axesXform (minimum <$> input') (maximum <$> input')
+  scatterPlot bx (map (forward <$> xform <*>) input)
   return bx
   where input' = sequenceA input
-        (marks,xform) = mkAxes showFct axGen (minimum <$> input') (maximum <$> input')
