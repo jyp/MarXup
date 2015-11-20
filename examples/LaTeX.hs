@@ -28,12 +28,16 @@ data SExp = Atom String | SX [SExp]
 
 aPlot :: Diagram ()
 aPlot = do
-  bx <- simplePlot (Vec2 (showFFloat (Just 1)) (showEFloat (Just 0)))
-                   (vec (simplLinAxis 0.1,logAxis 10))
-                   (map vec [(0.1,139),(0.35,10035),(0.23,1202)])
+  c@(bx,_) <- simplePlot (Point (showFFloat (Just 1)) (showEFloat (Just 0)))
+                         (vec (simplLinAxis 0.1,
+                               logAxis 10
+                               -- simplLinAxis 2000
+                              ))
+                         (map vec [(0.1,139),(0.35,10035),(0.23,1202)])
+  functionPlot c 100 (\x -> 100 + 300000*(x-0.2)^^2)
   width bx === constant 200
   height bx === constant 100
-  where vec (x,y) = Vec2 x y
+  where vec (x,y) = Point x y
 
 prettyS :: SExp -> Tex Doc
 prettyS (Atom x) = PP.text (textual x)

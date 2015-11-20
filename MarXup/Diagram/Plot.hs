@@ -7,14 +7,8 @@ import MarXup
 import MarXup.Tex
 import Control.Monad (forM_,when)
 
-type Transform a = Equiv a Constant
-
-data Vec2 a = Vec2 a a
-  deriving (Functor)
-
-instance Applicative Vec2 where
-  pure x = Vec2 x x
-  Vec2 f g <*> Vec2 x y = Vec2 (f x) (g y)
+type Vec2 = Point'
+type Transform a = Iso a Constant
 
 -- | Generic axis rendering. @axisGen origin target anchor labels@
 -- traces an axis from origin to target, attaching the labels at
@@ -31,9 +25,9 @@ axisGen origin target anch labels = do
                          (lint p (ypart origin) (ypart target))
 
 -- | @scale minx maxx@ maps the interval [minx,maxx] to [0,1]
-scale :: forall b. Fractional b => b -> b -> Equiv b b
-scale minx maxx = Equiv (\x -> (x - minx) / (maxx - minx))
-                        (\x -> x * (maxx - maxx) + minx)
+scale :: forall b. Fractional b => b -> b -> Iso b b
+scale minx maxx = Iso (\x -> (x - minx) / (maxx - minx))
+                      (\x -> x * (maxx - minx) + minx)
 
 -- | Make a number of steps
 mkSteps :: Transform a -> ShowFct a -> [a] -> [(Constant,TeX)]
@@ -50,7 +44,7 @@ vAxis bx = axisGen (bx # SW) (bx # NW) E
 -- | Draw axes. Coordinates in the [0,1] fit the box.
 axes :: Box -> Vec2 [(Constant, TeX)] -> Diagram ()
 axes bx zs = d1 >> d2
-  where Vec2 d1 d2 = (Vec2 hAxis vAxis) <*> pure bx <*> zs
+  where Point d1 d2 = (Point hAxis vAxis) <*> pure bx <*> zs
 
 -- | Multiply the vector (origin --> target) by p.
 lint :: Constant -> Expr -> Expr -> Expr
@@ -58,51 +52,48 @@ lint p origin target = (p*-(target-origin)) + origin
 
 -- | Draw a scatterplot in the given box.
 -- Input data in the [0,1] interval fits the box.
-scatterPlot :: Box -> [Vec2 Constant] -> Diagram ()
-scatterPlot bx input = forM_ input $ \z -> do
+scatterPlot :: PlotCanvas a -> [Vec2 a] -> Diagram ()
+scatterPlot (bx,xform) input = forM_ (map (forward <$> xform <*>) input) $ \z -> do
   pt <- using (fill "black") $ circleShape
   width pt === constant 3
-  pt # Center .=. interpBox bx (v2p z)
-
-v2p :: forall a. Vec2 a -> Point' a
-v2p (Vec2 x y) = Point x y
-
+  pt # Center .=. interpBox bx z
 
 interpBox :: forall a. Anchored a => a -> Point' Constant -> Point' Expr
 interpBox bx z = lint <$> z <*> bx#SW <*> bx#NE
 
--- | @functionPlot bx n xform f@.
--- Plot the function @f@ on the box @bx@,
--- using @n@ steps (precision). @xform@ is the axis transformation given by @mkAxes@.
+-- | @functionPlot c n f@.
+-- Plot the function @f@ on the canvas @c@, using @n@ steps (precision).
 
-functionPlot :: Box -> Int -> Transform a -> (a -> a) -> Diagram ()
-functionPlot bx nsteps t f = draw $ path $ polyline points
+functionPlot :: Show a => PlotCanvas a -> Int -> (a -> a) -> Diagram ()
+functionPlot (bx,Point tx ty) nsteps f = draw $ path $ polyline points
   where points = do
-           xi <- (map ( (/fromIntegral nsteps) . fromIntegral) [0..nsteps])
-           let x = backward t xi
+           step <- [0..nsteps]
+           let xi :: Double
+               xi = fromIntegral step / fromIntegral nsteps
+               x = backward tx xi
                y = f x
-               yi = forward t y
+               yi = forward ty y
            return $ interpBox bx (Point xi yi)
 
-data Equiv a b = Equiv {forward :: a -> b, backward :: b -> a}
+data Iso a b = Iso {forward :: a -> b, backward :: b -> a}
 
-after :: Equiv b c -> Equiv a b -> Equiv a c
-(Equiv f g) `after` (Equiv h i) = Equiv (f . h) (i . g)
+after :: Iso b c -> Iso a b -> Iso a c
+(Iso f g) `after` (Iso h i) = Iso (f . h) (i . g)
 
-axisMarks :: a -> a -> Equiv a Constant -> (a,[a],a)
+axisMarks :: a -> a -> Iso a Constant -> (a,[a],a)
 axisMarks lo hi trans = (u lo',(map u [lo'..hi']),u hi')
   where u = backward trans
         t = forward trans
-        lo' = fromIntegral $ floor (t lo)
-        hi' = fromIntegral $ ceiling (t hi)
+        lo' = fromIntegral $ (floor (t lo) :: Integer)
+        hi' = fromIntegral $ (ceiling (t hi) :: Integer)
 
 logAxis :: Constant -> Transform Constant
-logAxis base = Equiv t u
+logAxis base = Iso t u
      where t x = log x / log base
            u x = base ** x
 
 simplLinAxis :: Constant -> Transform Constant
-simplLinAxis step = Equiv (/step) (*step)
+simplLinAxis step = Iso (/step) (*step)
 
 type ShowFct a = a -> ShowS
 
@@ -129,9 +120,9 @@ preparePlot showFct axesXform lo hi = do
 
 -- | Draw a 2D scatter plot, given an axis specification and a data
 -- set
-simplePlot :: Ord a => Vec2 (ShowFct a) -> Vec2 (Transform a) -> [Vec2 a] -> Diagram Box
+simplePlot :: Ord a => Vec2 (ShowFct a) -> Vec2 (Transform a) -> [Vec2 a] -> Diagram (PlotCanvas a)
 simplePlot showFct axesXform input = do
-  (bx,xform) <- preparePlot showFct axesXform (minimum <$> input') (maximum <$> input')
-  scatterPlot bx (map (forward <$> xform <*>) input)
-  return bx
+  canvas <- preparePlot showFct axesXform (minimum <$> input') (maximum <$> input')
+  scatterPlot canvas input
+  return canvas
   where input' = sequenceA input
