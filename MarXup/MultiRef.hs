@@ -4,14 +4,15 @@ module MarXup.MultiRef where
 
 import Control.Monad.Fix
 import Control.Monad.RWS.Lazy
-import Control.Applicative
-import Control.Arrow (first)
 import Data.Map.Strict (Map,insert)
+import qualified Data.Map.Strict as M
 
 type MetaData key = Map key String
+type BoxSpecs = Map Int BoxSpec
 
-newtype Multi config key a = Multi {fromMulti :: RWS config String (References,[BoxSpec],MetaData key) a }
-  deriving (Functor, Monad, MonadReader config, Applicative, MonadWriter String, MonadState (References,[BoxSpec],MetaData key), MonadFix)
+-- FIXME: Move boxspecs to the Read part.
+newtype Multi config key a = Multi {fromMulti :: RWS config String (References,BoxSpecs,MetaData key) a }
+  deriving (Functor, Monad, MonadReader config, Applicative, MonadWriter String, MonadState (References,BoxSpecs,MetaData key), MonadFix)
 
 -----------------------------------
 -- Basic datatype and semantics
@@ -29,13 +30,12 @@ nilBoxSpec = BoxSpec 0 0 0
 raw :: String -> Multi config key ()
 raw s = tell s
 
-getBoxSpec :: Multi config key BoxSpec
-getBoxSpec = do
-  (refs,bs,m) <- get
-  case bs of
-    [] -> error "display: ran out of boxes!"
-    (b:bs') -> do
-      put (refs,bs',m)
+getBoxSpec :: Int -> Multi config key BoxSpec
+getBoxSpec bxId = do
+  (_,bs,_) <- get
+  case M.lookup bxId bs of
+    Nothing -> error "getBoxSpec: unknown box"
+    Just b -> do
       return b
 
 -- | allocate a new label

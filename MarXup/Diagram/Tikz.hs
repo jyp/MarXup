@@ -19,11 +19,11 @@ import Data.Foldable
 import Data.Monoid
 import Control.Monad.Reader
 
-instance Element Expr where
-  type Target Expr = Dia
-  element x = do
-    v <- valueOf x
-    diaRaw $ showDistance v
+-- instance Element Expr where
+--   type Target Expr = Dia
+--   element x = do
+--     v <- valueOf x
+--     diaRaw $ showDistance v
 
 instance Element (Diagram ()) where
   type Target (Diagram ()) = TeX
@@ -34,16 +34,15 @@ instance Element (Diagram ()) where
     env "tikzpicture" $
       Tex $ runDiagram d
 
---------------------
--- Point rendering
-instance Element Point where
-  type Target Point = Diagram ()
-  element (Point x y) = "(" <> element x <> "," <> element y <> ")"
 
 diaDebug msg = diaRaw $ "\n%DBG:" ++ msg ++ "\n"
 
-instance (Element (Point' v),Monoid (Target (Point' v)), IsString (Target (Point' v))) => Element (Segment v) where
-  type Target (Segment v) = Target (Point' v)
+instance Element FrozenPoint where
+  type Target FrozenPoint = String
+  element pt = frozenPointElim pt $ \x y -> "(" <> showDistance x <> "," <> showDistance y <> ")"
+
+instance Element (Frozen Segment) where
+  type Target (Frozen Segment) = String
   element (StraightTo p) = "--" <> element p
   element (CurveTo c d p) = "..controls" <> element c <> "and" <> element d <> ".." <> element p
   element Cycle = "--cycle"
@@ -52,32 +51,33 @@ instance (Element (Point' v),Monoid (Target (Point' v)), IsString (Target (Point
   -- element (Rounded Nothing) = "[sharp corners]"
   -- element (Rounded (Just r)) = "[" <> element (constant r) <> "]"
 
-instance Element Path where
-  type Target Path = Diagram ()
-  element = path
+-- instance Element Path where
+--   type Target Path = Diagram ()
+--   element = path
 
 path :: Path -> Dia
-path = frozenPath <=< freeze
-
-frozenPath :: FrozenPath  -> Dia
-frozenPath p  = do
+path p = do
   options <- view diaPathOptions
-  diaRaw $ "\\path"
+  freeze p (frozenPath options)
+
+frozenPath' :: FrozenPath -> Dia
+frozenPath' p = do
+  options <- view diaPathOptions
+  freeze [] $ \_ -> frozenPath options p
+  
+frozenPath :: PathOptions -> FrozenPath -> TeX
+frozenPath options p  = do
+  tex $ "\\path"
     <> element options
     <> case p of
       EmptyPath -> ""
       (Path start segs) -> element start ++ concatMap element segs
-  diaRaw ";\n"
+  tex ";\n"
 
 
 showDistance :: Constant -> String
 showDistance x = showFFloat (Just 4) x tikzUnit
     where tikzUnit = "pt"
-
-instance Element FrozenPoint where
-  type Target FrozenPoint = String
-  element pt = frozenPointElim pt $ \x y -> "(" <> showDistance x <> "," <> showDistance y <> ")"
-
 
 -----------------
 -- Path Options
@@ -159,10 +159,11 @@ instance Element PathOptions where
 
 drawText :: Point -> TeX -> Diagram BoxSpec
 drawText point t = do
-  diaRawTex $ tex $ "\\node[anchor=north west,inner sep=0] at "
-  element point
-  (_,box) <- diaRawTex $ inBox $ braces $ t
-  diaRawTex $ tex ";\n"
-  return box
+  bxId <- diaRawTex $ Tex newLabel
+  freeze point $ \p' -> do
+    tex $ "\\node[anchor=north west,inner sep=0] at " ++ element p'
+    fillBox bxId True $ braces $ t
+    tex ";\n"
+  diaRawTex $ getBoxFromId bxId
 
 

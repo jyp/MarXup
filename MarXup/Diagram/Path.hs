@@ -22,8 +22,6 @@ type Frozen x = x Constant
 type FrozenPoint = Frozen Point'
 type FrozenPath = Frozen Path'
 
-freeze :: Traversable t => t Expr -> Diagram (t Constant)
-freeze = traverse valueOf
 
 unfreeze :: Functor t => t Constant -> t Expr
 unfreeze = fmap constant
@@ -74,7 +72,7 @@ cutAfter' [] _cutter = []
 cutAfter' (b:bs) cutter = case clipOne b cutter of
   Nothing -> b:cutAfter' bs cutter
   Just b' -> [b']
-
+ 
 revBernstein (Bernsteinp n c) = Bernsteinp n (V.reverse c)
 revBeziers :: [Curve] -> [Curve]
 revBeziers = reverse . map rev

@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, KindSignatures, OverloadedStrings, EmptyDataDecls, MultiParamTypeClasses, FlexibleContexts, TypeSynonymInstances, FlexibleInstances   #-}
+{-# LANGUAGE DataKinds, KindSignatures, OverloadedStrings, EmptyDataDecls, MultiParamTypeClasses, FlexibleContexts, TypeSynonymInstances, FlexibleInstances, GADTs, LambdaCase   #-}
 
 module MarXup.Diagram.Object where
 
@@ -13,7 +13,7 @@ import Control.Monad
 import Control.Applicative
 -- import Data.Algebra
 -- import Data.List (intersperse)
-import Control.Lens (set)
+import Control.Lens (set,view)
 
 data Anchor = Center | N | NW | W | SW | S | SE | E | NE | BaseW | Base | BaseE
   deriving Show
@@ -210,6 +210,16 @@ data OVector = OVector { vectorOrigin, vectorMagnitude :: Point }
 turn180 :: OVector -> OVector
 turn180 (OVector p v) = OVector p (negate v)
 
+data FList xs a where
+  NIL :: FList '[] a
+  (:%>) :: Functor t => t a -> FList fs a -> FList ('(:) t fs) a
+
+infixr :%>
+
+instance Functor (FList xs) where
+  fmap _ NIL = NIL
+  fmap f (x :%> xs) = fmap f x :%> fmap f xs
+  
 -- | Traces a straight edge between two objects.
 -- A vector originated at the midpoint and pointing perpendicular to
 -- the edge is returned.
@@ -219,10 +229,9 @@ edge source target = do
       link = polyline points
       targetArea = objectOutline target
       sourceArea = objectOutline source
-  l' <- freeze link
-  sa' <- freeze sourceArea
-  ta' <- freeze targetArea
-  frozenPath $ (l' `cutAfter` ta') `cutBefore` sa'
+  options <- view diaPathOptions
+  freeze (link :%> sourceArea :%> targetArea :%> NIL) $ \(l' :%> sa' :%> ta' :%> NIL) -> do
+       frozenPath options $ (l' `cutAfter` ta') `cutBefore` sa'
   return $ OVector (avg points) (rotate90 (b-a))
 
 (.<.) :: Point -> Point -> Diagram ()

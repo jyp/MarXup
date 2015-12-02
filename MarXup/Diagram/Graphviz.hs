@@ -88,7 +88,7 @@ graphToDiagram (Gen.DotGraph _strict _directed _grIdent stmts) = do
                 (Just p,q:_) -> [lineSegment (pt' q) (pt' p)]
                 _ -> []
           using (set endTip toTip) $
-            draw $ frozenPath $ fromBeziers (beg ++ mid ++ end)
+            draw $ frozenPath' $ fromBeziers (beg ++ mid ++ end)
 
     (Gen.DN (DotNode _nodeIdent attrs)) -> do
       diaRaw $ "%Node: " ++ show attrs ++ "\n"

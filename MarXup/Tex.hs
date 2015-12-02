@@ -5,13 +5,13 @@ module MarXup.Tex where
 import MarXup
 import Control.Monad.Reader
 import Control.Monad.RWS
-import Control.Applicative
 import GHC.Exts( IsString(..) )
 import Data.List (intersperse,intercalate)
 import MarXup.MultiRef
 import System.Directory (doesFileExist)
 import Data.Char (isSpace)
-import Data.Map (assocs)
+import Data.Map (assocs, Map)
+import qualified Data.Map as Map
 
 data ClassFile = Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
   deriving Eq
@@ -211,51 +211,56 @@ instance Element SortedLabel where
 -- Generate boxes
 
 
--- whenMode :: Mode -> Tex () -> Tex ()
--- whenMode mode act = do
---   interpretMode <- Tex ask
---   when (mode interpretMode) act
-
 inBox :: Tex a -> Tex (a, BoxSpec)
-inBox x = braces $ do
+inBox = helpBox True
+
+justBox :: Tex a -> Tex BoxSpec
+justBox x = snd <$> helpBox False x
+
+
+helpBox :: Bool -> Tex a -> Tex (a,BoxSpec)
+helpBox showBox x = do bxId <- Tex newLabel
+                       a <- fillBox bxId showBox x
+                       b <- Tex (getBoxSpec bxId)
+                       return (a,b)
+
+getBoxFromId :: Int -> Tex BoxSpec
+getBoxFromId = Tex . getBoxSpec
+
+fillBox :: Label -> Bool -> Tex a -> Tex a
+fillBox bxId showBox x = braces $ do
   tex $ "\\savebox{\\marxupbox}{"
   a <- x
   tex $
     "}"
+    ++ "\\immediate\\write\\boxesfile{" ++ show bxId ++ "}"
     ++ writeBox "wd"
     ++ writeBox "ht"
     ++ writeBox "dp"
-  tex $ "\\box\\marxupbox"
-  b <- Tex getBoxSpec
+  when showBox $ tex $ "\\box\\marxupbox"
 
-  return (a,b)
+  return a
   where writeBox l = "\\immediate\\write\\boxesfile{\\number\\"++ l ++"\\marxupbox}"
 
+-- TODO: it would be nice to have:
+-- withBox :: Bool -> Tex a -> (Tex a -> Tex a) -> Tex BoxSpec
+-- withBox showBox boxContents boxContext = ...
 
-justBox :: Tex a -> Tex BoxSpec
-justBox x = do
-  do
-    tex "\n\\savebox{\\marxupbox}{"
-    x
-    tex $ 
-      "}"
-      ++ writeBox "wd"
-      ++ writeBox "ht"
-      ++ writeBox "dp"
-      ++ "\n"
-  b <- Tex getBoxSpec
+-- however this may require some latex trickery. The idea would be to
+-- create the box upfront (and thus we can obtain its boundaries), and
+-- invoke it wherever the context calls it. This means that we need a
+-- new 'box' for every invokation. It may be that latex does not have
+-- infinitely many boxes, and thus we need to reuse (latex-side) box
+-- ids.
 
-  return b
-  where writeBox l = "\\immediate\\write\\boxesfile{\\number\\"++ l ++"\\marxupbox}"
-
-renderWithBoxes :: ClassFile -> [BoxSpec] -> Tex a -> String
+renderWithBoxes :: ClassFile -> BoxSpecs -> Tex a -> String
 renderWithBoxes classFile bs (Tex t) = (preamble ++ doc)
   where (_,(_,_,metaDatum),doc) = runRWS (fromMulti $ t) classFile (0,bs,mempty)
         preamble :: String
         preamble = unlines $ map (uncurry renderKey) $ assocs metaDatum
 
 renderSimple :: ClassFile -> Tex a -> String
-renderSimple classFile = renderWithBoxes classFile []
+renderSimple classFile = renderWithBoxes classFile Map.empty
 
 renderTex :: ClassFile -> String -> TeX -> IO ()
 renderTex classFile fname body = do
@@ -266,7 +271,7 @@ renderTex classFile fname body = do
       then readFile boxesTxt
       else return ""
   putStrLn $ "Found " ++ show (length boxes) ++ " boxes"
-  let texSource = renderWithBoxes classFile (boxes ++ repeat nilBoxSpec) wholeDoc
+  let texSource = renderWithBoxes classFile boxes wholeDoc
       wholeDoc = do
         tex $ "\\newwrite\\boxesfile"
         tex $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n\\newsavebox{\\marxupbox}"
@@ -277,8 +282,8 @@ renderTex classFile fname body = do
 askClass :: Tex ClassFile
 askClass = Tex ask
 
-getBoxInfo :: [Int] -> [BoxSpec]
-getBoxInfo (width:height:depth:bs) = BoxSpec (scale width) (scale height) (scale depth):getBoxInfo bs
+getBoxInfo :: [Int] -> Map Int BoxSpec
+getBoxInfo (ident:width:height:depth:bs) = Map.insert ident (BoxSpec (scale width) (scale height) (scale depth)) (getBoxInfo bs)
   where scale x = fromIntegral x / 65536
-getBoxInfo _ = []
+getBoxInfo _ = Map.empty
 

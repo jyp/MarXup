@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies, OverloadedStrings, RecordWildCards,UndecidableInstances, PackageImports, TemplateHaskell #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies, OverloadedStrings, RecordWildCards,UndecidableInstances, PackageImports, TemplateHaskell, RankNTypes, GADTs #-}
 
 module MarXup.Diagram.Layout (module MarXup.Diagram.Layout) where
 import Control.Monad.LPMonad
@@ -10,14 +10,11 @@ import Data.LinearProgram.LinExpr
 import Data.Map (Map)
 import qualified Data.Map as M
 import Control.Lens hiding (element)
-import Data.String
--- import MarXup
 import Data.Traversable
 import Data.Foldable
-import Control.Applicative
-import System.IO.Unsafe
 import MarXup.MultiRef
 import MarXup.Tex
+import System.IO.Unsafe
 
 type LPState = LP Var Constant
 
@@ -63,8 +60,7 @@ data PathOptions = PathOptions
                      }
 $(makeLenses ''PathOptions)
 
-data Env = Env {_diaSolution :: Solution
-               ,_diaTightness :: Constant -- ^ Multiplicator to minimize constraints
+data Env = Env {_diaTightness :: Constant -- ^ Multiplicator to minimize constraints
                ,_diaPathOptions :: PathOptions}
 
 $(makeLenses ''Env)
@@ -82,8 +78,14 @@ defaultPathOptions = PathOptions
   ,_decoration = Decoration ""
   }
 
-newtype Diagram a = Dia (RWST Env () (Var,LPState) (Multi ClassFile Key) a)
-  deriving (Monad, Applicative, Functor, MonadReader Env)
+data Freeze where
+  Freeze :: forall t. Functor t => (t Constant -> Multi ClassFile Key ()) -> t Expr -> Freeze
+
+newtype Diagram a = Dia (RWST Env [Freeze] (Var,LPState) (Multi ClassFile Key) a)
+  deriving (Monad, Applicative, Functor, MonadReader Env, MonadWriter [Freeze])
+
+freeze :: Functor t => t Expr -> (t Constant -> TeX) -> Diagram ()
+freeze x f = tell [Freeze (\y -> fromTex (f y)) x]
 
 type Dia = Diagram ()
 
@@ -96,15 +98,6 @@ instance MonadState LPState Diagram where
 -------------
 -- Diagrams
 
-runDiagram :: Diagram a -> Multi ClassFile Key a
-runDiagram (Dia diag) = do
-  rec (a,(_,problem),_) <- runRWST diag (Env solution 1 defaultPathOptions)
-                                        (Var 0,LP Min M.empty [] M.empty M.empty)
-      let solution = case unsafePerformIO $ glpSolveVars simplexDefaults problem of
-            (_retcode,Just (_objFunc,s)) -> s
-            (retcode,Nothing) -> error $ "ret code = " ++ show retcode
-  -- Raw Normal $ "%problem solved: " ++ show problem ++ "\n"
-  return a
 
 diaRawTex :: Tex a -> Diagram a
 diaRawTex (Tex t) = Dia $ lift t
@@ -122,13 +115,11 @@ instance Monoid (Diagram ()) where
   mempty = return ()
   mappend = (>>)
 
-instance IsString (Diagram ()) where
-  fromString = diaRawTex . tex
+-- instance IsString (Diagram ()) where
+--   fromString = diaRawTex . tex
 
 --------------
 -- Variables
-varValue :: Var -> Diagram Double
-varValue v = M.findWithDefault 0 v <$> view diaSolution
 
 rawNewVar :: Diagram Var
 rawNewVar = Dia $ do
@@ -164,11 +155,21 @@ instance Num Expr where
   (+) = (^+^)
   (-) = (^-^)
 
-valueOf :: Expr -> Diagram Double
-valueOf (LinExpr m c) = do
-  vs <- forM (M.assocs m) $ \(v,scale) ->
-    (scale *) <$> varValue v
-  return $ sum $ c:vs
+runDiagram :: Diagram a -> Multi ClassFile Key a
+runDiagram (Dia diag) = do
+  rec (a,(_,problem),ds) <- runRWST diag (Env 1 defaultPathOptions)
+                                        (Var 0,LP Min M.empty [] M.empty M.empty)
+      let solution = case unsafePerformIO $ glpSolveVars simplexDefaults problem of
+            (_retcode,Just (_objFunc,s)) -> s
+            (retcode,Nothing) -> error $ "LP failed ret code = " ++ show retcode
+  -- Raw Normal $ "%problem solved: " ++ show problem ++ "\n"
+  forM ds $ \(Freeze f x) -> f (fmap (valueIn solution) x)
+  return a
+
+
+valueIn :: Solution -> Expr -> Double
+valueIn sol (LinExpr m c) = sum (c:[scale * varValue v | (v,scale) <- M.assocs m])
+ where varValue v = M.findWithDefault 0 v sol
 
 variable :: Var -> Expr
 variable v = LinExpr (var v) 0
