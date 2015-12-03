@@ -68,7 +68,7 @@ preamble body = do
 
 (▸) = flip (#)
 
-grDiag = graph Dot gr
+grDiag = graph tex Dot gr
 
 nod x = DotNode x [Margin (DVal 0),Width 0, Shape Circle, Label $ StrLabel $ fromString x]
 edg x y z = DotEdge x y [Label $ StrLabel z, Len 0.1]
