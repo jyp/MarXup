@@ -17,11 +17,8 @@ import Data.Maybe (listToMaybe)
 import Prelude hiding (sum,mapM_,mapM,concatMap,maximum,minimum)
 import qualified Data.Vector.Unboxed as V
 import Algebra.Polynomials.Bernstein (restriction,Bernsteinp(..))
-
-type Frozen x = x Constant
-type FrozenPoint = Frozen Point'
-type FrozenPath = Frozen Path'
-
+import Control.Lens (over, set, view)
+import Control.Monad.Reader (local)
 
 unfreeze :: Functor t => t Constant -> t Expr
 unfreeze = fmap constant
@@ -91,45 +88,11 @@ cutAfter = onBeziers cutAfter'
 cutBefore :: FrozenPath -> FrozenPath -> FrozenPath
 cutBefore = onBeziers cutBefore'
 
-data Segment v = CurveTo (Point' v) (Point' v) (Point' v)
-                   | StraightTo (Point' v)
-                   | Cycle
-                     -- Other things also supported by tikz:
-                   --  Rounded (Maybe Constant)
-                   --  HV point | VH point
-  deriving (Show,Eq)
-instance Functor Segment where
-  fmap = fmapDefault
-  
-instance Foldable Segment where
-  foldMap = foldMapDefault
-instance Traversable Segment where
-  traverse _ Cycle = pure Cycle
-  traverse f (StraightTo p) = StraightTo <$> traverse f p
-  traverse f (CurveTo c d q) = CurveTo <$> traverse f c <*> traverse f d <*> traverse f q
-  
-
 -----------------
 -- Paths
 
+
 type Path = Path' Expr
-
-data Path' a
-  = EmptyPath
-  | Path {startingPoint :: Point' a
-         ,segments :: [Segment a]}
-  deriving Show
-
--- mapPoints :: (Point' a -> Point' b) -> Path' a -> Path' b
-instance Functor Path' where
-  fmap = fmapDefault
-
-instance Foldable Path' where
-  foldMap = foldMapDefault
-instance Traversable Path' where
-  traverse _ EmptyPath = pure EmptyPath
-  traverse f (Path s ss) = Path <$> traverse f s <*> traverse (traverse f) ss
-
 
 polyline :: [Point] -> Path
 polyline [] = EmptyPath
@@ -152,4 +115,60 @@ circle center r =      Path (pt r 0)
        k1 = 4 * (sqrt 2 - 1) / 3
        k = k1 *^ r
        pt x y = center ^+^ (Point x y)
+
+
+path :: Monad m => Path -> Diagram m ()
+path p = do
+  options <- view diaPathOptions
+  tracePath' <- view (diaBackend . tracePath)
+  freeze p (tracePath' options)
+
+frozenPath' :: Monad m => FrozenPath -> Diagram m ()
+frozenPath' p = do
+  options <- view diaPathOptions
+  tracePath' <- view (diaBackend . tracePath)
+  freeze [] $ \_ -> tracePath' options p
+
+stroke :: Monad m => Color -> Diagram m a -> Diagram m a
+stroke color = using (outline color)
+
+draw :: Monad m => Diagram m a -> Diagram m a
+draw = stroke "black"
+
+noOutline :: PathOptions -> PathOptions
+noOutline = set drawColor Nothing
+
+outline :: Color -> PathOptions -> PathOptions
+outline color = set drawColor (Just color)
+
+fill :: Color -> PathOptions -> PathOptions
+fill color = set fillColor (Just color)
+
+zigzagDecoration :: PathOptions -> PathOptions
+zigzagDecoration = set decoration (Decoration "zigzag")
+
+using :: Monad m => (PathOptions -> PathOptions) -> Diagram m a -> Diagram m a
+using f = local (over diaPathOptions f)
+
+ultraThin, veryThin, thin, semiThick, thick, veryThick, ultraThick :: Constant
+ultraThin = 0.1
+veryThin = 0.2
+thin = 0.4
+semiThick = 0.6
+thick = 0.8
+veryThick = 1.2
+ultraThick = 1.6
+
+solid, dotted, denselyDotted, looselyDotted, dashed, denselyDashed,
+  looselyDashed, dashDotted, denselyDashdotted, looselyDashdotted :: PathOptions -> PathOptions
+solid             o@PathOptions{..} = o { _dashPattern = [] }
+dotted            o@PathOptions{..} = o { _dashPattern = [(_lineWidth,2)] }
+denselyDotted     o@PathOptions{..} = o { _dashPattern = [(_lineWidth, 1)] }
+looselyDotted     o@PathOptions{..} = o { _dashPattern = [(_lineWidth, 4)] }
+dashed            o@PathOptions{..} = o { _dashPattern = [(3, 3)] }
+denselyDashed     o@PathOptions{..} = o { _dashPattern = [(3, 2)] }
+looselyDashed     o@PathOptions{..} = o { _dashPattern = [(3, 6)] }
+dashDotted        o@PathOptions{..} = o { _dashPattern = [(3, 2), (_lineWidth, 2)] }
+denselyDashdotted o@PathOptions{..} = o { _dashPattern = [(3, 1), (_lineWidth, 1)] }
+looselyDashdotted o@PathOptions{..} = o { _dashPattern = [(3, 4), (_lineWidth, 4)] }
 

@@ -7,9 +7,7 @@ import Control.Monad (forM_,when,forM)
 import MarXup.Tex
 import Data.List (intersperse,groupBy,elemIndex,nub,intercalate)
 import Data.Monoid
-import Control.Applicative
 import Data.Function (on)
-import MarXup.MultiRef (metaData)
 
 -- | Separate the arguments with '\\'
 mkrows,mkcols :: [TeX] -> TeX

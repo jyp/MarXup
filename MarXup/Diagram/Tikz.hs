@@ -1,141 +1,65 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies, OverloadedStrings, RecordWildCards,UndecidableInstances, PackageImports, TemplateHaskell #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies, OverloadedStrings, RecordWildCards,UndecidableInstances, PackageImports, TemplateHaskell, RankNTypes #-}
 
 module MarXup.Diagram.Tikz where
 
 import MarXup.Diagram.Layout
-import MarXup.Diagram.Point
 import MarXup.Diagram.Path
-import Control.Lens hiding (element)
 import Prelude hiding (sum,mapM_,mapM,concatMap)
-import Control.Applicative
 import Data.List (intercalate)
-import Data.String
 import MarXup
-import MarXup.MultiRef
+import MarXup.MultiRef (newLabel)
 import MarXup.Tex
 import Numeric (showFFloat)
-import Data.Traversable
 import Data.Foldable
 import Data.Monoid
-import Control.Monad.Reader
 
--- instance Element Expr where
---   type Target Expr = Dia
---   element x = do
---     v <- valueOf x
---     diaRaw $ showDistance v
-
-instance Element (Diagram ()) where
-  type Target (Diagram ()) = TeX
+instance Element (Diagram Tex ()) where
+  type Target (Diagram Tex ()) = TeX
   element d = do
    texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!)
    braces $ do
     usepkg "tikz" 100 []
     env "tikzpicture" $
-      Tex $ runDiagram d
+      runDiagram tikzBackend d
 
+-- diaDebug msg = diaRaw $ "\n%DBG:" ++ msg ++ "\n"
+class Tikz a where
+  toTikz :: a -> String
 
-diaDebug msg = diaRaw $ "\n%DBG:" ++ msg ++ "\n"
+instance Tikz FrozenPoint where
+  toTikz pt = frozenPointElim pt $ \x y -> "(" <> showDistance x <> "," <> showDistance y <> ")"
 
-instance Element FrozenPoint where
-  type Target FrozenPoint = String
-  element pt = frozenPointElim pt $ \x y -> "(" <> showDistance x <> "," <> showDistance y <> ")"
-
-instance Element (Frozen Segment) where
-  type Target (Frozen Segment) = String
-  element (StraightTo p) = "--" <> element p
-  element (CurveTo c d p) = "..controls" <> element c <> "and" <> element d <> ".." <> element p
-  element Cycle = "--cycle"
-  -- element (VH p) = "|-" <> element p
-  -- element (HV p) = "-|" <> element p
-  -- element (Rounded Nothing) = "[sharp corners]"
-  -- element (Rounded (Just r)) = "[" <> element (constant r) <> "]"
-
--- instance Element Path where
---   type Target Path = Diagram ()
---   element = path
-
-path :: Path -> Dia
-path p = do
-  options <- view diaPathOptions
-  freeze p (frozenPath options)
-
-frozenPath' :: FrozenPath -> Dia
-frozenPath' p = do
-  options <- view diaPathOptions
-  freeze [] $ \_ -> frozenPath options p
-  
-frozenPath :: PathOptions -> FrozenPath -> TeX
-frozenPath options p  = do
-  tex $ "\\path"
-    <> element options
-    <> case p of
-      EmptyPath -> ""
-      (Path start segs) -> element start ++ concatMap element segs
-  tex ";\n"
-
+instance Tikz (Frozen Segment) where
+  toTikz (StraightTo p) = "--" <> toTikz p
+  toTikz (CurveTo c d p) = "..controls" <> toTikz c <> "and" <> toTikz d <> ".." <> toTikz p
+  toTikz Cycle = "--cycle"
+  -- toTikz (VH p) = "|-" <> toTikz p
+  -- toTikz (HV p) = "-|" <> toTikz p
+  -- toTikz (Rounded Nothing) = "[sharp corners]"
+  -- toTikz (Rounded (Just r)) = "[" <> toTikz (constant r) <> "]"
 
 showDistance :: Constant -> String
 showDistance x = showFFloat (Just 4) x tikzUnit
     where tikzUnit = "pt"
 
------------------
--- Path Options
-
-localPathOptions :: (PathOptions -> PathOptions) -> Diagram a -> Diagram a
-localPathOptions f = local (over diaPathOptions f)
-
-instance Show LineTip where
-  show t = case t of
+instance Tikz LineTip where
+  toTikz t = case t of
     ToTip -> "to"
     StealthTip -> "stealth"
     CircleTip -> "o"
     NoTip -> ""
     LatexTip -> "latex"
-    ReversedTip x -> show x ++ " reversed"
+    ReversedTip x -> toTikz x ++ " reversed"
     BracketTip -> "["
     ParensTip -> "("
-
-
-ultraThin, veryThin, thin, semiThick, thick, veryThick, ultraThick :: Constant
-ultraThin = 0.1
-veryThin = 0.2
-thin = 0.4
-semiThick = 0.6
-thick = 0.8
-veryThick = 1.2
-ultraThick = 1.6
-
 
 showDashPat :: DashPattern -> String
 showDashPat xs = intercalate " " ["on " <> showDistance on <>
                                   " off " <> showDistance off | (on,off) <- xs]
 
-solid             o@PathOptions{..} = o { _dashPattern = [] }
-dotted            o@PathOptions{..} = o { _dashPattern = [(_lineWidth,2)] }
-denselyDotted     o@PathOptions{..} = o { _dashPattern = [(_lineWidth, 1)] }
-looselyDotted     o@PathOptions{..} = o { _dashPattern = [(_lineWidth, 4)] }
-dashed            o@PathOptions{..} = o { _dashPattern = [(3, 3)] }
-denselyDashed     o@PathOptions{..} = o { _dashPattern = [(3, 2)] }
-looselyDashed     o@PathOptions{..} = o { _dashPattern = [(3, 6)] }
-dashdotted        o@PathOptions{..} = o { _dashPattern = [(3, 2), (_lineWidth, 2)] }
-denselyDashdotted o@PathOptions{..} = o { _dashPattern = [(3, 1), (_lineWidth, 1)] }
-looselyDashdotted o@PathOptions{..} = o { _dashPattern = [(3, 4), (_lineWidth, 4)] }
-
-using = localPathOptions
-stroke color = using (outline color)
-draw = stroke "black"
-
-noOutline = set drawColor Nothing
-outline color = set drawColor (Just color)
-fill color = set fillColor (Just color)
-
-zigzagDecoration = set decoration (Decoration "zigzag")
-
-instance Element PathOptions where
-  type Target PathOptions = String
-  element PathOptions{..} = "["
-    <> show _startTip <> "-" <> show _endTip <> ","
+instance Tikz PathOptions where
+  toTikz PathOptions{..} = "["
+    <> toTikz _startTip <> "-" <> toTikz _endTip <> ","
     <> col "draw" _drawColor
     <> col "fill" _fillColor
     <> "line width=" <> showDistance _lineWidth <> ","
@@ -154,16 +78,29 @@ instance Element PathOptions where
     <> "]"
     where col attr = maybe "" (\c -> attr <> "=" <> c <> ",")
 
-----------
--- Text
+tikzBackend :: Backend Tex
+tikzBackend = Backend {..} where
+  _tracePath options p = do
+     tex $ "\\path"
+       <> toTikz options
+       <> case p of
+         EmptyPath -> ""
+         (Path start segs) -> toTikz start ++ concatMap toTikz segs
+     tex ";\n"
+  _traceLabel :: Monad x =>
+                   (location -> (FrozenPoint -> Tex ()) -> x ()) -> -- freezer
+                   (forall a. Tex a -> x a) -> -- embedder
+                   location ->
+                   Tex () -> -- label specification
+                   x BoxSpec
+  _traceLabel freezer embedder point lab = do
+       bxId <- embedder $ Tex newLabel
+       freezer point $ \p' -> do
+         tex $ "\\node[anchor=north west,inner sep=0] at " ++ toTikz p'
+         fillBox bxId True $ braces $ lab
+         tex ";\n"
+       embedder $ getBoxFromId bxId
 
-drawText :: Point -> TeX -> Diagram BoxSpec
-drawText point t = do
-  bxId <- diaRawTex $ Tex newLabel
-  freeze point $ \p' -> do
-    tex $ "\\node[anchor=north west,inner sep=0] at " ++ element p'
-    fillBox bxId True $ braces $ t
-    tex ";\n"
-  diaRawTex $ getBoxFromId bxId
 
+type Dia = Diagram Tex ()
 

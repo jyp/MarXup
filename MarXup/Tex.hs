@@ -12,6 +12,7 @@ import System.Directory (doesFileExist)
 import Data.Char (isSpace)
 import Data.Map (assocs, Map)
 import qualified Data.Map as Map
+import MarXup.Diagram.Layout (BoxSpec (..))
 
 data ClassFile = Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
   deriving Eq

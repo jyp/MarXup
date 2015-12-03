@@ -2,9 +2,6 @@
 module MarXup.Diagram.Plot where
 
 import MarXup.Diagram
--- import Control.Lens hiding (set)
-import MarXup
-import MarXup.Tex
 import Control.Monad (forM_,when)
 
 type Vec2 = Point'
@@ -13,7 +10,7 @@ type Transform a = Iso a Constant
 -- | Generic axis rendering. @axisGen origin target anchor labels@
 -- traces an axis from origin to target, attaching the labels at
 -- anchor.
-axisGen :: Point -> Point -> Anchor -> [(Constant,TeX)] -> Diagram ()
+axisGen :: Monad m => Point -> Point -> Anchor -> [(Constant,m ())] -> Diagram m ()
 axisGen origin target anch labels = do
   draw {- using (set endTip ToTip) -} $ path $ polyline [origin,target]
   when (not $ null $ labels) $ do
@@ -30,19 +27,19 @@ scale minx maxx = Iso (\x -> (x - minx) / (maxx - minx))
                       (\x -> x * (maxx - minx) + minx)
 
 -- | Make a number of steps
-mkSteps :: Transform a -> ShowFct a -> [a] -> [(Constant,TeX)]
-mkSteps tx showFct xs = zip (map (forward tx) xs) (map (textual . ($ []) .  showFct) xs)
+mkSteps :: Monad m => Transform a -> ShowFct m a -> [a] -> [(Constant,m ())]
+mkSteps tx showFct xs = zip (map (forward tx) xs) (map showFct xs)
 
 -- | render an horizontal axis on the given box
-hAxis :: Box -> [(Constant, TeX)] -> Diagram ()
+hAxis :: Monad m => Box -> [(Constant, m ())] -> Diagram m ()
 hAxis bx = axisGen (bx # SW) (bx # SE) N
 
 -- | render a vertical axis on the given box
-vAxis :: Box -> [(Constant, TeX)] -> Diagram ()
+vAxis :: Monad m => Box -> [(Constant, m ())] -> Diagram m ()
 vAxis bx = axisGen (bx # SW) (bx # NW) E
 
 -- | Draw axes. Coordinates in the [0,1] fit the box.
-axes :: Box -> Vec2 [(Constant, TeX)] -> Diagram ()
+axes :: Monad m => Box -> Vec2 [(Constant, m ())] -> Diagram m ()
 axes bx zs = d1 >> d2
   where Point d1 d2 = (Point hAxis vAxis) <*> pure bx <*> zs
 
@@ -52,7 +49,7 @@ lint p origin target = (p*-(target-origin)) + origin
 
 -- | Draw a scatterplot in the given box.
 -- Input data in the [0,1] interval fits the box.
-scatterPlot :: PlotCanvas a -> [Vec2 a] -> Diagram ()
+scatterPlot :: Monad m => PlotCanvas a -> [Vec2 a] -> Diagram m ()
 scatterPlot (bx,xform) input = forM_ (map (forward <$> xform <*>) input) $ \z -> do
   pt <- using (fill "black") $ circleShape
   width pt === constant 3
@@ -64,7 +61,7 @@ interpBox bx z = lint <$> z <*> bx#SW <*> bx#NE
 -- | @functionPlot c n f@.
 -- Plot the function @f@ on the canvas @c@, using @n@ steps (precision).
 
-functionPlot :: Show a => PlotCanvas a -> Int -> (a -> a) -> Diagram ()
+functionPlot :: Monad m => Show a => PlotCanvas a -> Int -> (a -> a) -> Diagram m ()
 functionPlot (bx,Point tx ty) nsteps f = draw $ path $ polyline points
   where points = do
            step <- [0..nsteps]
@@ -95,7 +92,7 @@ logAxis base = Iso t u
 simplLinAxis :: Constant -> Transform Constant
 simplLinAxis step = Iso (/step) (*step)
 
-type ShowFct a = a -> ShowS
+type ShowFct m a = a -> m ()
 
 mkAxes :: Vec2 (Transform a) -> Vec2 a -> Vec2 a -> (Vec2 [a], Vec2 (Transform a))
 mkAxes axesXform lows highs = (mrks <$> axisInfo,
@@ -110,7 +107,7 @@ mkAxes axesXform lows highs = (mrks <$> axisInfo,
 
 type PlotCanvas a = (Box, Vec2 (Transform a))
 
-preparePlot :: Vec2 (ShowFct a) -> Vec2 (Transform a) -> Vec2 a -> Vec2 a -> Diagram (PlotCanvas a)
+preparePlot :: Monad m => Vec2 (ShowFct m a) -> Vec2 (Transform a) -> Vec2 a -> Vec2 a -> Diagram m (PlotCanvas a)
 preparePlot showFct axesXform lo hi = do
   bx <- rectangleShape =<< box
   axes bx marks
@@ -120,7 +117,7 @@ preparePlot showFct axesXform lo hi = do
 
 -- | Draw a 2D scatter plot, given an axis specification and a data
 -- set
-simplePlot :: Ord a => Vec2 (ShowFct a) -> Vec2 (Transform a) -> [Vec2 a] -> Diagram (PlotCanvas a)
+simplePlot :: (Ord a, Monad m) => Vec2 (ShowFct m a) -> Vec2 (Transform a) -> [Vec2 a] -> Diagram m (PlotCanvas a)
 simplePlot showFct axesXform input = do
   canvas <- preparePlot showFct axesXform (minimum <$> input') (maximum <$> input')
   scatterPlot canvas input

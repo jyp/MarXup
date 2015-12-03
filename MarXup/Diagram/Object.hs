@@ -3,14 +3,12 @@
 module MarXup.Diagram.Object where
 
 -- import MarXup
-import MarXup.Tex
-import MarXup.Diagram.Tikz
+-- import MarXup.Tex
 import MarXup.Diagram.Path
 import MarXup.Diagram.Point
 import MarXup.Diagram.Layout
-import MarXup.MultiRef (BoxSpec(..))
 import Control.Monad
-import Control.Applicative
+-- import Control.Applicative
 -- import Data.Algebra
 -- import Data.List (intersperse)
 import Control.Lens (set,view)
@@ -69,31 +67,31 @@ shiftInDir _ _  = 0 `Point` 0
 
 -- | Make a label object. This is just some text surrounded by 4
 -- points of blank.
-mkLabel :: TeX -> Diagram Anchorage
+mkLabel :: Monad m => m () -> Diagram m Anchorage
 mkLabel texCode = extend 4 <$> texBox texCode
 
-labelObj :: TeX -> Diagram Box
+labelObj :: Monad m => m () -> Diagram m Box
 labelObj = rectangleShape <=< mkLabel
 
 -- | Label a point by a given TeX expression, at the given anchor.
-labelPt :: TeX -> Anchor -> Point -> Diagram Box
+labelPt :: Monad m => m () -> Anchor -> Point -> Diagram m Box
 labelPt labell anchor labeled  = do
   t <- labelObj labell 
   t # anchor .=. labeled
   return t
 
 -- | A free point
-point :: Diagram Point
+point :: Monad m => Diagram m Point
 point = do
   [x,y] <- newVars (replicate 2 ContVar)
   return $ Point x y
 
 -- | A point anchorage (similar to a box of zero width and height)
-pointBox :: Diagram Anchorage
+pointBox :: Monad m => Diagram m Anchorage
 pointBox = anchors <$> point
 
 -- | A box. Anchors are aligned along a grid.
-box :: Diagram Anchorage
+box :: Monad m => Diagram m Anchorage
 box = do
   [n,s,e,w,base,midx,midy] <- newVars (replicate 7 ContVar)
   n >== base
@@ -118,14 +116,14 @@ box = do
     BaseW  -> pt base w
 
 -- | A box of zero width
-vrule :: Diagram Anchorage
+vrule :: Monad m => Diagram m Anchorage
 vrule = do
   o <- box
   align xpart [o # W, o #Center, o#E]
   return o
 
 -- | A box of zero height
-hrule :: Diagram Anchorage
+hrule :: Monad m => Diagram m Anchorage
 hrule = do
   o <- box
   height o === 0
@@ -138,7 +136,7 @@ ascent o = ypart (o # N - o # Base)
 descent o = ypart (o # Base - o # S)
 
 -- | Make one object fit (snugly) in the other.
-fitsIn, fitsHorizontallyIn, fitsVerticallyIn :: (Anchored a, Anchored b) => a -> b -> Diagram ()
+fitsIn, fitsHorizontallyIn, fitsVerticallyIn :: (Monad m, Anchored a, Anchored b) => a -> b -> Diagram m ()
 o `fitsVerticallyIn` o' = do
   let dyN = ypart $ o' # N - o # N
       dyS = ypart $ o # S - o' # S
@@ -160,7 +158,7 @@ a `fitsIn` b = do
   a `fitsVerticallyIn` b
 
 -- | A circle
-circleShape :: Diagram Object
+circleShape :: Monad m => Diagram m Object
 circleShape = do
   anch <- box
   width anch === height anch
@@ -180,19 +178,19 @@ circleShape = do
 --     Center -> Point 0 0
 --     NE -> Point k k
 
-rectangleShape :: Anchorage -> Diagram Object
+rectangleShape :: Monad m => Anchorage -> Diagram m Object
 rectangleShape l = do
   let p = polygon (map (l #) [NW,NE,SE,SW])
   path p
   return $ Object p l
 
-traceAnchorage :: Anchored a => Color -> a -> Diagram ()
+traceAnchorage :: (Anchored a, Monad m) => Color -> a -> Diagram m ()
 traceAnchorage c l = do
   stroke c $ path $ polygon (map (l #) [NW,NE,SE,SW])
   -- TODO: draw the baseline, etc.
 
 -- | Typeset a piece of text and return its bounding box.
-texBox :: TeX -> Diagram Anchorage
+texBox :: Monad m => m () -> Diagram m Anchorage
 texBox t = do
   l <- box
   -- traceAnchorage "red" l
@@ -223,37 +221,38 @@ instance Functor (FList xs) where
 -- | Traces a straight edge between two objects.
 -- A vector originated at the midpoint and pointing perpendicular to
 -- the edge is returned.
-edge :: Object -> Object -> Diagram OVector
+edge :: Monad m => Object -> Object -> Diagram m OVector
 edge source target = do
   let points@[a,b] = [source # Center,target # Center]
       link = polyline points
       targetArea = objectOutline target
       sourceArea = objectOutline source
   options <- view diaPathOptions
+  tracePath' <- view (diaBackend . tracePath)
   freeze (link :%> sourceArea :%> targetArea :%> NIL) $ \(l' :%> sa' :%> ta' :%> NIL) -> do
-       frozenPath options $ (l' `cutAfter` ta') `cutBefore` sa'
+       tracePath' options $ (l' `cutAfter` ta') `cutBefore` sa'
   return $ OVector (avg points) (rotate90 (b-a))
 
-(.<.) :: Point -> Point -> Diagram ()
+(.<.) :: Monad m => Point -> Point -> Diagram m ()
 Point x1 y1 .<. Point x2 y2 = do
   x1 <== x2
   y1 <== y2
 
 -- | Forces the point to be inside the (bounding box) of the object.
-insideBox :: Anchored a => Point -> a -> Diagram ()
+insideBox :: Monad m => Anchored a => Point -> a -> Diagram m ()
 insideBox p o = do
   (o # SW) .<. p
   p .<. (o # NE)
 
 -- | @autoLabel label i@ Layouts the label at the given incidence
 -- vector.
-autoLabel :: Box -> OVector -> Diagram ()
+autoLabel :: Monad m => Box -> OVector -> Diagram m ()
 autoLabel lab (OVector pt norm) = do
   pt `insideBox` lab
   minimize =<< orthoDist (lab#Center) (pt + norm)
 
 -- | @labeledEdge label source target@
-labeledEdge :: Object -> Object -> Box -> Diagram ()
+labeledEdge :: Monad m => Object -> Object -> Box -> Diagram m ()
 labeledEdge source target lab = autoLabel lab =<< edge source target
 
 
@@ -261,17 +260,18 @@ labeledEdge source target lab = autoLabel lab =<< edge source target
 -------------------
 -- Even higher-level primitives:
 
+nodeDistance :: Expr
 nodeDistance = 5
 
-leftOf :: Object -> Object -> Diagram ()
+leftOf :: Monad m => Object -> Object -> Diagram m ()
 a `leftOf` b = spread hdist nodeDistance [a,b]
 
-topOf :: Object -> Object -> Diagram ()
+topOf :: Monad m => Object -> Object -> Diagram m ()
 a `topOf` b =  spread vdist nodeDistance [b,a]
 
 -- | Spread a number of objects by *minimum* a given distance. example: @spread
 -- hdist 30 ps@
-spread :: (t -> t -> Expr) -> Expr -> [t] -> Diagram ()
+spread :: Monad m => (t -> t -> Expr) -> Expr -> [t] -> Diagram m ()
 spread f d (x:y:xs) = do
   f x y >== d
   minimize $ f x y
@@ -279,7 +279,7 @@ spread f d (x:y:xs) = do
 spread _ _ _ = return ()
 
 -- | A node: a labeled circle
-node :: TeX -> Diagram Object
+node :: Monad m => m () -> Diagram m Object
 node lab = do
   l <- extend 4 <$> texBox lab
   c <- draw $ circleShape
@@ -288,12 +288,12 @@ node lab = do
   return c
 
 -- | Draw an arrow between two objects
-arrow :: Object -> Object -> Diagram OVector
+arrow :: Monad m => Object -> Object -> Diagram m OVector
 arrow src trg = using (outline "black" . set endTip LatexTip) $ do
   edge src trg
 
 -- | Bounding box of a number of anchored values
-boundingBox :: Anchored a => [a] -> Diagram Object
+boundingBox :: (Monad m, Anchored a) => [a] -> Diagram m Object
 boundingBox os = do
   bx <- box
   mapM_ (`fitsIn` bx) os

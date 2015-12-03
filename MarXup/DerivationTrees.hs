@@ -21,12 +21,10 @@ derivationTree, derivationTreeD
 -- import DerivationTrees.Basics
 import Data.List
 import Control.Monad.Writer 
-import Control.Applicative 
 import Data.LabeledTree
 import Data.Monoid
 import MarXup (element)
 import MarXup.Tex hiding (label)
-import MarXup.MultiRef
 import MarXup.Diagram as D
 import qualified Data.Tree as T
 ------------------
@@ -52,12 +50,14 @@ type Derivation = Tree Link Rule
 --------------------------------------------------
 -- Delay
 
+depth :: forall t. Link ::> Tree Link t -> Int
 depth (Link{steps} ::> Node _ ps) = 1 + steps + maximum (0 : map depth ps)
 
 isDelayed :: Premise -> Bool
 isDelayed (Delayed{} ::> _) = True
 isDelayed _ = False
 
+delayPre :: forall a. Int -> Link ::> a -> Link ::> a
 delayPre s (Link {..} ::> j) = Link {steps = s, ..} ::> j
 
 delayD :: Derivation -> Derivation
@@ -90,7 +90,7 @@ stringizeTex (Node Rule {..} premises) = braces $ do
 derivationTreeD :: Derivation -> Tex ()
 derivationTreeD d = element $ derivationTreeDiag $ delayD d
 
-derivationTreeDiag :: Derivation -> Diagram ()
+derivationTreeDiag :: Derivation -> Dia
 derivationTreeDiag d = do
   [h] <- newVars [ContVar] -- the height of a layer in the tree.
   minimize h
@@ -112,7 +112,7 @@ derivationTreeDiag d = do
   minimize $ 10 *- (rightMost - leftMost)
   n # Center .=. Point 0 0
 
-toDiagPart :: Expr -> Premise -> Diagram (T.Tree (Point,Anchorage,Point))
+toDiagPart :: Expr -> Premise -> Diagram Tex (T.Tree (Point,Anchorage,Point))
 toDiagPart layerHeight (Link{..} ::> rul)
   | steps == 0 = toDiagram layerHeight rul
   | otherwise = do
@@ -135,7 +135,7 @@ toDiagPart layerHeight (Link{..} ::> rul)
 -- - Returns an object encompassing the group, with a the baseline set correctly.
 -- - Returns the average distance between the objects
    
-chainBases :: Expr -> [Anchorage] -> Diagram (Anchorage,Expr)
+chainBases :: Expr -> [Anchorage] -> Diagram Tex (Anchorage,Expr)
 chainBases _ [] = do
   o <- box
   return (o,0)
@@ -151,16 +151,9 @@ chainBases spacing ls = do
   D.align xpart [grp # E,last ls # E]
   return (grp,avg dxs)
 
--- | Make an horizontally flexible box of glue.
-mkHGlue :: Expr -> Expr -> Diagram Anchorage
-mkHGlue minimumWidth preferredWidth = do
-  g <- box
-  width g >== minimumWidth
-  width g =~= preferredWidth
-  return g
-
 -- | Put object in a box of the same vertical extent, and baseline,
 -- but whose height can be bigger.
+relaxHeight :: (Monad m, Anchored a) => a -> Diagram m Anchorage
 relaxHeight o = do
   b <- box
   -- using (outline "green")$ traceBounds o
@@ -170,7 +163,7 @@ relaxHeight o = do
   o `fitsVerticallyIn` b
   return b
 
-toDiagram :: Expr -> Derivation -> Diagram (T.Tree (Point,Anchorage,Point))
+toDiagram :: Expr -> Derivation -> Diagram Tex (T.Tree (Point,Anchorage,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
   concl <- relaxHeight =<< extend 1.5 <$> texBox conclusion
@@ -203,16 +196,19 @@ toDiagram layerHeight (Node Rule{..} premises) = do
   relax 3 $ minimize xd'
 
   -- draw the rule.
-  localPathOptions ruleStyle $ path $ polyline [separ # W,separ # E]
+  using ruleStyle $ path $ polyline [separ # W,separ # E]
   return $ T.Node (separ # W, concl, lab # E) ps
 
 -----------------------
 
 
+rule :: Tex () -> Tex () -> Rule
 rule ruleLabel conclusion = Rule {delimiter = mempty, ruleStyle = outline "black", ..}
 
 dummy :: Rule
 dummy = (rule mempty mempty) {ruleStyle = const defaultPathOptions}
+
+emptyDrv :: forall k. Tree k Rule
 emptyDrv = Node dummy []
 
 -- abortDrv (Node Rule {..} _) = Node Rule {ruleStyle = Waved, ..} []

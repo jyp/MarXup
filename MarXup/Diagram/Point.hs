@@ -3,9 +3,7 @@
 module MarXup.Diagram.Point where
 
 import MarXup.Diagram.Layout
-import Data.Traversable
 import Data.Foldable
-import Data.Algebra
 import Control.Applicative
 import Data.List (transpose)
 import Prelude hiding (sum,mapM_,mapM,concatMap,maximum,minimum)
@@ -14,43 +12,17 @@ infix 4 .=.
 ----------------
 -- Points 
 -- | A point in 2d space
-data Point' a = Point {xpart :: a, ypart :: a}
-  deriving (Eq,Show)
 
-instance Traversable Point' where
-  traverse f (Point x y) = Point <$> f x <*> f y
-
-instance Foldable Point' where
-  foldMap = foldMapDefault
-
-instance Functor Point' where
-  fmap = fmapDefault
-
-instance Applicative Point' where
-  pure x = Point x x
-  Point f g <*> Point x y = Point (f x) (g y)
 
 type Point = Point' Expr
-instance Group a => Num (Point' a) where
-  negate = neg
-  (+) = (^+^)
-  (-) = (^-^)
-
-instance Group v => Group (Point' v) where
-  zero = Point zero zero
-  Point x1 y1 ^+^ Point x2 y2 = Point (x1 ^+^ x2) (y1 ^+^ y2)
-  neg (Point x y) = Point (neg x) (neg y)
-
-instance Module Constant v => Module Constant (Point' v) where
-  k *^ Point x y = Point (k *^ x) (k *^ y)
 
 -- | Orthogonal norm of a vector
-orthonorm :: Point -> Diagram Expr
+orthonorm :: Monad m => Point -> Diagram m Expr
 orthonorm (Point x y) =
   (+) <$> absoluteValue x <*> absoluteValue y
 
 -- | Orthogonal distance between points.
-orthoDist :: Point -> Point -> Diagram Expr
+orthoDist :: Monad m => Point -> Point -> Diagram m Expr
 orthoDist p q = orthonorm (q-p)
 
 -- | Rotate a vector 90 degres in the trigonometric direction.
@@ -66,7 +38,7 @@ ydiff p q = ypart (q - p)
 -----------------
 -- Point constraints
 
-(.=.),northOf,southOf,westOf,eastOf :: Point -> Point -> Diagram ()
+(.=.),northOf,southOf,westOf,eastOf :: Monad m => Point -> Point -> Diagram m ()
 Point x1 y1 .=. Point x2 y2 = do
   x1 === x2
   y1 === y2
@@ -76,15 +48,15 @@ southOf = flip northOf
 westOf (Point x1 _) (Point x2 _) = x1 <== x2
 eastOf = flip westOf
 
-alignHoriz,alignVert :: [Point] -> Diagram ()
+alignHoriz,alignVert :: Monad m => [Point] -> Diagram m ()
 alignHoriz = align ypart
 alignVert = align xpart
 
-align :: (a -> Expr) -> [a] -> Diagram ()
+align :: Monad m => (a -> Expr) -> [a] -> Diagram m ()
 align _ [] = return ()
 align f (p:ps) = forM_ ps $ \p' -> f p === f p'
 
-alignMatrix :: [[Point]] -> Dia
+alignMatrix :: Monad m => [[Point]] -> Diagram m ()
 alignMatrix ls = do
   forM_ ls alignHoriz
   forM_ (transpose ls) alignVert
@@ -92,7 +64,7 @@ alignMatrix ls = do
 ---------------------
 -- Point objectives
 
-southwards, northwards, westwards, eastwards :: Point -> Diagram ()
+southwards, northwards, westwards, eastwards :: Monad m => Point -> Diagram m ()
 southwards (Point _ y) = minimize y
 westwards (Point x _) = minimize x
 northwards = southwards . negate

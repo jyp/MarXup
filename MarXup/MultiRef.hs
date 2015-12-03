@@ -6,7 +6,7 @@ import Control.Monad.Fix
 import Control.Monad.RWS.Lazy
 import Data.Map.Strict (Map,insert)
 import qualified Data.Map.Strict as M
-
+import MarXup.Diagram.Layout (BoxSpec, nilBoxSpec)
 type MetaData key = Map key String
 type BoxSpecs = Map Int BoxSpec
 
@@ -18,14 +18,7 @@ newtype Multi config key a = Multi {fromMulti :: RWS config String (References,B
 -- Basic datatype and semantics
 type Label = Int
 
--- | Size of a box, in points. boxDepth is how far the baseline is
--- from the bottom. boxHeight is how far the baseline is from the top.
--- (These are TeX meanings)
-data BoxSpec = BoxSpec {boxWidth, boxHeight, boxDepth :: Double}
-             deriving (Show)
 
-nilBoxSpec :: BoxSpec
-nilBoxSpec = BoxSpec 0 0 0
 
 raw :: String -> Multi config key ()
 raw s = tell s

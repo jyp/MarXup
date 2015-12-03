@@ -26,9 +26,11 @@ import Numeric (showFFloat, showEFloat)
 
 data SExp = Atom String | SX [SExp]
 
-aPlot :: Diagram ()
+textualS = textual . ($ "")
+
+aPlot :: Dia
 aPlot = do
-  c@(bx,_) <- simplePlot (Point (showFFloat (Just 1)) (showEFloat (Just 0)))
+  c@(bx,_) <- simplePlot (Point (textualS . showFFloat (Just 1)) (textualS . showEFloat (Just 0)))
                          (vec (simplLinAxis 0.1,
                                logAxis 10
                                -- simplLinAxis 2000
