@@ -1,10 +1,8 @@
-{-# LANGUAGE RecordWildCards #-}
-module MarXup.Diagram.Graphviz {-(graph)-} where
+{-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
+module MarXup.Diagram.Graphviz (graph) where
 
-import MarXup.Tex
 import MarXup.Diagram.Point as D
 import MarXup.Diagram.Object as D
-import MarXup.Diagram.Tikz as D
 import MarXup.Diagram.Layout as D
 import MarXup.Diagram.Path
 import Data.GraphViz as G
@@ -12,16 +10,14 @@ import Data.GraphViz.Attributes.Complete as G
 import Data.GraphViz.Parsing as G
 import qualified Data.GraphViz.Types.Generalised as Gen
 import Data.GraphViz.Commands.IO as G
--- import qualified Data.Text.Lazy.Internal as T
 import qualified Data.Text.Lazy as T
 import System.IO.Unsafe (unsafePerformIO)
--- import Data.Traversable
 import Data.Foldable
 import Control.Lens (set)
 import Graphics.Typography.Geometry.Bezier (Curve)
 
-graph :: (PrintDotRepr g n, ParseDot n, PrintDot n) => GraphvizCommand -> g n -> Dia
-graph cmd gr = graphToDiagram $ layout cmd gr
+graph :: (Monad m,PrintDotRepr g n, ParseDot n, PrintDot n) => (String -> m ()) -> GraphvizCommand -> g n -> Diagram m ()
+graph labFct cmd gr = graphToDiagram labFct $ layout cmd gr
 
 layout :: (PrintDotRepr g n, ParseDot n, PrintDot n) => GraphvizCommand -> g n -> Gen.DotGraph n
 layout command input = parseIt' $ unsafePerformIO $ graphvizWithHandle command input DotOutput hGetStrict 
@@ -68,16 +64,11 @@ tipTop def (AType [(_,DotArrow)]) = CircleTip
 tipTop def (AType [(_,Vee)]) = StealthTip
 tipTop def _ = def
 
-renderLab :: T.Text -> G.Point -> Diagram Tex ()
-renderLab l p = do
-  l' <- labelObj $ tex $ T.unpack $ l
-  l' # D.Center .=. pt p
-
-graphToDiagram :: Gen.DotGraph n -> Dia
-graphToDiagram (Gen.DotGraph _strict _directed _grIdent stmts) = do
+graphToDiagram :: forall m n. Monad m => (String -> m ()) -> Gen.DotGraph n -> Diagram m ()
+graphToDiagram labFct (Gen.DotGraph _strict _directed _grIdent stmts) = do
   forM_ stmts $ \ stmt -> case stmt of
     (Gen.DE (DotEdge _from _to attrs)) -> do
-      diaRaw $ tex $ "%Edge: " ++ show attrs ++ "\n"
+      -- diaRaw $ tex $ "%Edge: " ++ show attrs ++ "\n"
       let toTip = readAttr' arrowHeadA attrs (tipTop ToTip) ToTip
       readAttr labelA attrs $ \(StrLabel l) ->
         readAttr lpos attrs $ \p -> 
@@ -95,7 +86,7 @@ graphToDiagram (Gen.DotGraph _strict _directed _grIdent stmts) = do
             draw $ frozenPath' $ fromBeziers (beg ++ mid ++ end)
 
     (Gen.DN (DotNode _nodeIdent attrs)) -> do
-      diaRaw $ tex $ "%Node: " ++ show attrs ++ "\n"
+      -- diaRaw $ tex $ "%Node: " ++ show attrs ++ "\n"
       readAttr pos   attrs $ \(PointPos p) -> do
         readAttr labelA attrs $ \l -> do
           case l of
@@ -107,6 +98,12 @@ graphToDiagram (Gen.DotGraph _strict _directed _grIdent stmts) = do
               draw $ path $ circle (pt p) (constant $ inch (w/2))
             _ -> return ()
     _ -> return ()
+  where
+  renderLab :: T.Text -> G.Point -> Diagram m ()
+  renderLab l p = do
+    l' <- labelObj $ labFct $ T.unpack $ l
+    l' # D.Center .=. pt p
+
 
 inch x = 72 * x
 
