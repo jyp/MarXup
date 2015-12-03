@@ -33,10 +33,9 @@ raw s = tell s
 getBoxSpec :: Int -> Multi config key BoxSpec
 getBoxSpec bxId = do
   (_,bs,_) <- get
-  case M.lookup bxId bs of
-    Nothing -> error "getBoxSpec: unknown box"
-    Just b -> do
-      return b
+  return $ case M.lookup bxId bs of
+    Nothing -> nilBoxSpec -- TODO: log this error somehow
+    Just b -> b
 
 -- | allocate a new label
 newLabel :: Multi key config Label -- create a new label
