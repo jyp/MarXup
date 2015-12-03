@@ -80,7 +80,7 @@ gr = DotGraph False True Nothing
       ,edg "D" "A" "4"])
 
 testDiagram = do
-  draw $ path $ circle (Point 0 0) 5
+  -- draw $ path $ circle (Point 0 0) 5
   a   <- labelObj $ ensureMath $ "a"
   b   <- labelObj $ ensureMath $ "b"
   a'  <- draw $ circleShape -- labelObj $ ensureMath $ "c"
@@ -179,7 +179,7 @@ Here is some derivation tree:
 @someTree
 
 @section«Diagrams»
-
+@testDiagram
 One can also draw diagrams:
 
 @section«Graphviz»
