@@ -6,14 +6,13 @@ import MarXup (textual)
 import MarXup.Latex
 import MarXup.Tex
 import MarXup.MultiRef
-import MarXup.Diagram.Layout (BoxSpec(..))
+import Graphics.Diagrams.Core (BoxSpec (..))
 import MarXup.Diagram.Tikz (showDistance)
 import Data.Foldable (forM_)
 import Control.Applicative
 import Data.Function (on)
 import Data.List (partition,minimumBy,sort)
 import Data.Either (partitionEithers)
-
 
 data BoxTex = TeX TeX BoxSpec | Spacing Double
 

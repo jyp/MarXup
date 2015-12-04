@@ -13,8 +13,8 @@ import Control.Applicative
 import Data.Monoid
 import Control.Monad (unless)
 import MarXup.Diagram
-import MarXup.Diagram.Plot
-import MarXup.Diagram.Graphviz
+import Graphics.Diagrams.Plot
+import Graphics.Diagrams.Graphviz
 import Control.Lens (set)
 import Data.GraphViz hiding (Plain)
 import Data.String

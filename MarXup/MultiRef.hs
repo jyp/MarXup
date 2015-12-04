@@ -6,7 +6,7 @@ import Control.Monad.Fix
 import Control.Monad.RWS.Lazy
 import Data.Map.Strict (Map,insert)
 import qualified Data.Map.Strict as M
-import MarXup.Diagram.Layout (BoxSpec, nilBoxSpec)
+import Graphics.Diagrams.Core (BoxSpec, nilBoxSpec)
 type MetaData key = Map key String
 type BoxSpecs = Map Int BoxSpec
 
