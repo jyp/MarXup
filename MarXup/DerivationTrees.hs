@@ -1,4 +1,4 @@
-{-# LANGUAGE DisambiguateRecordFields, NamedFieldPuns, RecordWildCards, PostfixOperators, LiberalTypeSynonyms, TypeOperators, OverloadedStrings, PackageImports #-}
+{-# LANGUAGE DisambiguateRecordFields, NamedFieldPuns, RecordWildCards, PostfixOperators, LiberalTypeSynonyms, TypeOperators, OverloadedStrings, PackageImports, ScopedTypeVariables #-}
 
 module MarXup.DerivationTrees (
 -- * Basics
@@ -7,7 +7,7 @@ module Data.LabeledTree,
 
 -- * Derivation' building
 -- axiom, rule, etc, aborted, 
-emptyDrv, haltDrv, haltDrv', delayPre,
+emptyDrv, haltDrv', delayPre,
 dummy, rule, Derivation, Premise, Rule(..), 
 
 -- * Links
@@ -32,35 +32,35 @@ import qualified Data.Tree as T
 
 type LineStyle = PathOptions -> PathOptions
 
-data Link = Link {label :: Tex (), linkStyle :: LineStyle, steps :: Int}  -- ^ Regular link
-          | Delayed -- ^ automatic delaying
+data Link lab = Link {label :: lab, linkStyle :: LineStyle, steps :: Int}  -- ^ Regular link
+              | Delayed -- ^ automatic delaying
 
-defaultLink :: Link
+defaultLink :: Monoid lab => Link lab
 defaultLink = Link mempty (denselyDotted . outline "black")  0
 
 
 -------------------
 
-data Rule = Rule {ruleStyle :: LineStyle, delimiter :: Tex (), ruleLabel :: Tex (), conclusion :: Tex ()}
+data Rule lab = Rule {ruleStyle :: LineStyle, delimiter :: lab, ruleLabel :: lab, conclusion :: lab}
 --  deriving Show
 
-type Premise = Link ::> Derivation
-type Derivation = Tree Link Rule
+type Premise lab = Link lab ::> Derivation lab
+type Derivation lab = Tree (Link lab) (Rule lab)
 
 --------------------------------------------------
 -- Delay
 
-depth :: forall t. Link ::> Tree Link t -> Int
+depth :: forall lab t. Link lab ::> Tree (Link lab) t -> Int
 depth (Link{steps} ::> Node _ ps) = 1 + steps + maximum (0 : map depth ps)
 
-isDelayed :: Premise -> Bool
+isDelayed :: Premise lab -> Bool
 isDelayed (Delayed{} ::> _) = True
 isDelayed _ = False
 
-delayPre :: forall a. Int -> Link ::> a -> Link ::> a
+delayPre :: forall lab a. Int -> Link lab ::> a -> Link lab ::> a
 delayPre s (Link {..} ::> j) = Link {steps = s, ..} ::> j
 
-delayD :: Derivation -> Derivation
+delayD :: Monoid lab => Derivation lab -> Derivation lab
 delayD (Node r ps0) = Node r (map delayP ps)
     where ps = fmap (fmap delayD) ps0
           ps' = filter (not . isDelayed) ps
@@ -70,11 +70,11 @@ delayD (Node r ps0) = Node r (map delayP ps)
 ----------------------------------------------------------
 -- TeXify
   
--- | Render a derivation tree without using metapost drv package (links will not be rendered properly)
-derivationTree :: Derivation -> TeX
+-- | Render a derivation tree using simple latex only (links will not be rendered properly)
+derivationTree :: Derivation TeX -> TeX
 derivationTree = stringizeTex
 
-stringizeTex :: Derivation -> TeX
+stringizeTex :: Derivation TeX -> TeX
 stringizeTex (Node Rule {..} premises) = braces $ do
   cmd0 "displaystyle" -- so that the text does not get smaller
   cmdn "frac" [mconcat $
@@ -87,10 +87,10 @@ stringizeTex (Node Rule {..} premises) = braces $ do
 ----------------------------------------------------------
 -- Tikzify
 
-derivationTreeD :: Derivation -> Tex ()
-derivationTreeD d = element $ derivationTreeDiag $ delayD d
+derivationTreeD :: Derivation TeX -> TeX
+derivationTreeD d = element $ (derivationTreeDiag $ delayD d :: TexDiagram ())
 
-derivationTreeDiag :: Derivation -> Dia
+derivationTreeDiag :: Monad m => Derivation lab -> Diagram lab m ()
 derivationTreeDiag d = do
   [h] <- newVars [ContVar] -- the height of a layer in the tree.
   minimize h
@@ -112,7 +112,7 @@ derivationTreeDiag d = do
   minimize $ 10 *- (rightMost - leftMost)
   n # Center .=. Point 0 0
 
-toDiagPart :: Expr -> Premise -> Diagram Tex (T.Tree (Point,Anchorage,Point))
+toDiagPart :: Monad m => Expr -> Premise lab -> Diagram lab m (T.Tree (Point,Anchorage,Point))
 toDiagPart layerHeight (Link{..} ::> rul)
   | steps == 0 = toDiagram layerHeight rul
   | otherwise = do
@@ -134,8 +134,8 @@ toDiagPart layerHeight (Link{..} ::> rul)
 -- - Separates the objects by the given distance
 -- - Returns an object encompassing the group, with a the baseline set correctly.
 -- - Returns the average distance between the objects
-   
-chainBases :: Expr -> [Anchorage] -> Diagram Tex (Anchorage,Expr)
+
+chainBases :: Monad m => Expr -> [Anchorage] -> Diagram lab m (Anchorage,Expr)
 chainBases _ [] = do
   o <- box
   return (o,0)
@@ -153,7 +153,7 @@ chainBases spacing ls = do
 
 -- | Put object in a box of the same vertical extent, and baseline,
 -- but whose height can be bigger.
-relaxHeight :: (Monad m, Anchored a) => a -> Diagram m Anchorage
+relaxHeight :: (Monad m, Anchored a) => a -> Diagram lab m Anchorage
 relaxHeight o = do
   b <- box
   -- using (outline "green")$ traceBounds o
@@ -163,12 +163,12 @@ relaxHeight o = do
   o `fitsVerticallyIn` b
   return b
 
-toDiagram :: Expr -> Derivation -> Diagram Tex (T.Tree (Point,Anchorage,Point))
+toDiagram :: Monad m => Expr -> Derivation lab -> Diagram lab m (T.Tree (Point,Anchorage,Point))
 toDiagram layerHeight (Node Rule{..} premises) = do
   ps <- mapM (toDiagPart layerHeight) premises
-  concl <- relaxHeight =<< extend 1.5 <$> texBox conclusion
+  concl <- relaxHeight =<< extend 1.5 <$> labelBox conclusion
   -- using (outline "red")$ traceBounds concl
-  lab <- texBox ruleLabel
+  lab <- labelBox ruleLabel
 
   -- Grouping
   (psGrp,premisesDist) <- chainBases 10 [p | T.Node (_,p,_) _ <- ps]
@@ -202,23 +202,24 @@ toDiagram layerHeight (Node Rule{..} premises) = do
 -----------------------
 
 
-rule :: Tex () -> Tex () -> Rule
+rule :: Monoid lab => lab -> lab -> Rule lab
 rule ruleLabel conclusion = Rule {delimiter = mempty, ruleStyle = outline "black", ..}
 
-dummy :: Rule
+dummy :: Monoid lab => Rule lab
 dummy = (rule mempty mempty) {ruleStyle = const defaultPathOptions}
 
-emptyDrv :: forall k. Tree k Rule
+emptyDrv :: forall k lab. Monoid lab => Tree k (Rule lab)
 emptyDrv = Node dummy []
 
 -- abortDrv (Node Rule {..} _) = Node Rule {ruleStyle = Waved, ..} []
 
 -- | Used when the rest of the derivation is known.
-haltDrv' :: Tex () -> Derivation -> Derivation
+haltDrv' :: forall lab. Monoid lab => lab -> Derivation lab -> Derivation lab
 haltDrv' tex (Node r _) = Node r {ruleStyle = noOutline}
-     [defaultLink {steps = 1, label = tex} ::> emptyDrv]
-
--- | More compact variant
-haltDrv :: Tex () -> Derivation -> Derivation
-haltDrv t (Node r _) = Node r [defaultLink ::> Node dummy {conclusion = cmd "vdots" nil >> cmd "hspace" (tex "2pt") >> t} []]
+     [lnk {steps = 1, label = tex} ::> emptyDrv]
+  where lnk :: Link lab
+        lnk = defaultLink
+-- -- | More compact variant
+-- haltDrv :: Monoid lab => lab -> Derivation lab -> Derivation lab
+-- haltDrv t (Node r _) = Node r [defaultLink ::> Node dummy {conclusion = cmd "vdots" nil >> cmd "hspace" (tex "2pt") >> t} []]
 

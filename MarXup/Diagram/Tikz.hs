@@ -13,8 +13,10 @@ import Numeric (showFFloat)
 import Data.Foldable
 import Data.Monoid
 
-instance Element (Diagram Tex ()) where
-  type Target (Diagram Tex ()) = TeX
+type TexDiagram = Diagram TeX Tex
+
+instance Element (Diagram TeX Tex ()) where
+  type Target (Diagram TeX Tex ()) = TeX
   element d = do
    texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!)
    braces $ do
@@ -78,7 +80,7 @@ instance Tikz PathOptions where
     <> "]"
     where col attr = maybe "" (\c -> attr <> "=" <> c <> ",")
 
-tikzBackend :: Backend Tex
+tikzBackend :: Backend TeX Tex
 tikzBackend = Backend {..} where
   _tracePath options p = do
      tex $ "\\path"
@@ -102,5 +104,5 @@ tikzBackend = Backend {..} where
        embedder $ getBoxFromId bxId
 
 
-type Dia = Diagram Tex ()
+type Dia = TexDiagram ()
 
