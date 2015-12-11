@@ -28,7 +28,7 @@ executable marxup
   build-depends: pretty==1.1.*
   build-depends: parsek==1.*
   build-depends: dlist>=0.7
-  other-modules: Config, MarXupParser
+  other-modules: Config, MarXupParser, Literate, Output
 
 library
   extensions: FlexibleInstances, TypeSynonymInstances, GADTs

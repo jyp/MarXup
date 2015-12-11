@@ -68,6 +68,7 @@ preamble body = do
 
 (▸) = flip (#)
 
+grDiag :: TexDiagram ()
 grDiag = graph tex Dot gr
 
 nod x = DotNode x [Margin (DVal 0),Width 0, Shape Circle, Label $ StrLabel $ fromString x]
@@ -81,6 +82,7 @@ gr = DotGraph False True Nothing
       ,edg "B" "D" "3"
       ,edg "D" "A" "4"])
 
+testDiagram :: TexDiagram ()
 testDiagram = do
   -- draw $ path $ circle (Point 0 0) 5
   a   <- labelObj $ ensureMath $ "a"
