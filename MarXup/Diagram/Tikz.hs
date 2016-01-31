@@ -29,7 +29,7 @@ class Tikz a where
   toTikz :: a -> String
 
 instance Tikz FrozenPoint where
-  toTikz pt = frozenPointElim pt $ \x y -> "(" <> showDistance x <> "," <> showDistance y <> ")"
+  toTikz (Point x y) =  "(" <> showDistance x <> "," <> showDistance y <> ")"
 
 instance Tikz (Frozen Segment) where
   toTikz (StraightTo p) = "--" <> toTikz p
@@ -105,4 +105,3 @@ tikzBackend = Backend {..} where
 
 
 type Dia = TexDiagram ()
-

@@ -12,7 +12,7 @@ import MarXup.PrettyPrint.Core as PC
 import Control.Applicative
 import Data.Monoid
 import Control.Monad (unless)
-import MarXup.Diagram
+import MarXup.Diagram as D
 import Graphics.Diagrams.Plot
 import Graphics.Diagrams.Graphviz
 import Control.Lens (set)
@@ -85,19 +85,19 @@ gr = DotGraph False True Nothing
 testDiagram :: TexDiagram ()
 testDiagram = do
   -- draw $ path $ circle (Point 0 0) 5
-  a   <- labelObj $ ensureMath $ "a"
-  b   <- labelObj $ ensureMath $ "b"
-  a'  <- draw $ circleShape -- labelObj $ ensureMath $ "c"
-  width a' === 15
-  b'  <- labelObj $ ensureMath $ "d"
-  a'' <- labelObj $ ensureMath $ "."
-  b'' <- labelObj $ ensureMath $ "."
+  a   <- D.label "a" $ ensureMath $ "a"
+  b   <- D.label "b" $ ensureMath $ "b"
+  a'  <- draw $ circle "a'" -- label $ ensureMath $ "c"
+  width a' === constant 15
+  b'  <- D.label "b'" $ ensureMath $ "d"
+  a'' <- D.label "a''" $ ensureMath $ "."
+  b'' <- D.label "b''" $ ensureMath $ "."
 
   -- c <- texObj $ ensureMath $ "c"
   -- Center ▸ c === MP.center [E ▸ a'', E ▸ b''] + (20 +: 0)
 
-  let width = 70
-  vdist b a === 30
+  let width = constant 70
+  vdist b a === constant 30
   hdist a a' === width
   hdist a' a'' === width
   alignMatrix [[Center ▸ a, Center ▸ a',Center ▸ a'']
@@ -107,7 +107,7 @@ testDiagram = do
   autoLab "bang" =<< arrow b b'
   autoLab "oops" . turn180 =<< arrow a b
   autoLab "pif" =<< arrow a' a''
-  autoLab "paf" =<< arrow b' b'' 
+  autoLab "paf" =<< arrow b' b''
 
   draw $ do
     autoLab "equal" =<< edge a'' b''
@@ -141,9 +141,9 @@ b = Con "b"
 
 (≜) = binop 1 "="
 
-      
+
 main = renderTex Plain "LaTeX" docu
-       
+
 docu = preamble «
 
 @intro<-section«Intro»
@@ -208,9 +208,8 @@ Another paragaph.
 
 @haskell«
 
-autoLab s i = do
-  o <- labelObj s
-  autoLabel o i
+autoLab :: String -> OVector -> Diagram TeX Tex Object
+autoLab s = autoLabel s (textual s)
 
 »
 some text after
@@ -220,4 +219,3 @@ some text after
 Mar@ensureMath«@cmd0"chi"»up is awesome :p .
 
 »
-
