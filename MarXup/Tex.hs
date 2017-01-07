@@ -14,7 +14,7 @@ import Data.Map (assocs, Map)
 import qualified Data.Map as Map
 import Graphics.Diagrams.Core (BoxSpec (..))
 
-data ClassFile = Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
+data ClassFile = ACMArt | Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
   deriving Eq
 
 

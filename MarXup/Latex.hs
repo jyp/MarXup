@@ -5,7 +5,7 @@ import MarXup
 import MarXup.Verbatim
 import Control.Monad (forM_,when,forM)
 import MarXup.Tex
-import Data.List (intersperse,groupBy,elemIndex,nub,intercalate)
+import Data.List (intersperse,groupBy,elemIndex,nub)
 import Data.Monoid
 import Data.Function (on)
 
@@ -35,17 +35,21 @@ authorinfo as = do c<-askClass; authorinfo' c as
 
 -- | author info as triplets name, institution, email
 authorinfo' :: AuthorInfoStyle -> [AuthorInfo] -> TeX
+authorinfo' ACMArt as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
+  let names = map authorName g
+  forM_ names $ \n -> cmd "author" $ textual n
+  cmd "affiliation" $ do
+    cmd "institution" $ textual institution
 authorinfo' LNCS as = do
   cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
   cmd "institute" $ mconcat $ intersperse (cmd0 "and") $ map textual $ insts
   where oneauthor AuthorInfo{..} = textual authorName <> (if length insts > 1 then cmd "inst" (textual $ show $ 1 + instIdx) else mempty)
            where Just instIdx = elemIndex authorInst insts
         insts = nub $ map authorInst as
-
 authorinfo' SIGPlan as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
     let names = map authorName g
         emails = mconcat $ intersperse (cmd0 "and") $ map (textual . authorEmail) g
-    cmdn "authorinfo" [mconcat $ intersperse (cmd0 "and") $ map textual names, textual institution, emails]
+    _ <- cmdn "authorinfo" [mconcat $ intersperse (cmd0 "and") $ map textual names, textual institution, emails]
     return ()
 authorinfo' EPTCS as = mconcat $ intersperse and' $
   flip map (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do

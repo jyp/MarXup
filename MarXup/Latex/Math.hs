@@ -61,8 +61,9 @@ mathbox = mbox . ensureMath
 -- Environement of name @nv@, which should be refered as @referent@.
 deflike :: String -> String -> String -> TeX -> TeX -> Tex SortedLabel
 deflike referent nv header name statement = do
-  newtheorem nv header
   cls <- askClass
+  unless (cls == ACMArt && nv `elem` ["theorem","lemma"]) $ do
+    newtheorem nv header
   unless (cls == LNCS) $ usepkg "amsthm" 100 []
   let envir body = case cls of
         SIGPlan -> env'' nv [name] [] (hspace "0cm" >> body)
