@@ -21,13 +21,13 @@ data ClassFile = ACMArt | Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
 ------------------------------------
 -- MetaData
 
-data Key = PreClass String | PrePackage Int String | PreTheorem String String   -- priority
+data Key = PreClass String | PrePackage Int {- ^ priority -} String | PreTheorem String String
   deriving (Ord,Eq)
 
 newtheorem :: String -> String -> TeX
 newtheorem ident txt = do
   sty <- askClass
-  unless ((sty == LNCS || sty == Beamer) && ident `elem` ["theorem", "corollary", "lemma", "definition", "proposition"]) $ do
+  unless ((sty == LNCS || sty == Beamer || sty == ACMArt) && ident `elem` ["theorem", "corollary", "lemma", "definition", "proposition"]) $ do
   Tex $ metaData (PreTheorem ident txt) ""
 
 usepkg :: String -> Int -> [String] -> TeX
