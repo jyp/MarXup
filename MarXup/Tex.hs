@@ -21,7 +21,7 @@ data ClassFile = ACMArt | Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
 ------------------------------------
 -- MetaData
 
-data Key = PreClass String | PrePackage Int {- ^ priority -} String | PreTheorem String String
+data Key = PreClass String | PrePackage Int {- priority -} String | PreTheorem String String
   deriving (Ord,Eq)
 
 newtheorem :: String -> String -> TeX
