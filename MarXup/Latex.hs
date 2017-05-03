@@ -113,6 +113,15 @@ newcol :: TeX
 newcol = tex "&"
 newpara :: Tex ()
 newpara = texLn "\\par"
+newpage :: TeX
+newpage = cmd0 "newpage"
+
+rawMath :: Verbatim a -> Tex ()
+rawMath x = do
+  tex "$"
+  tex $ fromVerbatim x
+  tex "$"
+  return ()
 
 maketitle :: Tex ()
 maketitle = cmd "maketitle" $ return ()
@@ -205,6 +214,12 @@ figure caption body = env "figure" $ do
   body
   cmd "caption" caption
   label "Fig."
+
+table :: TeX -> TeX -> Tex SortedLabel
+table caption body = env "table" $ do
+  cmd "caption" caption
+  body
+  MarXup.Tex.label "Table"
 
 ----------
 -- Fonts
