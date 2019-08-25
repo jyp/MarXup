@@ -6,7 +6,6 @@ import MarXup.Verbatim
 import Control.Monad (forM_,when,forM)
 import MarXup.Tex
 import Data.List (intersperse,groupBy,elemIndex,nub)
-import Data.Monoid
 import Data.Function (on)
 
 -- | Separate the arguments with '\\'
@@ -138,8 +137,10 @@ paragraph s = cmd "paragraph" s >> label "Sec."
 
 color :: String -> Tex a -> Tex a
 color col bod = do
-  [_,x] <- cmdn' "textcolor" [] [tex col >> return undefined, bod]
-  return x
+  xs <- cmdn' "textcolor" [] [tex col >> return undefined, bod]
+  case xs of
+    [_,x] -> return x
+    _ -> error "MarXup.Tex.color: the impossible happened"
 
 ----------------
 -- Preamble stuff
@@ -168,8 +169,11 @@ stdPreamble = do
 -- Lists
 
 {-# DEPRECATED item, enumerate, itemize "Since Aug 2015. Use itemList, enumList, descList instead "#-}
+item :: Tex ()
 item = cmd0 "item"
+enumerate :: Tex a -> Tex a
 enumerate = env "enumerate"
+itemize :: Tex a -> Tex a
 itemize = env "itemize"
 
 itemList :: [TeX] -> TeX

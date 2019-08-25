@@ -14,8 +14,6 @@ frame tit bod = env "frame" $ do
   bod
 
 framesubtitle = cmd "framesubtitle"
-itemiz xs = itemize $ mconcat $ fmap (item <>) xs
-enumerat xs = enumerate $ mconcat $ fmap (item <>) xs
 
 note = cmd "note"
 

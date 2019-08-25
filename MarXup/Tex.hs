@@ -90,7 +90,9 @@ reference l = tex (show l)
 
 instance Monoid (TeX) where
   mempty = tex ""
-  mappend = (>>)
+
+instance Semigroup (TeX) where
+  (<>) = (>>)
 
 instance IsString (TeX) where
   fromString = textual
@@ -125,8 +127,10 @@ cmd c = cmd' c []
 -- | Command with options
 cmd' :: String -> [String] -> Tex b -> Tex b
 cmd' cmd options arg = do
-  [x] <- cmdn' cmd options [arg]
-  return x
+  xs <- cmdn' cmd options [arg]
+  case xs of
+    [x] -> return x
+    _ -> error "MarXup.Tex: cmd': the impossible happened"
 
 -- | Command with options and many arguments
 cmdn' :: String -> [String] -> [Tex a] -> Tex [a]

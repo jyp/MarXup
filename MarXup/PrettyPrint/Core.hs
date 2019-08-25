@@ -38,7 +38,8 @@ toksToSimple (Tx s:ts) = SText s $ toksToSimple ts
 
 instance Monoid Doc where
   mempty = Empty
-  mappend = Cat
+instance Semigroup Doc where
+  (<>) = Cat
   
 group :: Doc -> Doc
 group x         = Union (flatten x) x
