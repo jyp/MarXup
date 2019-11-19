@@ -1,5 +1,6 @@
+Cabal-Version:  >= 1.8
 name:           marxup
-version:        3.1.1.0
+version:        3.1.2.0
 category:       Text
 synopsis:       Markup language preprocessor for Haskell
 description:
@@ -9,7 +10,6 @@ license:        GPL-2
 license-file:   LICENSE
 author:         Jean-Philippe Bernardy
 maintainer:     jeanphilippe.bernardy@gmail.com
-Cabal-Version:  >= 1.8
 build-type:     Simple
 
 data-files:
