@@ -20,7 +20,7 @@ haskellInline = haskellInlineCust defaultParseMode printTok
 
 type PrintTok = Token -> (Float,TeX,Float)
 
-haskellInlineCust :: ParseMode -> (PrintTok) -> Verbatim a -> Tex ()
+haskellInlineCust :: ParseMode -> PrintTok -> Verbatim a -> Tex ()
 haskellInlineCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVerbatim v) of
    ParseOk toks -> mconcat $ map render $ mkSpaces $ map (mkTok custPrintTok) toks
    ParseFailed location err -> textual (show location ++ show err)
