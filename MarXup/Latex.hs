@@ -34,11 +34,10 @@ authorinfo as = do c<-askClass; authorinfo' c as
 
 -- | author info as triplets name, institution, email
 authorinfo' :: AuthorInfoStyle -> [AuthorInfo] -> TeX
-authorinfo' ACMArt as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
-  let names = map authorName g
-  forM_ names $ \n -> cmd "author" $ textual n
-  cmd "affiliation" $ do
-    cmd "institution" $ textual institution
+authorinfo' ACMArt as = forM_ as $ \AuthorInfo{..} -> do
+  cmd "author" $ textual authorName
+  cmd "affiliation" $ textual authorInst
+  cmd "email" $ textual authorEmail
 authorinfo' LNCS as = do
   cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
   cmd "institute" $ mconcat $ intersperse (cmd0 "and") $ map textual $ insts

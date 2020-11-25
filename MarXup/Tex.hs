@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies,TypeSynonymInstances,FlexibleInstances, PackageImports #-}
 
 module MarXup.Tex where
@@ -9,19 +10,19 @@ import GHC.Exts( IsString(..) )
 import Data.List (intersperse,intercalate)
 import MarXup.MultiRef
 import System.Directory (doesFileExist)
-import Data.Char (isSpace)
+import Data.Char (isSpace,toLower)
 import Data.Map (assocs, Map)
 import qualified Data.Map as Map
 import Graphics.Diagrams.Core (BoxSpec (..))
 
 data ClassFile = ACMArt | Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
-  deriving Eq
+  deriving (Ord,Eq,Show)
 
 
 ------------------------------------
 -- MetaData
 
-data Key = PreClass String | PrePackage Int {- priority -} String | PreTheorem String String
+data Key = PreClass ClassFile | PrePackage Int {- priority -} String | PreTheorem String String
   deriving (Ord,Eq)
 
 newtheorem :: String -> String -> TeX
@@ -33,17 +34,22 @@ newtheorem ident txt = do
 usepkg :: String -> Int -> [String] -> TeX
 usepkg ident prio options = Tex $ metaData (PrePackage prio ident) (intercalate "," options)
 
-documentClass :: String -> [String] -> TeX
+documentClass :: ClassFile -> [String] -> TeX
 documentClass docClass options = Tex $ metaData (PreClass docClass) (intercalate "," options)
 
+className :: ClassFile -> String
+className = \case
+  Plain -> "article"
+  SIGPlan -> "sigplanconf"
+  c -> map toLower (show c)
 
 renderKey :: Key -> String -> String
 renderKey o options = case o of
-  PreClass name -> "\\documentclass[" ++ options ++ "]{" ++ name ++ "}"
+  PreClass name -> "\\documentclass[" ++ options ++ "]{" ++ className name ++ "}"
   PrePackage _ name -> "\\usepackage[" ++ options ++ "]{" ++ name ++ "}"
   PreTheorem ident txt  -> "\\newtheorem{" ++ ident ++ "}{" ++ txt ++ "}"
 
-newtype Tex a = Tex {fromTex :: Multi ClassFile Key a}
+newtype Tex a = Tex {fromTex :: Multi () Key a}
   deriving (Monad, MonadFix, Applicative, Functor)
 
 
@@ -258,17 +264,17 @@ fillBox bxId showBox x = braces $ do
 -- infinitely many boxes, and thus we need to reuse (latex-side) box
 -- ids.
 
-renderWithBoxes :: ClassFile -> BoxSpecs -> Tex a -> String
-renderWithBoxes classFile bs (Tex t) = (preamble ++ doc)
-  where (_,(_,_,metaDatum),doc) = runRWS (fromMulti $ t) classFile (0,bs,mempty)
+renderWithBoxes :: BoxSpecs -> Tex a -> String
+renderWithBoxes bs (Tex t) = (preamble ++ doc)
+  where (_,(_,_,metaDatum),doc) = runRWS (fromMulti $ t) () (0,bs,mempty)
         preamble :: String
         preamble = unlines $ map (uncurry renderKey) $ assocs metaDatum
 
-renderSimple :: ClassFile -> Tex a -> String
-renderSimple classFile = renderWithBoxes classFile Map.empty
+renderSimple :: Tex a -> String
+renderSimple = renderWithBoxes Map.empty
 
-renderTex :: ClassFile -> String -> TeX -> IO ()
-renderTex classFile fname body = do
+renderTex :: String -> TeX -> IO ()
+renderTex fname body = do
   let boxesTxt = fname ++ ".boxes"
   boxes <- getBoxInfo . map read . lines <$> do
     e <- doesFileExist boxesTxt
@@ -276,7 +282,7 @@ renderTex classFile fname body = do
       then readFile boxesTxt
       else return ""
   putStrLn $ "Found " ++ show (length boxes) ++ " boxes"
-  let texSource = renderWithBoxes classFile boxes wholeDoc
+  let texSource = renderWithBoxes boxes wholeDoc
       wholeDoc = do
         tex $ "\\newwrite\\boxesfile"
         tex $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n\\newsavebox{\\marxupbox}"
@@ -285,7 +291,12 @@ renderTex classFile fname body = do
   writeFile (fname ++ ".tex") texSource
 
 askClass :: Tex ClassFile
-askClass = Tex ask
+askClass = Tex $ do
+  k <- Map.keys <$> getMetaData
+  case [c | PreClass c <- k] of
+    [] -> error "class not specified (use documentClass command earlier)"
+    [c] -> return c
+    _ ->  error "do not use documentclass more than once"
 
 getBoxInfo :: [Int] -> Map Int BoxSpec
 getBoxInfo (ident:width:height:depth:bs) = Map.insert ident (BoxSpec (scale width) (scale height) (scale depth)) (getBoxInfo bs)
