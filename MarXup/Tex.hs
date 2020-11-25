@@ -190,7 +190,7 @@ env'' e opts args body = do
 ------------------
 -- Sorted labels
 
-data SortedLabel =  SortedLabel String Label
+data SortedLabel = SortedLabel String Label
 
 label :: String -> Tex SortedLabel
 label s = do
@@ -199,24 +199,43 @@ label s = do
   return $ SortedLabel s l
 
 xref :: SortedLabel -> TeX
-xref (SortedLabel _ l) = do
-  cmd "ref" (reference l)
+xref l = xrefWith (cmd "ref") [l]
+
+xrefWith :: (TeX -> Tex a) -> [SortedLabel] -> TeX
+xrefWith c ls = do
+  _ <- c (tex (intercalate "," [show l | SortedLabel _ l <- ls]))
   return ()
 
-fxref :: SortedLabel -> TeX
-fxref l@(SortedLabel s _) = do
-  textual s
-  tex "~" -- non-breakable space here
-  xref l
+usepkgCleverRef :: TeX
+usepkgCleverRef = usepkg "cleveref" 1000 []
+
+cleverefCmd :: Tex b -> Tex b
+cleverefCmd r = do
+  usepkgCleverRef
+  cmd "cref" r
+
+crefCapCmd :: Tex b -> Tex b
+crefCapCmd r = do
+  usepkgCleverRef
+  cmd "Cref" r
+
+cref :: SortedLabel -> TeX
+cref l = crefs [l]
+
+crefs :: [SortedLabel] -> TeX
+crefs = xrefWith cleverefCmd
+
+ccrefs :: [SortedLabel] -> TeX
+ccrefs = xrefWith crefCapCmd
 
 pageref :: SortedLabel -> TeX
 pageref (SortedLabel _ l) = do
   cmd "pageref" (reference l)
   return ()
-  
+
 instance Element SortedLabel where
   type Target SortedLabel = TeX
-  element x = fxref x >> return ()
+  element x = cref x >> return ()
 
 -----------------
 -- Generate boxes
