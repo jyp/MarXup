@@ -25,3 +25,4 @@
   (setq font-lock-defaults '(marxup-font-lock-keywords))
   (setq mode-name "marxup"))
 
+(provide 'marxup-mode)
