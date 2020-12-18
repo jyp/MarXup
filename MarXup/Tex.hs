@@ -52,6 +52,8 @@ renderKey o options = case o of
 newtype Tex a = Tex {fromTex :: Multi () Key a}
   deriving (Monad, MonadFix, Applicative, Functor)
 
+instance MonadFail Tex where
+  fail = error
 
 
 
