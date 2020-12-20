@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module MarXup.LineUp.Haskell where
 
 import Data.List
@@ -20,20 +21,33 @@ haskellInline = haskellInlineCust defaultParseMode printTok
 
 type PrintTok = Token -> (Float,TeX,Float)
 
-haskellInlineCust :: ParseMode -> PrintTok -> Verbatim a -> Tex ()
-haskellInlineCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVerbatim v) of
-   ParseOk toks -> mconcat $ map render $ mkSpaces $ map (mkTok custPrintTok) toks
-   ParseFailed location err -> textual (show location ++ show err)
-
 mkTok :: (t -> (Float, TeX, Float)) -> Loc t -> Tok
 mkTok custPrintTok (Loc l t) = Tok (srcSpanStartColumn l) (srcSpanEndColumn l) before txt after
   where (before,txt,after) = custPrintTok t
 
-haskellCust :: ParseMode -> (PrintTok) -> Verbatim a -> Tex ()
-haskellCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVerbatim v) of
+
+preprocess :: String -> String
+preprocess = \case xs | hideSequence `isPrefixOf` xs -> dropper (drop (length hideSequence) xs)
+                   (x:xs) -> x:preprocess xs
+                   [] -> []
+  where
+    hideSequence = "{-<-}"
+    showSequence = "{->-}"
+    dropper :: String -> String
+    dropper xs     | showSequence `isPrefixOf` xs = preprocess (drop (length showSequence) xs)
+    dropper (_:xs) = dropper xs
+    dropper [] = []
+
+haskellCust :: ParseMode -> PrintTok -> Verbatim a -> Tex ()
+haskellCust mode custPrintTok v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
   ParseOk toks -> lineup (map (map (mkTok custPrintTok)) lins)
     where lins = groupBy ((==) `on` (srcSpanStartLine . loc)) toks
   ParseFailed location err -> textual (show location ++ show err)
+
+haskellInlineCust :: ParseMode -> PrintTok -> Verbatim a -> Tex ()
+haskellInlineCust mode custPrintTok v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
+   ParseOk toks -> mconcat $ map render $ mkSpaces $ map (mkTok custPrintTok) toks
+   ParseFailed location err -> textual (show location ++ show err)
 
 splitTok :: String -> (String, Maybe String)
 splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Just (reverse subscript))
@@ -44,6 +58,11 @@ splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Ju
         (primes,rev1) = span (== '\'') rev0
         rev0 = reverse input
         subscript = explicitSubscript ++ numbers
+
+testt = lexTokenStream "-"
+
+-- >>> testt 
+-- ParseOk []
 
 printTok :: PrintTok
 printTok t = let s = textual $ showToken t
@@ -109,7 +128,7 @@ printTok t = let s = textual $ showToken t
         ParArrayRightSquare -> rightParen
         Comma -> rightParen
         Underscore -> symbol
-        BackQuote -> symbol
+        BackQuote -> (0,tex "`",0)
         Dot -> symbol
         DotDot -> symbol
         Colon -> symbol
