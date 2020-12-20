@@ -21,3 +21,8 @@ quoteStrings :: [(String,String)]
     L q  <- lookupDefault (L [("«","»")]) cfg "quotes"
 
     return (aq,q)
+
+
+-- Local Variables:
+-- dante-target: "marxup"
+-- End:

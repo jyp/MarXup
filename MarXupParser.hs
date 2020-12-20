@@ -16,7 +16,7 @@ import Config
 -- Simple printing combinators, which do not add nor remove line breaks
 
 data Haskell = HaskChunk String | HaskLn SourcePos | Quote [MarXup] | List [Haskell] | Parens [Haskell] | String String deriving (Show)
-data MarXup = TextChunk String | Unquote (Maybe (SourcePos,String)) [(SourcePos,Haskell)] | Comment String deriving (Show)
+data MarXup = QuotedAntiQuote | TextChunk String | Unquote (Maybe (SourcePos,String)) [(SourcePos,Haskell)] | Comment String deriving (Show)
 
 ----------------------------------------------
 -- Parsing combinators
@@ -63,7 +63,7 @@ pHask = many ((List <$> pArg "[]") <|>
 pTextArg' :: String -> String -> Parser Haskell
 pTextArg' open close = Quote <$> (label "quoted text" $
   string open *>
-  (many (pElement <|> pTextChunk <|> pComment))
+  (many (pQuotedAntiQuote <|> pElement <|> pTextChunk <|> pComment))
   <* string close)
 
 pTextArg :: Parser Haskell
@@ -83,6 +83,11 @@ pArgument = (Parens <$> pArg "()" <|> (List <$> pArg "[]") <|> pTextArg <|> pStr
 
 pId :: Parser Haskell
 pId = HaskChunk <$> pIdent
+
+pQuotedAntiQuote = do
+  choice $ map (string . double) antiQuoteStrings
+  return QuotedAntiQuote
+  where double x = x ++ x
 
 pElement :: Parser MarXup
 pElement = 
@@ -154,3 +159,4 @@ testText3 = parse "<interactive>" pTextArg completeResults "« 1 @x 2 @y 3 @x 4 
 testElem = parse "<interactive>" pElement completeResults "@x<-fct(x « yop »)[y]"
 testChunk = parse "<interactive>" pHaskChunk completeResults "t"
 testArg = parse "<interactive>" (pArg "()") completeResults "()"
+
