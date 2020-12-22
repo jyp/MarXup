@@ -124,6 +124,9 @@ backslash = tex ['\\']
 nil :: TeX
 nil = braces (tex "")
 
+func :: String -> TeX
+func cmd = backslash >> tex cmd >> tex " "
+
 -- | Command with no argument
 cmd0 :: String -> Tex ()
 cmd0 c = cmdn' c [] [] >> return ()

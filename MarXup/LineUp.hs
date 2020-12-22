@@ -102,10 +102,8 @@ lineup input = env'' "list" [] [mempty,tex "\\setlength\\leftmargin{1em}"] $ do
 -- field of the tokens (spacing goes after the texts)
 mkSpaces :: [Tok] -> [Tok]
 mkSpaces [] = []
--- mkSpaces ts = [ Tok startCol endCol
---                 0 (tex (show preSpace) <> render <> tex (show postSpace) <> tex "\\;") 0
---               | Tok{..} <- ts]
 mkSpaces ts = [ Tok (startCol l) (endCol l) 0
-                (render l <>
-                 tex ("\\mskip " ++ show (min (postSpace l) (preSpace r)) ++ "mu" )) 0
+                (render l
+                 <> tex ("\\mskip " ++ show (min (postSpace l) (preSpace r)) ++ "mu" )
+                ) 0
               | (l,r) <- zip ts (tail ts) ] ++ [last ts]
