@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE LambdaCase #-}
 module MarXup.LineUp.Haskell where
 
@@ -10,20 +11,23 @@ import MarXup
 import MarXup.LineUp
 import MarXup.Tex
 import MarXup.Verbatim
-import Data.Monoid
 import Data.Char (isDigit)
 
+instance Functor Loc where
+  fmap f (Loc l x) = Loc l (f x)
+
 haskell :: Verbatim a -> Tex ()
-haskell = haskellCust defaultParseMode printTok
+haskell = haskellCust defaultParseMode (fmap (fmap printTok))
 
 haskellInline :: Verbatim a -> Tex ()
-haskellInline = haskellInlineCust defaultParseMode printTok
+haskellInline = haskellInlineCust defaultParseMode (fmap (fmap printTok))
 
+type ProcessToks = [Loc Token] -> [Loc (Float,TeX,Float)]
 type PrintTok = Token -> (Float,TeX,Float)
 
-mkTok :: (t -> (Float, TeX, Float)) -> Loc t -> Tok
-mkTok custPrintTok (Loc l t) = Tok (srcSpanStartColumn l) (srcSpanEndColumn l) before txt after
-  where (before,txt,after) = custPrintTok t
+
+mkTok :: (Loc (Float, TeX, Float)) -> Tok
+mkTok (Loc l (before,txt,after)) = Tok (srcSpanStartColumn l) (srcSpanEndColumn l) before txt after
 
 
 preprocess :: String -> String
@@ -38,15 +42,15 @@ preprocess = \case xs | hideSequence `isPrefixOf` xs -> dropper (drop (length hi
     dropper (_:xs) = dropper xs
     dropper [] = []
 
-haskellCust :: ParseMode -> PrintTok -> Verbatim a -> Tex ()
-haskellCust mode custPrintTok v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
-  ParseOk toks -> lineup (map (map (mkTok custPrintTok)) lins)
-    where lins = groupBy ((==) `on` (srcSpanStartLine . loc)) toks
+haskellCust :: ParseMode -> ProcessToks -> Verbatim a -> Tex ()
+haskellCust mode processToks v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
+  ParseOk toks -> lineup (map (map mkTok) lins)
+    where lins = groupBy ((==) `on` (srcSpanStartLine . loc)) (processToks toks)
   ParseFailed location err -> textual (show location ++ show err)
 
-haskellInlineCust :: ParseMode -> PrintTok -> Verbatim a -> Tex ()
-haskellInlineCust mode custPrintTok v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
-   ParseOk toks -> mconcat $ map render $ mkSpaces $ map (mkTok custPrintTok) toks
+haskellInlineCust :: ParseMode -> ProcessToks -> Verbatim a -> Tex ()
+haskellInlineCust mode processToks v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
+   ParseOk toks -> mconcat $ map render $ mkSpaces $ map mkTok  $ processToks toks
    ParseFailed location err -> textual (show location ++ show err)
 
 splitTok :: String -> (String, Maybe String)
@@ -58,11 +62,6 @@ splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Ju
         (primes,rev1) = span (== '\'') rev0
         rev0 = reverse input
         subscript = explicitSubscript ++ numbers
-
-testt = lexTokenStream "-"
-
--- >>> testt 
--- ParseOk []
 
 printTok :: PrintTok
 printTok t = let s = textual $ showToken t
