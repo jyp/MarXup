@@ -10,6 +10,7 @@ import Language.Haskell.Exts.SrcLoc
 import MarXup
 import MarXup.LineUp
 import MarXup.Tex
+import MarXup.Latex.Math
 import MarXup.Verbatim
 import Data.Char (isDigit)
 
@@ -66,26 +67,27 @@ splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Ju
 printTok :: PrintTok
 printTok t = let s = textual $ showToken t
                  ident = word $ case splitTok $ showToken t of
-                              (_,Nothing) -> cmd "mathsf" s
-                              (pref,Just suff) -> cmd "mathsf" (textual pref) <> tex "_" <> braces (textual suff)
-                 unquote = word $ cmd "mathsf" s
-                 quote = word $ cmd "mathtt" s
-                 literal = word $ cmd "mathrm" s
-                 string = word $ cmd "texttt" s
-                 keyword = word $ cmd "mathbf" s
-                 pragma = word $ cmd "mathrm" s
-                 symbol = word $ cmd "mathnormal" s
-                 leftParen  = (3,cmd "mathnormal" s,0)
-                 rightParen = (0,cmd "mathnormal" s,3)
-                 rightParenMed = (0,cmd "mathnormal" s,4)
-                 special x = med $ cmd "mathnormal" $ tex x
-                 debug = thick $ textual "[" <> ( cmd "mathnormal" $ textual $ show t) <> textual "]"
+                              (_,Nothing) -> mathsf s
+                              (pref,Just suff) -> mathsf (textual pref) <> tex "_" <> braces (textual suff)
+                 unquote = word $ mathsf s
+                 quote = word $ mathtt s
+                 literal = word $ mathrm s
+                 string = word $ mathtt s
+                 keyword = word $ mathbf s
+                 pragma = word $ mathrm s
+                 symbol = word $ mathnormal s
+                 leftParen  = (3,mathnormal s,0)
+                 rightParen = (0,mathnormal s,3)
+                 rightParenMed = (0,mathnormal s,4)
+                 special x = med $ mathnormal $ tex x
+                 debug = thick $ textual "[" <> ( mathnormal $ textual $ show t) <> textual "]"
                  thick s = (5,s,5)
+                 verythick s = (6,s,6)
                  med s = (4,s,4)
                  thin s = (3,s,3)
                  word = thin
   in case t of
-        -- _ -> cmd "mathrm" $ textual $ show t -- Debug
+        -- _ -> mathrm $ textual $ show t -- Debug
         VarId _ -> ident
         QVarId _ -> ident
         IDupVarId _ -> ident
@@ -140,11 +142,11 @@ printTok t = let s = textual $ showToken t
         Equals -> symbol
         Backslash -> symbol
         Bar -> symbol
-        LeftArrow -> thick $ func "leftarrow"
-        RightArrow -> thick $ func "rightarrow"
+        LeftArrow -> thick $ mathnormal (func "leftarrow")
+        RightArrow -> verythick $ mathnormal (func "rightarrow")
         At -> symbol
         Tilde -> symbol
-        DoubleArrow -> thick $ func "Rightarrow"
+        DoubleArrow -> verythick $ mathnormal (func "Rightarrow")
         Minus -> symbol
         Exclamation -> symbol
         Star -> symbol
