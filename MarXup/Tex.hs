@@ -72,8 +72,8 @@ kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
 
 escape :: Char -> [Char]
-escape '\\' = "\\ensuremath{\\backslash{}}"
-escape '~' = "\\ensuremath{\\sim{}}"
+escape '\\' = "\\ensuremath{\\backslash}"
+escape '~' = "\\ensuremath{\\sim}"
 escape '<' = "\\ensuremath{<}"
 escape '>' = "\\ensuremath{>}"
 escape c | c `elem` "#^_{}&$%" = '\\':c:[]
