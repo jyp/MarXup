@@ -31,8 +31,12 @@ newtheorem ident txt = do
   unless ((sty == LNCS || sty == Beamer || sty == ACMArt) && ident `elem` ["theorem", "corollary", "lemma", "definition", "proposition"]) $ do
   Tex $ metaData (PreTheorem ident txt) ""
 
+
 usepkg :: String -> Int -> [String] -> TeX
 usepkg ident prio options = Tex $ metaData (PrePackage prio ident) (intercalate "," options)
+-- regular packages: 100
+-- around "last": 1000
+
 
 documentClass :: ClassFile -> [String] -> TeX
 documentClass docClass options = Tex $ metaData (PreClass docClass) (intercalate "," options)
@@ -70,6 +74,7 @@ instance Textual Tex where
 
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
+
 
 escape :: Char -> [Char]
 escape '\\' = "\\ensuremath{\\backslash}"
@@ -326,4 +331,16 @@ getBoxInfo :: [Int] -> Map Int BoxSpec
 getBoxInfo (ident:width:height:depth:bs) = Map.insert ident (BoxSpec (scale width) (scale height) (scale depth)) (getBoxInfo bs)
   where scale x = fromIntegral x / 65536
 getBoxInfo _ = Map.empty
+
+
+data Size = TexSize Unit Double
+
+data Unit = TextWidth | Em | En | Ex deriving Show
+
+texSize :: Size -> TeX
+texSize (TexSize u x) = tex (show x ++ "\\" ++ map toLower (show u)) 
+
+textwidth :: Double -> Size
+textwidth = TexSize TextWidth
+
 

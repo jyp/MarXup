@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module MarXup.Latex where
 
@@ -212,11 +213,11 @@ figure_ caption body = env "figure*" $ do
   cmd "caption" caption
   label "Fig."
 
-figure :: TeX -> TeX -> Tex SortedLabel
+figure :: TeX -> Tex a -> Tex (a,SortedLabel)
 figure caption body = env "figure" $ do
-  body
+  x <- body
   cmd "caption" caption
-  label "Fig."
+  (x,) <$> label "Fig."
 
 table :: TeX -> TeX -> Tex SortedLabel
 table caption body = env "table" $ do

@@ -50,9 +50,13 @@ haskellCust mode processToks v = case lexTokenStreamWithMode mode (preprocess $ 
   ParseFailed location err -> textual (show location ++ show err)
 
 haskellInlineCust :: ParseMode -> ProcessToks -> Verbatim a -> Tex ()
-haskellInlineCust mode processToks v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
-   ParseOk toks -> mconcat $ map render $ mkSpaces $ map mkTok  $ processToks toks
-   ParseFailed location err -> textual (show location ++ show err)
+haskellInlineCust mode processToks v = mconcat (haskellInlineCust' mode processToks v) 
+
+haskellInlineCust' :: ParseMode -> ProcessToks -> Verbatim a -> [TeX]
+haskellInlineCust' mode processToks v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
+   ParseOk toks -> map render $ mkSpaces $ map mkTok  $ processToks toks
+   ParseFailed location err -> [textual (show location ++ show err)]
+
 
 splitTok :: String -> (String, Maybe String)
 splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Just (reverse subscript))

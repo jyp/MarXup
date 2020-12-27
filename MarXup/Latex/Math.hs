@@ -39,7 +39,7 @@ displayMath = env "displaymath"
 
 mathpreamble :: TeX
 mathpreamble = do
-  usepackage "amsmath"  []
+  usepkg "amsmath" 50 []
   usepackage "amssymb"  []   -- extra symbols such as □
   usepackage "stmaryrd" [] -- has ⟦ and ⟧
 
