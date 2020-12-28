@@ -31,9 +31,9 @@ lineup input = env'' "list" [] [mempty,tex "\\setlength\\leftmargin{1em}"] $ do
   texLines $ map (("% " ++) . map marx . drop 1 . isIndentTab ) array
   
   texLn "\\item\\relax"
-  cmd "ensuremath" $ env "pboxed" $ do
+  cmd "ensuremath" $ env "parray" $ do -- using pboxed allows page breaks, but cannot be put in acmart figures T_T
     declColumn Nothing "B"
-    forM_ (zip3 allTabStops [(1::Int)..] (drop 1 indentColumns)) $ \(_col,tab,indenting) -> 
+    forM_ (zip3 allTabStops [(1::Int)..] (drop 1 indentColumns)) $ \(_col,tab,indenting) ->
       declColumn (justIf (indenting) $ tex $ show (tab-1) ++ "em") (show tab)
     declColumn Nothing "E"
     texLn "%"
