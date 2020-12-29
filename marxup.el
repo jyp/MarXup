@@ -10,7 +10,7 @@
        st))
 
 
-(setq marxup-marxup-regexp "@\\([[:word:]]+<-\\)?[[:word:]]+")
+(setq marxup-marxup-regexp "@\\([[:word:]_]+<-\\)?[[:word:]_]+")
 (setq marxup-operators-regexp (regexp-opt '("«" "»")))
 (setq marxup-font-lock-keywords
       `((,marxup-marxup-regexp . font-lock-function-name-face)
