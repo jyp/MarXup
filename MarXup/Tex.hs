@@ -335,12 +335,15 @@ getBoxInfo _ = Map.empty
 
 data Size = TexSize Unit Double
 
-data Unit = TextWidth | Em | En | Ex deriving Show
+data Unit = TextWidth | Cm | Em | En | Ex deriving Show
 
 texSize :: Size -> TeX
 texSize (TexSize u x) = tex (show x ++ "\\" ++ map toLower (show u)) 
 
 textwidth :: Double -> Size
 textwidth = TexSize TextWidth
+
+centimeters :: Double -> Size
+centimeters = TexSize Cm
 
 
