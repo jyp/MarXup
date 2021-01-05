@@ -18,19 +18,18 @@ data Tok = Tok {
   }
 
 
+justIf :: Bool -> a -> Maybe a
 justIf True x = Just x
 justIf _ _ = Nothing
 
-marx True = '!'
-marx False = '-'
 
 lineup :: [[Tok]] -> TeX
-lineup input = env'' "list" [] [mempty,tex "\\setlength\\leftmargin{1em}"] $ do
+lineup input = do
   usepkg "polytable" 100 []
-  texLn ""
-  texLines $ map (("% " ++) . map marx . drop 1 . isIndentTab ) array
+  -- texLines $ map (("% " ++) . map marx . drop 1 . isIndentTab ) array % debug
+  -- marx True = '!'
+  -- marx False = '-'
   
-  texLn "\\item\\relax"
   cmd "ensuremath" $ env "parray" $ do -- using pboxed allows page breaks, but cannot be put in acmart figures T_T
     declColumn Nothing "B"
     forM_ (zip3 allTabStops [(1::Int)..] (drop 1 indentColumns)) $ \(_col,tab,indenting) ->

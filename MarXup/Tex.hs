@@ -332,13 +332,21 @@ getBoxInfo (ident:width:height:depth:bs) = Map.insert ident (BoxSpec (scale widt
   where scale x = fromIntegral x / 65536
 getBoxInfo _ = Map.empty
 
+-- | For display, but on the left. Also no math.
+displayLeft :: Size -> TeX -> TeX
+displayLeft sz body = env'' "list" [] [mempty,tex "\\setlength" <> cmd "leftmargin" (texSize sz)] $ do
+  texLn "\\item\\relax"
+  body
+
 
 data Size = TexSize Unit Double
 
 data Unit = TextWidth | Cm | Em | En | Ex deriving Show
 
 texSize :: Size -> TeX
-texSize (TexSize u x) = tex (show x ++ "\\" ++ map toLower (show u)) 
+texSize (TexSize u x) = tex (show x) <> case u of
+  TextWidth -> tex ("\\textwidth")
+  _ -> tex (map toLower (show u))
 
 textwidth :: Double -> Size
 textwidth = TexSize TextWidth
