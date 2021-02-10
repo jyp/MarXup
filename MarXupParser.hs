@@ -154,3 +154,8 @@ testText3 = parse "<interactive>" pTextArg completeResults "« 1 @x 2 @y 3 @x 4 
 testElem = parse "<interactive>" pElement completeResults "@x<-fct(x « yop »)[y]"
 testChunk = parse "<interactive>" pHaskChunk completeResults "t"
 testArg = parse "<interactive>" (pArg "()") completeResults "()"
+
+
+-- Local Variables:
+-- dante-target: "exe:marxup"
+-- End:
