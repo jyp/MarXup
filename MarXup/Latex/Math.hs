@@ -37,12 +37,9 @@ subscript x = tex "_" <> braces x
 
 displayMath = env "displaymath"
 
-mathsf :: Tex a -> Tex a
-mathsf = cmd "mathsf"
-
 mathpreamble :: TeX
 mathpreamble = do
-  usepackage "amsmath"  []
+  usepkg "amsmath" 50 []
   usepackage "amssymb"  []   -- extra symbols such as □
   usepackage "stmaryrd" [] -- has ⟦ and ⟧
 
@@ -103,3 +100,19 @@ centerVertically = ensureMath . cmd "vcenter" . cmd "hbox"
 
 qedhere :: Tex ()
 qedhere = cmd0 "qedhere"
+
+
+mathnormal :: Tex a -> Tex a
+mathnormal = cmd "mathnormal"
+
+mathsf :: Tex a -> Tex a
+mathsf = cmd "mathsf" 
+
+mathrm :: Tex a -> Tex a
+mathrm = cmd "mathrm"
+
+mathtt :: Tex a -> Tex a
+mathtt = cmd "mathtt"
+
+mathbf :: Tex a -> Tex a
+mathbf = cmd "mathbf"

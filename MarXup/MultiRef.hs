@@ -43,6 +43,9 @@ metaData k val = do
    put (r,bx,insert k val m)
    return ()
 
+getMetaData :: Multi config key (MetaData key)
+getMetaData = gets (\(_,_,m) -> m)
+
 type References = Int -- how many labels have been allocated
 emptyRefs :: References
 emptyRefs = 0

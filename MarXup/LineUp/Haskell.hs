@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE LambdaCase #-}
 module MarXup.LineUp.Haskell where
 
 import Data.List
@@ -8,32 +10,53 @@ import Language.Haskell.Exts.SrcLoc
 import MarXup
 import MarXup.LineUp
 import MarXup.Tex
+import MarXup.Latex.Math
 import MarXup.Verbatim
-import Data.Monoid
 import Data.Char (isDigit)
 
+instance Functor Loc where
+  fmap f (Loc l x) = Loc l (f x)
+
 haskell :: Verbatim a -> Tex ()
-haskell = haskellCust defaultParseMode printTok
+haskell = haskellCust defaultParseMode (fmap (fmap printTok))
 
 haskellInline :: Verbatim a -> Tex ()
-haskellInline = haskellInlineCust defaultParseMode printTok
+haskellInline = haskellInlineCust defaultParseMode (fmap (fmap printTok))
 
+type ProcessToks = [Loc Token] -> [Loc (Float,TeX,Float)]
 type PrintTok = Token -> (Float,TeX,Float)
 
-haskellInlineCust :: ParseMode -> (PrintTok) -> Verbatim a -> Tex ()
-haskellInlineCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVerbatim v) of
-   ParseOk toks -> mconcat $ map render $ mkSpaces $ map (mkTok custPrintTok) toks
-   ParseFailed location err -> textual (show location ++ show err)
 
-mkTok :: (t -> (Float, TeX, Float)) -> Loc t -> Tok
-mkTok custPrintTok (Loc l t) = Tok (srcSpanStartColumn l) (srcSpanEndColumn l) before txt after
-  where (before,txt,after) = custPrintTok t
+mkTok :: (Loc (Float, TeX, Float)) -> Tok
+mkTok (Loc l (before,txt,after)) = Tok (srcSpanStartColumn l) (srcSpanEndColumn l) before txt after
 
-haskellCust :: ParseMode -> (PrintTok) -> Verbatim a -> Tex ()
-haskellCust mode custPrintTok v = case lexTokenStreamWithMode mode (fromVerbatim v) of
-  ParseOk toks -> lineup (map (map (mkTok custPrintTok)) lins)
-    where lins = groupBy ((==) `on` (srcSpanStartLine . loc)) toks
+
+preprocess :: String -> String
+preprocess = \case xs | hideSequence `isPrefixOf` xs -> dropper (drop (length hideSequence) xs)
+                   (x:xs) -> x:preprocess xs
+                   [] -> []
+  where
+    hideSequence = "{-<-}"
+    showSequence = "{->-}"
+    dropper :: String -> String
+    dropper xs     | showSequence `isPrefixOf` xs = preprocess (drop (length showSequence) xs)
+    dropper (_:xs) = dropper xs
+    dropper [] = []
+
+haskellCust :: ParseMode -> ProcessToks -> Verbatim a -> Tex ()
+haskellCust mode processToks v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
+  ParseOk toks -> lineup (map (map mkTok) lins)
+    where lins = groupBy ((==) `on` (srcSpanStartLine . loc)) (processToks toks)
   ParseFailed location err -> textual (show location ++ show err)
+
+haskellInlineCust :: ParseMode -> ProcessToks -> Verbatim a -> Tex ()
+haskellInlineCust mode processToks v = mconcat (haskellInlineCust' mode processToks v) 
+
+haskellInlineCust' :: ParseMode -> ProcessToks -> Verbatim a -> [TeX]
+haskellInlineCust' mode processToks v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
+   ParseOk toks -> map render $ mkSpaces $ map mkTok  $ processToks toks
+   ParseFailed location err -> [textual (show location ++ show err)]
+
 
 splitTok :: String -> (String, Maybe String)
 splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Just (reverse subscript))
@@ -47,23 +70,28 @@ splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Ju
 
 printTok :: PrintTok
 printTok t = let s = textual $ showToken t
-                 ident = regular $ case splitTok $ showToken t of
-                              (_,Nothing) -> cmd "mathsf" s
-                              (pref,Just suff) -> cmd "mathsf" (textual pref) <> tex "_" <> braces (textual suff)
-                 unquote = regular $ cmd "mathsf" s
-                 quote = regular $ cmd "mathtt" s
-                 literal = regular $ cmd "mathrm" s
-                 string = regular $ cmd "texttt" s
-                 keyword = regular $ cmd "mathbf" s
-                 pragma = regular $ cmd "mathrm" s
-                 symbol = regular $ cmd "mathnormal" s
-                 regular tx = (5,tx,5)
-                 leftParen  = (5,cmd "mathnormal" s,0)
-                 rightParen = (0,cmd "mathnormal" s,5)
-                 special x = regular $ cmd "mathnormal" $ tex x
-                 debug = regular $ textual "[" <> ( cmd "mathnormal" $ textual $ show t) <> textual "]"
+                 ident = word $ case splitTok $ showToken t of
+                              (_,Nothing) -> mathsf s
+                              (pref,Just suff) -> mathsf (textual pref) <> tex "_" <> braces (textual suff)
+                 unquote = word $ mathsf s
+                 quote = word $ mathtt s
+                 literal = word $ mathrm s
+                 string = word $ mathtt s
+                 keyword = word $ mathbf s
+                 pragma = word $ mathrm s
+                 symbol = word $ mathnormal s
+                 leftParen  = (3,mathnormal s,0)
+                 rightParen = (0,mathnormal s,3)
+                 rightParenMed = (0,mathnormal s,4)
+                 special x = med $ mathnormal $ tex x
+                 debug = thick $ textual "[" <> ( mathnormal $ textual $ show t) <> textual "]"
+                 thick s = (5,s,5)
+                 verythick s = (6,s,6)
+                 med s = (4,s,4)
+                 thin s = (3,s,3)
+                 word = thin
   in case t of
-        -- _ -> cmd "mathrm" $ textual $ show t -- Debug
+        -- _ -> mathrm $ textual $ show t -- Debug
         VarId _ -> ident
         QVarId _ -> ident
         IDupVarId _ -> ident
@@ -79,7 +107,7 @@ printTok t = let s = textual $ showToken t
         VarSym "<|>" -> special "<\\!\\mid\\!>"
         VarSym "<+>" -> special "<{\\mkern-12mu}+{\\mkern-12mu}>"
         VarSym "<*>" -> special "<{\\mkern-12mu}*{\\mkern-12mu}>"
-        VarSym "<$>" -> special "<{\\mkern-12mu}\\${\\mkern-12mu}>"
+        VarSym "<$>" -> special "<{\\mkern-6mu}\\${\\mkern-6mu}>"
         VarSym "++" -> special "+\\!+"
         VarSym _ -> symbol
         ConSym _ -> ident
@@ -107,9 +135,9 @@ printTok t = let s = textual $ showToken t
         RightSquare          -> rightParen
         ParArrayLeftSquare   -> leftParen
         ParArrayRightSquare -> rightParen
-        Comma -> rightParen
+        Comma -> rightParenMed
         Underscore -> symbol
-        BackQuote -> symbol
+        BackQuote -> (0,tex "`",0)
         Dot -> symbol
         DotDot -> symbol
         Colon -> symbol
@@ -118,11 +146,11 @@ printTok t = let s = textual $ showToken t
         Equals -> symbol
         Backslash -> symbol
         Bar -> symbol
-        LeftArrow -> regular $ cmd0 "leftarrow"
-        RightArrow -> regular $ cmd0 "rightarrow"
+        LeftArrow -> thick $ mathnormal (func "leftarrow")
+        RightArrow -> verythick $ mathnormal (func "rightarrow")
         At -> symbol
         Tilde -> symbol
-        DoubleArrow -> regular $ cmd0 "Rightarrow"
+        DoubleArrow -> verythick $ mathnormal (func "Rightarrow")
         Minus -> symbol
         Exclamation -> symbol
         Star -> symbol

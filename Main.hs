@@ -1,11 +1,11 @@
 import Text.ParserCombinators.Parsek.Position
 
 import System.Environment
-import Data.Monoid
 import Data.DList hiding (foldr, map)
 import MarXupParser
 import qualified Literate as Lit
 import Output
+import Config
 
 rHaskells :: [Haskell] -> Doc
 rHaskells xs = mconcat $ map rHaskell xs
@@ -18,13 +18,16 @@ rHaskell (List xs) = brackets $ rHaskells xs
 rHaskell (Parens xs) = parens $ rHaskells xs
 rHaskell (String xs) = doubleQuotes $ text xs
 
+
 rArg :: (SourcePos, Haskell) -> Doc
 rArg (pos,h) = oPos pos <> parens (rHaskell h)
 
 rMarxup :: MarXup -> Doc
+rMarxup QuotedAntiQuote = case antiQuoteStrings of
+  x:xs -> oText x
 rMarxup (TextChunk s) = oText s
 rMarxup (Unquote var val) =
-  maybe mempty (\(pos,x) -> oPos pos <> text (x <> "<-")) var <>
+  maybe mempty (\(pos,x) -> oPos pos <> rHaskell x <> text ("<-")) var <>
   text "element" <+> parens (hcat $ map rArg val)
 rMarxup (Comment _) = mempty
 
@@ -33,3 +36,8 @@ main = do
   x : y : z : _ <- getArgs
   parseFile y $ \res -> writeFile z $ render (rHaskells res <> Lit.rHaskells res)
 
+
+-- Local Variables:
+-- dante-target: "marxup:exe:marxup"
+-- End:
+ 

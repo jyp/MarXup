@@ -5,6 +5,7 @@ import Data.DList hiding (foldr, map)
 import MarXupParser
 import Data.List (isPrefixOf)
 import Output
+import Config
 
 ----------------------------------------------
 -- Top-level generation
@@ -23,5 +24,7 @@ rMarxup _ = mempty
 
 rInlineHask :: MarXup -> Doc
 rInlineHask (TextChunk x) = text x
+rInlineHask QuotedAntiQuote = case antiQuoteStrings of
+  x:_ -> text x
 rInlineHask _ = mempty
 

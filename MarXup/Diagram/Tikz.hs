@@ -3,7 +3,6 @@
 module MarXup.Diagram.Tikz where
 
 import Graphics.Diagrams.Core
-import Graphics.Diagrams.Path
 import Prelude hiding (sum,mapM_,mapM,concatMap)
 import Data.List (intercalate)
 import MarXup

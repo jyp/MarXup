@@ -215,13 +215,16 @@ heights strut ls = zip (computeHeights strut ls) ls
 computeWidths :: Double -> [BoxTex] -> [Double]
 computeWidths = scanl (\x b -> len b + x)
 
+strut :: Tex ()
+strut = tex "\rule[-.3\baselineskip]{0pt}{\baselineskip}"
+
 layout :: SimpleDoc -> Tex ()
 layout d = env "tikzpicture" $ do
   strutBox <- justBox $ -- textual "qM" -- slightly too small ones
-                         cmd0 "strut" -- this gives slightly too big spaces sometimes
-  let strut = TeX mempty strutBox
-  forM_ (heights strut $ linify0 d) $ \(y,(i,boxes)) -> do
-    let mh = maximum (map hei (strut:boxes))
+                        strut  -- this gives slightly too big spaces sometimes
+  let strut' = TeX mempty strutBox
+  forM_ (heights strut' $ linify0 d) $ \(y,(i,boxes)) -> do
+    let mh = maximum (map hei (strut':boxes))
     forM_ (zip boxes $ computeWidths i boxes) $ \(tx,x) -> do
       case tx of
         Spacing _ -> return ()
