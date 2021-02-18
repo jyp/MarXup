@@ -4,7 +4,7 @@ module MarXup.Latex where
 
 import MarXup
 import MarXup.Verbatim
-import Control.Monad (forM_,when,forM)
+import Control.Monad (forM_,when,forM,unless)
 import MarXup.Tex
 import Data.List (intersperse,groupBy,elemIndex,nub)
 import Data.Function (on)
@@ -102,8 +102,19 @@ acknowledgements body = do
   classFile <- askClass
   case classFile of
     SIGPlan -> cmd0 "acks" >> body
+    ACMArt -> do
+      x <- env "acks" $ do
+        texLn "" -- some idiotic bug in acmart
+        body
+      texLn "" -- some idiotic bug in acmart
+      texLn ""
+      return x
     _ -> do paragraph "acknowledgements"
             body
+
+
+footnote :: Tex a -> Tex a
+footnote = cmd "footnote"
 
 
 newline :: TeX
@@ -204,6 +215,24 @@ tabular opts format bod = do
     mkrows (map mkcols bod)
   return ()
 
+tabularx :: [String] -> String -> [[TeX]] -> TeX
+tabularx opts format bod = do
+  usepkg "tabularx" 100 [] 
+  env' "tabularx" opts $ do
+    braces (tex format)
+    mkrows (map mkcols bod)
+  return ()
+
+multicols :: Int -> Tex a -> Tex a
+multicols n body = do
+  usepkg "multicol" 100 []
+  env'' "multicols" [] [tex (show n)] body
+
+makecell :: String -> Tex b -> Tex b
+makecell opts body = do
+  usepkg "makecell" 100 []
+  cmd' "makecell" [opts] body
+
 center ::  Tex a -> Tex a
 center = env "center"
 
@@ -218,6 +247,28 @@ figure caption body = env "figure" $ do
   x <- body
   cmd "caption" caption
   (x,) <$> label "Fig."
+
+wrapfigure :: Bool -> Size -> TeX -> Tex a -> Tex (a,SortedLabel)
+wrapfigure isRight sz caption body = do
+  usepkg "wrapfig" 100 []
+  env'' "wrapfigure" [] [if isRight then "r" else "l", texSize sz]  $ do
+    x <- body
+    cmd "caption" caption
+    (x,) <$> label "Fig."
+
+subfigure :: String -> Size -> TeX -> TeX -> Tex SortedLabel
+subfigure option width caption body = do
+  usepkg "subcaption" 100 []
+  env'' "subfigure" [tex option] [texSize width]  $ do
+    body
+    cmd "caption" caption
+    label "Subfig."
+
+subfigures :: TeX -> [(Size,TeX,TeX)] -> Tex ([SortedLabel],SortedLabel)
+subfigures caption subs = figure caption $
+  forM (zip (True:repeat False) subs) $ \(isFirst,(sz,subcaption,body)) -> do
+    unless isFirst (cmd0 "quad")
+    subfigure "b" sz subcaption body
 
 table :: TeX -> TeX -> Tex SortedLabel
 table caption body = env "table" $ do
@@ -258,6 +309,12 @@ italic = cmd "textit"
 
 teletype :: Tex a -> Tex a
 teletype = cmd "texttt"
+
+small ::  Tex a -> Tex a
+small x = braces (cmd0 "small" >> x)
+
+url :: Tex a -> Tex a
+url = cmd "url"
 
 -------------------------
 -- Scaling and rotating
