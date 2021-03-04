@@ -69,20 +69,20 @@ splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Ju
         subscript = explicitSubscript ++ numbers
 
 printTok :: PrintTok
-printTok t = let s = textual $ showToken t
+printTok t = let self = textual $ showToken t
                  ident = word $ case splitTok $ showToken t of
-                              (_,Nothing) -> mathsf s
+                              (_,Nothing) -> mathsf self
                               (pref,Just suff) -> mathsf (textual pref) <> tex "_" <> braces (textual suff)
-                 unquote = word $ mathsf s
-                 quote = word $ mathtt s
-                 literal = word $ mathrm s
-                 string = word $ mathtt s
-                 keyword = word $ mathbf s
-                 pragma = word $ mathrm s
-                 symbol = word $ mathnormal s
-                 leftParen  = (3,mathnormal s,0)
-                 rightParen = (0,mathnormal s,3)
-                 rightParenMed = (0,mathnormal s,4)
+                 unquote = word $ mathsf self
+                 quote = word $ mathtt self
+                 literal = word $ mathrm self
+                 string = word $ mathtt self
+                 keyword = word $ mathbf self
+                 pragma = word $ mathrm self
+                 symbol = word $ mathnormal self
+                 leftParen  = (3,allowbreak <> mathnormal self,0)
+                 rightParen = (0,mathnormal self <> allowbreak,3)
+                 rightParenMed = (0,mathnormal self,4)
                  special x = med $ mathnormal $ tex x
                  debug = thick $ textual "[" <> ( mathnormal $ textual $ show t) <> textual "]"
                  thick s = (5,s,5)
@@ -109,6 +109,18 @@ printTok t = let s = textual $ showToken t
         VarSym "<*>" -> special "<{\\mkern-12mu}*{\\mkern-12mu}>"
         VarSym "<$>" -> special "<{\\mkern-6mu}\\${\\mkern-6mu}>"
         VarSym "++" -> special "+\\!+"
+        VarSym "*^" -> thin (func "cdot")
+        VarSym "-<" -> thin (func "lefttail") 
+        VarSym "<-" -> thin (func "leftarrow")
+        VarSym "===" -> thick (tex "≡")
+        VarSym ">>=" -> thick (mathnormal (tex ">\\mkern-3mu >\\mkern-2mu ="))
+        VarSym ">>" -> thick (mathnormal (tex ">\\mkern-3mu >"))
+        VarSym ">>>" -> thick (mathnormal (tex ">\\mkern-3mu >\\mkern-3mu >"))
+        VarSym "***" -> thick (mathnormal (tex "*\\mkern-4mu *\\mkern-4mu *"))
+        VarSym "." -> (1,tex ".", 5)
+        VarSym "∘" -> thick (mathnormal self)
+        VarSym "×" -> thick (mathnormal self)
+        VarSym "<||>" -> thin (mathnormal  (tex "<\\mkern-5mu | | \\mkern -5mu >"))
         VarSym _ -> symbol
         ConSym _ -> ident
         QVarSym _ -> ident
