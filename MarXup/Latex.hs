@@ -27,31 +27,39 @@ title :: TeX -> TeX
 title = cmd "title"
 
 type AuthorInfoStyle = ClassFile
+ 
+data Affiliation = Affiliation {affilInstitution :: String, affilCity :: String, affilCountry :: String}
 
-data AuthorInfo = AuthorInfo {authorName :: String, authorEmail :: String, authorInst :: String}
+data AuthorInfo = AuthorInfo {authorName :: String, authorEmail :: String, authorAffil :: Affiliation}
 
 authorinfo :: [AuthorInfo] -> Tex ()
 authorinfo as = do c<-askClass; authorinfo' c as
 
+authorInst :: AuthorInfo -> String
+authorInst = affilInstitution . authorAffil
+
 -- | author info as triplets name, institution, email
 authorinfo' :: AuthorInfoStyle -> [AuthorInfo] -> TeX
-authorinfo' ACMArt as = forM_ as $ \AuthorInfo{..} -> do
+authorinfo' ACMArt as = forM_ as $ \AuthorInfo{authorAffil = Affiliation{..},..} -> do
   cmd "author" $ textual authorName
-  cmd "affiliation" $ textual authorInst
+  cmd "affiliation" $ do
+    cmd "institution" $ textual affilCountry
+    cmd "city" $ textual affilCity
+    cmd "country" $ textual affilInstitution
   cmd "email" $ textual authorEmail
 authorinfo' LNCS as = do
   cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
   cmd "institute" $ mconcat $ intersperse (cmd0 "and") $ map textual $ insts
-  where oneauthor AuthorInfo{..} = textual authorName <> (if length insts > 1 then cmd "inst" (textual $ show $ 1 + instIdx) else mempty)
-           where Just instIdx = elemIndex authorInst insts
+  where oneauthor AuthorInfo{authorAffil = Affiliation {affilInstitution = institution},..} = textual authorName <> (if length insts > 1 then cmd "inst" (textual $ show $ 1 + instIdx) else mempty)
+           where Just instIdx = elemIndex institution insts
         insts = nub $ map authorInst as
-authorinfo' SIGPlan as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
+authorinfo' SIGPlan as = forM_ (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ Affiliation {affilInstitution = institution}):_)) -> do
     let names = map authorName g
         emails = mconcat $ intersperse (cmd0 "and") $ map (textual . authorEmail) g
     _ <- cmdn "authorinfo" [mconcat $ intersperse (cmd0 "and") $ map textual names, textual institution, emails]
     return ()
 authorinfo' EPTCS as = mconcat $ intersperse and' $
-  flip map (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ institution):_)) -> do
+  flip map (groupBy ((==) `on` authorInst) as) $ \ (g@((AuthorInfo _ _ Affiliation {affilInstitution = institution}):_)) -> do
     cmd "author" $ do
       mconcat $ intersperse dquad $ map (textual . authorName) g
       cmd "institute" $ textual institution
@@ -79,9 +87,9 @@ authorinfo' IEEE as = cmd "author" $ do
   cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace "1cm") $ map (textual . authorName) as
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
   cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
-  where (AuthorInfo {authorInst = inst}:_) = as
+  where (AuthorInfo {authorAffil = Affiliation {affilInstitution = inst}}:_) = as
 authorinfo' _ {- Plain -} as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
-  where oneauthor (AuthorInfo name _ institution) = textual name <> newline <> textual institution
+  where oneauthor (AuthorInfo name _ Affiliation {affilInstitution = institution}) = textual name <> newline <> textual institution
 
 keywords :: [String] -> TeX
 keywords ks = do
