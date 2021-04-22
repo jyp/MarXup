@@ -244,14 +244,14 @@ makecell opts body = do
 center ::  Tex a -> Tex a
 center = env "center"
 
-figure_ :: TeX -> TeX -> Tex SortedLabel
-figure_ caption body = env "figure*" $ do
-  body
-  cmd "caption" caption
-  label "Fig."
+figure_ :: TeX -> Tex a -> Tex (a, SortedLabel)
+figure_ = figAny "figure*"
 
 figure :: TeX -> Tex a -> Tex (a,SortedLabel)
-figure caption body = env "figure" $ do
+figure = figAny "figure"
+
+figAny :: String -> TeX -> Tex a -> Tex (a,SortedLabel)
+figAny theEnv caption body = env theEnv $ do
   x <- body
   cmd "caption" caption
   (x,) <$> label "Fig."
@@ -273,7 +273,7 @@ subfigure option width caption body = do
     label "Subfig."
 
 subfigures :: TeX -> [(Size,TeX,TeX)] -> Tex ([SortedLabel],SortedLabel)
-subfigures caption subs = figure caption $
+subfigures caption subs = figure_ caption $
   forM (zip (True:repeat False) subs) $ \(isFirst,(sz,subcaption,body)) -> do
     unless isFirst (cmd0 "quad")
     subfigure "b" sz subcaption body
