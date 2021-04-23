@@ -219,7 +219,7 @@ xrefWith c ls = do
   return ()
 
 usepkgCleverRef :: TeX
-usepkgCleverRef = usepkg "cleveref" 1000 []
+usepkgCleverRef = usepkg "cleveref" 1000 ["capitalize"]
 
 cleverefCmd :: Tex b -> Tex b
 cleverefCmd r = do
