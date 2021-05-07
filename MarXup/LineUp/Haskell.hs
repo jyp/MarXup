@@ -31,16 +31,23 @@ mkTok :: (Loc (Float, TeX, Float)) -> Tok
 mkTok (Loc l (before,txt,after)) = Tok (srcSpanStartColumn l) (srcSpanEndColumn l) before txt after
 
 
+-- We replace with spaces so that the column numbers are not affected
+replaceWithSpaces :: String -> String -> (String -> String) -> String
+replaceWithSpaces s xs k  = help (length s) xs k where
+  help :: Int -> String -> (String -> String) -> String
+  help n xs k  = replicate n ' ' ++ k (drop n xs)
+
 preprocess :: String -> String
-preprocess = \case xs | hideSequence `isPrefixOf` xs -> dropper (drop (length hideSequence) xs)
+preprocess = \case xs | hideSequence `isPrefixOf` xs -> replaceWithSpaces hideSequence xs dropper
                    (x:xs) -> x:preprocess xs
                    [] -> []
   where
     hideSequence = "{-<-}"
     showSequence = "{->-}"
     dropper :: String -> String
-    dropper xs     | showSequence `isPrefixOf` xs = preprocess (drop (length showSequence) xs)
-    dropper (_:xs) = dropper xs
+    dropper xs     | showSequence `isPrefixOf` xs = replaceWithSpaces showSequence xs preprocess
+    dropper ('\n':xs) = '\n':dropper xs
+    dropper (_:xs) = ' ':dropper xs
     dropper [] = []
 
 haskellCust :: ParseMode -> ProcessToks -> Verbatim a -> Tex ()
