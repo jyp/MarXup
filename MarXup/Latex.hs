@@ -43,9 +43,9 @@ authorinfo' :: AuthorInfoStyle -> [AuthorInfo] -> TeX
 authorinfo' ACMArt as = forM_ as $ \AuthorInfo{authorAffil = Affiliation{..},..} -> do
   cmd "author" $ textual authorName
   cmd "affiliation" $ do
-    cmd "institution" $ textual affilCountry
+    cmd "institution" $ textual affilInstitution
     cmd "city" $ textual affilCity
-    cmd "country" $ textual affilInstitution
+    cmd "country" $ textual affilCountry
   cmd "email" $ textual authorEmail
 authorinfo' LNCS as = do
   cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
