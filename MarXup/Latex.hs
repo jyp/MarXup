@@ -337,12 +337,13 @@ scalebox factor x = do
 qu :: TeX -> TeX
 qu x = tex "``" <> x <> tex "''"
 
-paren,brack,brac,bigBrac,bigParen :: Tex a -> Tex a
+paren,brack,brac,bigBrac,bigParen,bigBrack :: Tex a -> Tex a
 paren = parenthesize (tex "(") (tex ")")
 brack = parenthesize (tex "[") (tex "]")
 brac = parenthesize (backslash >> tex "{") (backslash >> tex "}")
 bigBrac = bigParenthesize (backslash >> tex "{") (backslash >> tex "}")
 bigParen = bigParenthesize (tex "(") (tex ")")
+bigBrack = bigParenthesize (tex "[") (tex "]")
 
 parenthesize,bigParenthesize :: TeX -> TeX -> Tex a -> Tex a
 bigParenthesize l r bod = do

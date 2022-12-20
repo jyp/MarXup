@@ -91,7 +91,7 @@ printTok t = let self = textual $ showToken t
                  rightParen = (0,mathnormal self <> allowbreak,3)
                  rightParenMed = (0,mathnormal self,4)
                  special x = med $ mathnormal $ tex x
-                 debug = thick $ textual "[" <> ( mathnormal $ textual $ show t) <> textual "]"
+                 debug = thick $ textual "[" <> mathnormal (textual $ show t) <> textual "]"
                  thick s = (5,s,5)
                  verythick s = (6,s,6)
                  med s = (4,s,4)
