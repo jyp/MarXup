@@ -134,13 +134,6 @@ newpara = texLn "\\par"
 newpage :: TeX
 newpage = cmd0 "newpage"
 
-rawMath :: Verbatim a -> Tex ()
-rawMath x = do
-  tex "$"
-  tex $ fromVerbatim x
-  tex "$"
-  return ()
-
 maketitle :: Tex ()
 maketitle = cmd "maketitle" $ return ()
 
@@ -337,26 +330,6 @@ scalebox factor x = do
 qu :: TeX -> TeX
 qu x = tex "``" <> x <> tex "''"
 
-paren,brack,brac,bigBrac,bigParen,bigBrack :: Tex a -> Tex a
-paren = parenthesize (tex "(") (tex ")")
-brack = parenthesize (tex "[") (tex "]")
-brac = parenthesize (backslash >> tex "{") (backslash >> tex "}")
-bigBrac = bigParenthesize (backslash >> tex "{") (backslash >> tex "}")
-bigParen = bigParenthesize (tex "(") (tex ")")
-bigBrack = bigParenthesize (tex "[") (tex "]")
-
-parenthesize,bigParenthesize :: TeX -> TeX -> Tex a -> Tex a
-bigParenthesize l r bod = do
-  tex "\\left" >> l
-  x <- bod
-  tex "\\right" >> r
-  return x
-
-parenthesize l r bod = do
-  l
-  x <- bod
-  r
-  return x
 
 inferrule' :: TeX -> [TeX] -> TeX -> TeX
 inferrule' name xs y = cmdm "inferrule" [name] [mkrows xs,y] >> return ()

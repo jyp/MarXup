@@ -44,6 +44,7 @@ library
   build-depends: haskell-src-exts
   build-depends: lp-diagrams
   build-depends: text
+  build-depends: gasp
 
   exposed-modules: MarXup
   exposed-modules: MarXup.Tex

@@ -13,43 +13,36 @@ import Control.Monad (unless)
 
 instance Element Math where
   type Target Math = TeX
-  element = inline
+  element = math . mRender 0 
 
-instance IsString Math where
-  fromString = Con . fromString
-
-inline x = " " <> (cmd "ensuremath" . mRender 0 $ x) <> " "
--- display = cmd "displaymath" . mRender 0
-display x = tex "$$" <> mRender 0 x <> tex "$$"
-
-text :: TeX -> Math
-text = Con . cmd "text"
 
 -- type MathShallow = Int -> Tex
 
-data Math = BinOp Int (TeX -> TeX -> TeX) Int Int Math Math
-          | UnOp Int (TeX -> TeX) Int Math
-          | Con TeX
-          | Math (Int -> TeX)
-          | Invisible (TeX -> TeX) Math
+data Math = BinOp Int (TexMath () -> TexMath () -> TexMath ()) Int Int Math Math
+          | UnOp Int (TexMath () -> TexMath ()) Int Math
+          | Con (TexMath ())
+          | Math (Int -> TexMath ())
+          | Invisible (TexMath () -> TexMath ()) Math
 
 parp p p' = if p' < p then bigParen else id
 
-mRender :: Int -> Math -> TeX
+mRender :: Int -> Math -> TexMath ()
 mRender _ (Con x) = x
 mRender p (Math x) = x p
 mRender p (BinOp p' f pl pr l r) = parp p p' $ f (mRender pl l) (mRender pr r)
 mRender p (UnOp p' f px x) = parp p p' $ f (mRender px x)
 mRender p (Invisible f x) = f $ mRender p x
 
-ternaryOp :: Int -> (TeX -> TeX -> TeX -> TeX) -> Int -> Int -> Int -> Math -> Math -> Math -> Math
+ternaryOp :: Int -> (TexMath () -> TexMath () -> TexMath () -> TexMath ()) -> Int -> Int -> Int -> Math -> Math -> Math -> Math
 ternaryOp p' f px py pz x y z = Math $ \p -> parp p p' $ f (mRender px x)(mRender py y)(mRender pz z)
   
-binop :: Int -> TeX -> Math -> Math -> Math
+binop :: Int -> TexMath () -> Math -> Math -> Math
 binop prec op = BinOp prec (\x y -> x <> op <> y) prec prec
-preop prec op = UnOp prec (\x -> x <> op) prec
+preop :: Int -> Tex () -> Math -> Math
+preop prec op = UnOp prec (\(TexMath x) -> TexMath (x <> op)) prec
 outop left right = UnOp 100 (parenthesize left right) 0
-fct x = UnOp 6 (x <>) 7
+fct :: TeX -> Math -> Math
+fct x = UnOp 6 (TexMath . (x <>) . fromTexMath) 7
 
 --------------
 -- Operators
@@ -67,13 +60,13 @@ instance Num Math where
   negate = preop 1  "-"
 
 instance Fractional Math where
-    (/) = BinOp 10 (\a b -> cmdn_ "frac" [a,b]) 0 0
+    (/) = BinOp 10 frac 0 0
     fromRational r = fromInteger (numerator r) / fromInteger (denominator r)
 
 instance Floating Math where
-    pi = Con $ cmd0 "pi"
-    exp = UnOp 20 (\x -> tex "e^" <> braces x) 0
-    sqrt = UnOp 10 (cmd "sqrt") 0
+    pi = Con $ TexMath $ cmd0 "pi"
+    exp = UnOp 20 (\(TexMath x) -> TexMath (tex "e^" <> braces x)) 0
+    sqrt = UnOp 10 (TexMath . cmd "sqrt" . fromTexMath) 0
     log = fct (cmd "mathnormal" "log")
     sin = fct (cmd "mathnormal" "sin")
     cos = fct (cmd "mathnormal" "cos")
@@ -95,7 +88,7 @@ floor = outop "⌊" "⌋"
 
 
 
-(^^^) = BinOp 5 (\x y -> braces x <> superscript y) 5 6
-($$$) = BinOp 5 (\x y -> braces x <> subscript y) 5 6
+(^^^) = BinOp 5 (\(TexMath x) y -> TexMath (braces x) <> superscript y) 5 6
+($$$) = BinOp 5 (\(TexMath x) y -> TexMath (braces x) <> subscript y) 5 6
 
 

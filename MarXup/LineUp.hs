@@ -8,12 +8,13 @@ import Data.Monoid
 import Data.Maybe (catMaybes)
 
 import MarXup.Tex
+import MarXup.Latex.Math
 
 data Tok = Tok {
   startCol :: Int,
   endCol :: Int,
   preSpace :: Float, -- max amount of space which should come before this token, in mu
-  render :: TeX,
+  render :: TexMath (),
   postSpace :: Float -- max amount of space which should come after this token, in mu
   }
 
@@ -33,7 +34,7 @@ lineup input = do
   cmd "ensuremath" $ env "parray" $ do -- using pboxed allows page breaks, but cannot be put in acmart figures T_T
     declColumn Nothing "B"
     forM_ (zip3 allTabStops [(1::Int)..] (drop 1 indentColumns)) $ \(_col,tab,indenting) ->
-      declColumn (justIf (indenting) $ tex $ show (tab-1) ++ "em") (show tab)
+      declColumn (justIf indenting $ tex $ show (tab-1) ++ "em") (show tab)
     declColumn Nothing "E"
     texLn "%"
     sequence_ $ intersperse (texLn "\\\\") $ map printLine array
@@ -51,7 +52,7 @@ lineup input = do
          when (not $ null ts) $ do
            cmdn' ">" [showCol colName] []
            braces $ forM_ ts $ \t -> do 
-                render t
+                fromTexMath (render t)
       cmdn' "<" ["E"] []
       return ()
 
@@ -103,6 +104,6 @@ mkSpaces :: [Tok] -> [Tok]
 mkSpaces [] = []
 mkSpaces ts = [ Tok (startCol l) (endCol l) 0
                 (render l
-                 <> tex ("\\mskip " ++ show (min (postSpace l) (preSpace r)) ++ "mu" )
+                 <> TexMath (tex ("\\mskip " ++ show (min (postSpace l) (preSpace r)) ++ "mu" ))
                 ) 0
               | (l,r) <- zip ts (tail ts) ] ++ [last ts]

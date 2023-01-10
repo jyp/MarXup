@@ -20,14 +20,16 @@ instance Functor Loc where
 haskell :: Verbatim a -> Tex ()
 haskell = haskellCust defaultParseMode (fmap (fmap printTok))
 
-haskellInline :: Verbatim a -> Tex ()
+haskellInline :: Verbatim a -> TexMath ()
 haskellInline = haskellInlineCust defaultParseMode (fmap (fmap printTok))
 
-type ProcessToks = [Loc Token] -> [Loc (Float,TeX,Float)]
-type PrintTok = Token -> (Float,TeX,Float)
+type Spaced a = (Float,a,Float)
+type SpacedMath = Spaced (TexMath ())
+type ProcessToks = [Loc Token] -> [Loc SpacedMath]
+type PrintTok = Token -> SpacedMath
 
 
-mkTok :: (Loc (Float, TeX, Float)) -> Tok
+mkTok :: Loc SpacedMath -> Tok
 mkTok (Loc l (before,txt,after)) = Tok (srcSpanStartColumn l) (srcSpanEndColumn l) before txt after
 
 
@@ -56,10 +58,10 @@ haskellCust mode processToks v = case lexTokenStreamWithMode mode (preprocess $ 
     where lins = groupBy ((==) `on` (srcSpanStartLine . loc)) (processToks toks)
   ParseFailed location err -> textual (show location ++ show err)
 
-haskellInlineCust :: ParseMode -> ProcessToks -> Verbatim a -> Tex ()
+haskellInlineCust :: ParseMode -> ProcessToks -> Verbatim a -> TexMath ()
 haskellInlineCust mode processToks v = mconcat (haskellInlineCust' mode processToks v) 
 
-haskellInlineCust' :: ParseMode -> ProcessToks -> Verbatim a -> [TeX]
+haskellInlineCust' :: ParseMode -> ProcessToks -> Verbatim a -> [TexMath ()]
 haskellInlineCust' mode processToks v = case lexTokenStreamWithMode mode (preprocess $ fromVerbatim v) of
    ParseOk toks -> map render $ mkSpaces $ map mkTok  $ processToks toks
    ParseFailed location err -> [textual (show location ++ show err)]
@@ -79,7 +81,7 @@ printTok :: PrintTok
 printTok t = let self = textual $ showToken t
                  ident = word $ case splitTok $ showToken t of
                               (_,Nothing) -> mathsf self
-                              (pref,Just suff) -> mathsf (textual pref) <> tex "_" <> braces (textual suff)
+                              (pref,Just suff) -> mathsf (textual pref) <> subscript (textual suff)
                  unquote = word $ mathsf self
                  quote = word $ mathtt self
                  literal = word $ mathrm self
@@ -90,7 +92,7 @@ printTok t = let self = textual $ showToken t
                  leftParen  = (3,allowbreak <> mathnormal self,0)
                  rightParen = (0,mathnormal self <> allowbreak,3)
                  rightParenMed = (0,mathnormal self,4)
-                 special x = med $ mathnormal $ tex x
+                 special x = med $ mathnormal $ TexMath (tex x)
                  debug = thick $ textual "[" <> mathnormal (textual $ show t) <> textual "]"
                  thick s = (5,s,5)
                  verythick s = (6,s,6)
@@ -116,18 +118,18 @@ printTok t = let self = textual $ showToken t
         VarSym "<*>" -> special "<{\\mkern-12mu}*{\\mkern-12mu}>"
         VarSym "<$>" -> special "<{\\mkern-6mu}\\${\\mkern-6mu}>"
         VarSym "++" -> special "+\\!+"
-        VarSym "*^" -> thin (func "cdot")
-        VarSym "-<" -> thin (func "lefttail") 
-        VarSym "<-" -> thin (func "leftarrow")
-        VarSym "===" -> thick (tex "≡")
-        VarSym ">>=" -> thick (mathnormal (tex ">\\mkern-3mu >\\mkern-2mu ="))
-        VarSym ">>" -> thick (mathnormal (tex ">\\mkern-3mu >"))
-        VarSym ">>>" -> thick (mathnormal (tex ">\\mkern-3mu >\\mkern-3mu >"))
-        VarSym "***" -> thick (mathnormal (tex "*\\mkern-4mu *\\mkern-4mu *"))
-        VarSym "." -> (1,tex ".", 5)
+        VarSym "*^" -> thin (mathFunc "cdot")
+        VarSym "-<" -> thin (mathFunc "lefttail") 
+        VarSym "<-" -> thin (mathFunc "leftarrow")
+        VarSym "===" -> thick (TexMath (tex "≡"))
+        VarSym ">>=" -> thick (mathnormal (mathTex ">\\mkern-3mu >\\mkern-2mu ="))
+        VarSym ">>" -> thick (mathnormal (mathTex ">\\mkern-3mu >"))
+        VarSym ">>>" -> thick (mathnormal (mathTex ">\\mkern-3mu >\\mkern-3mu >"))
+        VarSym "***" -> thick (mathnormal (mathTex "*\\mkern-4mu *\\mkern-4mu *"))
+        VarSym "." -> (1,mathTex ".", 5)
         VarSym "∘" -> thick (mathnormal self)
         VarSym "×" -> thick (mathnormal self)
-        VarSym "<||>" -> thin (mathnormal  (tex "<\\mkern-5mu | | \\mkern -5mu >"))
+        VarSym "<||>" -> thin (mathnormal  (mathTex "<\\mkern-5mu | | \\mkern -5mu >"))
         VarSym _ -> symbol
         ConSym _ -> ident
         QVarSym _ -> ident
@@ -156,7 +158,7 @@ printTok t = let self = textual $ showToken t
         ParArrayRightSquare -> rightParen
         Comma -> rightParenMed
         Underscore -> symbol
-        BackQuote -> (0,tex "`",0)
+        BackQuote -> (0,mathTex "`",0)
         Dot -> symbol
         DotDot -> symbol
         Colon -> symbol
@@ -165,11 +167,11 @@ printTok t = let self = textual $ showToken t
         Equals -> symbol
         Backslash -> symbol
         Bar -> symbol
-        LeftArrow -> thick $ mathnormal (func "leftarrow")
-        RightArrow -> verythick $ mathnormal (func "rightarrow")
+        LeftArrow -> thick $ mathnormal (mathFunc "leftarrow")
+        RightArrow -> verythick $ mathnormal (mathFunc "rightarrow")
         At -> symbol
         Tilde -> symbol
-        DoubleArrow -> verythick $ mathnormal (func "Rightarrow")
+        DoubleArrow -> verythick $ mathnormal (mathFunc "Rightarrow")
         Minus -> symbol
         Exclamation -> symbol
         Star -> symbol

@@ -75,9 +75,6 @@ instance Textual Tex where
 kern :: String -> TeX
 kern x = braces $ tex $ "\\kern " ++ x
 
-allowbreak :: TeX
-allowbreak = cmd0 "allowbreak"
-
 escape :: Char -> [Char]
 escape '\\' = "\\ensuremath{\\backslash}"
 escape '~' = "\\ensuremath{\\sim}"
