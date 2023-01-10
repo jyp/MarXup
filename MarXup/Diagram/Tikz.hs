@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, RecursiveDo, TypeFamilies, OverloadedStrings, RecordWildCards,UndecidableInstances, PackageImports, TemplateHaskell, RankNTypes #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, OverloadedStrings, RecordWildCards, UndecidableInstances, RankNTypes #-}
 
 module MarXup.Diagram.Tikz where
 
@@ -10,18 +10,25 @@ import MarXup.MultiRef (newLabel)
 import MarXup.Tex
 import Numeric (showFFloat)
 import Data.Foldable
-import Data.Monoid
 
 type TexDiagram = Diagram TeX Tex
 
+-- | Tikz picture with options
+tikzPicture :: [String] -> Diagram TeX Tex b -> Tex b
+tikzPicture options d = do
+  texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!)
+  braces $ do
+    usepkg "tikz" 100 []
+    env' "tikzpicture"options $
+      runDiagram tikzBackend d
+
+-- | Convert a diagram to tikz, and let the baseline be at 0 (instead of the lowest point in the picture).
+tikzWithBaseline :: [String] -> Diagram TeX Tex b -> Tex b
+tikzWithBaseline options = tikzPicture ("baseline=0pt":options)
+
 instance Element (Diagram TeX Tex ()) where
   type Target (Diagram TeX Tex ()) = TeX
-  element d = do
-   texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!)
-   braces $ do
-    usepkg "tikz" 100 []
-    env "tikzpicture" $
-      runDiagram tikzBackend d
+  element = tikzPicture []
 
 -- diaDebug msg = diaRaw $ "\n%DBG:" ++ msg ++ "\n"
 class Tikz a where
