@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, OverloadedStrings, RecordWildCards, UndecidableInstances, RankNTypes #-}
 
-module MarXup.Diagram.Tikz where
+module MarXup.Diagram.Tikz (tikzPicture, tikzZeroBaseline, tikzCentered, tikzLarge, TexDiagram, showDistance) where
 
 import Graphics.Diagrams.Core
 import Prelude hiding (sum,mapM_,mapM,concatMap)
@@ -14,7 +14,7 @@ import Data.Foldable
 type TexDiagram = Diagram TeX Tex
 
 -- | Tikz picture with options
-tikzPicture :: [String] -> Diagram TeX Tex b -> Tex b
+tikzPicture, tikzZeroBaseline, tikzCentered, tikzLarge :: [String] -> Diagram TeX Tex b -> Tex b
 tikzPicture options d = do
   texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!)
   braces $ do
@@ -22,9 +22,22 @@ tikzPicture options d = do
     env' "tikzpicture"options $
       runDiagram tikzBackend d
 
--- | Convert a diagram to tikz, and let the baseline be at 0 (instead of the lowest point in the picture).
-tikzWithBaseline :: [String] -> Diagram TeX Tex b -> Tex b
-tikzWithBaseline options = tikzPicture ("baseline=0pt":options)
+
+-- | Convert a diagram to tikz, and let the baseline be at 0 (instead
+-- of the lowest point in the picture). This way the baseline can be
+-- set precisely in the diagram (knowing that 0 y coordinate is
+-- baseline).
+tikzZeroBaseline options = tikzPicture ("baseline=0pt":options)
+
+-- | Convert a diagram to tikz, and let the baseline be 0.8x below the
+-- center of the picture. This is suitable for larger pictures
+-- inserted directly in text.
+tikzLarge options = tikzPicture ("baseline=([yshift=-0.8ex]current bounding box.center)":options)
+
+-- | Convert a diagram to tikz, and let the baseline be the center of the picture.
+-- This is suitable for lining up pictures by center (for example in a table)
+tikzCentered options = tikzPicture ("baseline={([yshift=-0.8ex]current bounding box.center)}":options)
+
 
 instance Element (Diagram TeX Tex ()) where
   type Target (Diagram TeX Tex ()) = TeX
