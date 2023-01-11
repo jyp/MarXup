@@ -32,11 +32,11 @@ tikzZeroBaseline options = tikzPicture ("baseline=0pt":options)
 -- | Convert a diagram to tikz, and let the baseline be 0.8x below the
 -- center of the picture. This is suitable for larger pictures
 -- inserted directly in text.
-tikzLarge options = tikzPicture ("baseline=([yshift=-0.8ex]current bounding box.center)":options)
+tikzLarge options = tikzPicture ("baseline={([yshift=-0.8ex]current bounding box.center)}":options)
 
 -- | Convert a diagram to tikz, and let the baseline be the center of the picture.
 -- This is suitable for lining up pictures by center (for example in a table)
-tikzCentered options = tikzPicture ("baseline={([yshift=-0.8ex]current bounding box.center)}":options)
+tikzCentered options = tikzPicture ("baseline=(current bounding box.center)":options)
 
 
 instance Element (Diagram TeX Tex ()) where
