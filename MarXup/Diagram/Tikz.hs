@@ -19,7 +19,7 @@ tikzPicture options d = do
   texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!)
   braces $ do
     usepkg "tikz" 100 []
-    env' "tikzpicture"options $
+    env'' "tikzpicture" (tex <$> options) [] $ -- no escaping of options, because braces are common here
       runDiagram tikzBackend d
 
 
