@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module MarXup.Latex where
@@ -238,13 +239,24 @@ center ::  Tex a -> Tex a
 center = env "center"
 
 figure_ :: TeX -> Tex a -> Tex (a, SortedLabel)
-figure_ = figAny "figure*"
+figure_ = figAny "figure*" []
 
 figure :: TeX -> Tex a -> Tex (a,SortedLabel)
-figure = figAny "figure"
+figure = figAny "figure" []
 
-figAny :: String -> TeX -> Tex a -> Tex (a,SortedLabel)
-figAny theEnv caption body = env theEnv $ do
+data FloatPlacement = PlaceHere | PlaceHERE | PlaceForce | PlaceTop | PlacePage| PlaceBottom | PlacementOverride
+
+showPlacement :: FloatPlacement -> String
+showPlacement = \case
+  PlaceBottom -> "b"
+  PlacementOverride -> "!"
+  PlaceHERE -> "H"
+  PlaceTop -> "t"
+  PlacePage -> "p"
+  PlaceHere -> "h"
+
+figAny :: String -> [FloatPlacement] -> TeX -> Tex a -> Tex (a,SortedLabel)
+figAny theEnv place caption body = env' theEnv [concatMap showPlacement place] $ do
   x <- body
   cmd "caption" caption
   (x,) <$> label "Fig."
