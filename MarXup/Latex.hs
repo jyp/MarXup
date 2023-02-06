@@ -269,10 +269,10 @@ wrapfigure isRight sz caption body = do
     cmd "caption" caption
     (x,) <$> label "Fig."
 
-subfigure :: String -> Size -> TeX -> TeX -> Tex SortedLabel
-subfigure option width caption body = do
+subfigure :: [FloatPlacement] -> Size -> TeX -> TeX -> Tex SortedLabel
+subfigure place width caption body = do
   usepkg "subcaption" 100 []
-  env'' "subfigure" [tex option] [texSize width]  $ do
+  env'' "subfigure" [tex $ concatMap showPlacement place] [texSize width]  $ do
     body
     cmd "caption" caption
     label "Subfig."
@@ -281,7 +281,7 @@ subfigures :: TeX -> [(Size,TeX,TeX)] -> Tex ([SortedLabel],SortedLabel)
 subfigures caption subs = figure_ caption $
   forM (zip (True:repeat False) subs) $ \(isFirst,(sz,subcaption,body)) -> do
     unless isFirst (cmd0 "quad")
-    subfigure "b" sz subcaption body
+    subfigure [PlaceBottom] sz subcaption body
 
 table :: TeX -> TeX -> Tex SortedLabel
 table caption body = env "table" $ do
