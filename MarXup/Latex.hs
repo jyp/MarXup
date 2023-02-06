@@ -281,7 +281,7 @@ subfigures :: TeX -> [(Size,TeX,TeX)] -> Tex ([SortedLabel],SortedLabel)
 subfigures caption subs = figure_ caption $
   forM (zip (True:repeat False) subs) $ \(isFirst,(sz,subcaption,body)) -> do
     unless isFirst (cmd0 "quad")
-    subfigure [PlaceBottom] sz subcaption body
+    subfigure [PlaceTop] sz subcaption body -- see https://tex.stackexchange.com/a/333259
 
 table :: TeX -> TeX -> Tex SortedLabel
 table caption body = env "table" $ do
