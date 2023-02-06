@@ -101,6 +101,7 @@ printTok t = let self = textual $ showToken t
                  word = thin
   in case t of
         -- _ -> mathrm $ textual $ show t -- Debug
+        Tilde -> thin (mathFunc "sim")
         VarId _ -> ident
         QVarId _ -> ident
         IDupVarId _ -> ident
