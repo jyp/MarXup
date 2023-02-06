@@ -72,8 +72,8 @@ instance Textual Tex where
     _ -> tex $ process s
    where process = concatMap escape
 
-kern :: String -> TeX
-kern x = braces $ tex $ "\\kern " ++ x
+kern :: Size -> TeX
+kern x = braces $ (tex "\\kern " <> texSize x)
 
 escape :: Char -> [Char]
 escape '\\' = "\\ensuremath{\\backslash}"
@@ -349,6 +349,9 @@ texSize (TexSize u x) = tex (show x) <> case u of
 
 textwidth :: Double -> Size
 textwidth = TexSize TextWidth
+
+exWidth :: Double -> Size
+exWidth = TexSize Ex
 
 centimeters :: Double -> Size
 centimeters = TexSize Cm

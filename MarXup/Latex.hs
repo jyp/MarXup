@@ -17,9 +17,9 @@ mkrows ls = sequence_ $ intersperse newline ls
 -- | Separate the arguments with '&'
 mkcols = sequence_ . intersperse newcol
 
-vspace, hspace :: String -> TeX
-vspace = cmd "vspace" . tex
-hspace = cmd "hspace" . tex
+vspace, hspace :: Size -> TeX
+vspace = cmd "vspace" . texSize
+hspace = cmd "hspace" . texSize
 
 hfill :: TeX
 hfill = cmd0 "hfill"
@@ -85,7 +85,7 @@ authorinfo' Beamer as = do
         inst i = when (length institutions > 1) $ cmd "inst" $ tex $ show (i+1)
 
 authorinfo' IEEE as = cmd "author" $ do
-  cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace "1cm") $ map (textual . authorName) as
+  cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace (centimeters 1)) $ map (textual . authorName) as
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
   cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
   where (AuthorInfo {authorAffil = Affiliation {affilInstitution = inst}}:_) = as
@@ -97,7 +97,7 @@ keywords ks = do
   classFile <- askClass
   case classFile of
     Plain -> do
-      paragraph "keywords"
+      _ <- paragraph "keywords"
       mconcat $ intersperse ", " $ map textual ks
       return ()
     LNCS -> do cmd "keywords" $ mconcat $ intersperse ", " $ map textual ks
