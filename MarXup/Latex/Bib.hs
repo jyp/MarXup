@@ -26,3 +26,6 @@ citet (Verbatim x r) = cmd "citet" (tex x) >> return r
 
 citep :: Verbatim a -> Tex a
 citep (Verbatim x r) = cmd "citep" (tex x) >> return r
+
+citeauthor :: Verbatim a -> Tex a
+citeauthor (Verbatim x r) = cmd "citeauthor" (tex x) >> return r
