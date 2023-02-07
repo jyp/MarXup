@@ -101,7 +101,6 @@ printTok t = let self = textual $ showToken t
                  word = thin
   in case t of
         -- _ -> mathrm $ textual $ show t -- Debug
-        Tilde -> thin (mathFunc "sim")
         VarId _ -> ident
         QVarId _ -> ident
         IDupVarId _ -> ident
@@ -171,7 +170,7 @@ printTok t = let self = textual $ showToken t
         LeftArrow -> thick $ mathnormal (mathFunc "leftarrow")
         RightArrow -> verythick $ mathnormal (mathFunc "rightarrow")
         At -> symbol
-        Tilde -> symbol
+        Tilde -> thin (mathTex "{\\sim}")
         DoubleArrow -> verythick $ mathnormal (mathFunc "Rightarrow")
         Minus -> symbol
         Exclamation -> symbol
