@@ -123,6 +123,10 @@ example = deflike "Ex." "example" "Example"
 oxford :: TexMath a -> TexMath a
 oxford = bigParenthesize (textual "⟦") (textual "⟧")
 
+equation :: TexMath () -> Tex SortedLabel
+equation e = do
+  env "equation" (fromTexMath e >> label "equation")
+
 multiline' :: [TexMath ()] -> Tex ()
 multiline' = env "multline*" . mkrows . fmap fromTexMath
 
