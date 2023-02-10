@@ -210,6 +210,10 @@ descList xs = env "enumerate" $ forM_ xs $ \(lab,x) -> do
 ------------------------
 -- Various environments
 
+quote :: Tex a -> Tex a
+quote = env "quote"
+
+
 tabular :: [String] -> String -> [[TeX]] -> TeX
 tabular opts format bod = do
   env' "tabular" opts $ do
