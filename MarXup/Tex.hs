@@ -14,6 +14,7 @@ import Data.Char (isSpace,toLower)
 import Data.Map (assocs, Map)
 import qualified Data.Map as Map
 import Graphics.Diagrams.Core (BoxSpec (..))
+import Data.Either (rights)
 
 data ClassFile = ACMArt | Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
   deriving (Ord,Eq,Show)
@@ -121,6 +122,7 @@ genParen [l,r] x = tex [l] *> x <* tex [r]
 braces,brackets :: Tex a -> Tex a
 braces = genParen "{}"
 brackets = genParen "[]"
+parens = genParen "()"
 
 backslash :: TeX
 backslash = tex ['\\']
@@ -129,7 +131,7 @@ nil :: TeX
 nil = braces (tex "")
 
 func :: String -> TeX
-func cmd = backslash >> tex cmd >> tex " "
+func c = backslash >> tex c >> tex " "
 
 -- | Command with no argument
 cmd0 :: String -> Tex ()
@@ -141,34 +143,34 @@ cmd c = cmd' c []
 
 -- | Command with options
 cmd' :: String -> [String] -> Tex b -> Tex b
-cmd' cmd options arg = do
-  xs <- cmdn' cmd options [arg]
+cmd' c options arg = do
+  xs <- cmdn' c options [arg]
   case xs of
     [x] -> return x
     _ -> error "MarXup.Tex: cmd': the impossible happened"
 
--- | Command with options and many arguments
+-- | Command with comma-separated string options in a single bracket, and many arguments
 cmdn' :: String -> [String] -> [Tex a] -> Tex [a]
-cmdn' cmd options args = do
-  backslash >> tex cmd
-  when (not $ null options) $ brackets $ sequence_ $ map tex $ intersperse "," options
-  res <- sequence $ map braces args
-  when (null args) $ tex "{}" -- so that this does not get glued with the next thing.
-  return res
+cmdn' c options args = rights <$>
+  cmdm c [Left <$> tex (intercalate "," options) | not (null options)]
+         (fmap (Right <$>) args)
 
 -- | Command with tex options and several arguments
 cmdm :: String -> [Tex a] -> [Tex a] -> Tex [a]
-cmdm cmd options args = do
-  backslash >> tex cmd
-  when (not $ null options) $ sequence_ $ map brackets $ options
-  res <- sequence $ map braces args
+cmdm n options args = cmdGeneric n (map brackets options ++ map braces args)
+
+-- | A generic command with arguments. The arguments are assumed to be
+-- already enclosed in braces, brackets, parens, etc. accordingly.
+cmdGeneric :: String -> [Tex a] -> Tex [a]
+cmdGeneric cmdName args = do
+  backslash >> tex cmdName
+  res <- sequence args
   when (null args) $ tex "{}" -- so that this does not get glued with the next thing.
   return res
 
-
 -- | Command with string options and several arguments; no result
 cmdn'_ :: String -> [String] -> [TeX] -> Tex ()
-cmdn'_ cmd options args = cmdn' cmd options args >> return ()
+cmdn'_ c options args = cmdn' c options args >> return ()
 
 -- | Command with n arguments
 cmdn :: String -> [Tex a] -> Tex [a]

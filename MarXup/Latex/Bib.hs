@@ -34,15 +34,12 @@ bibliography x = do
   texLn ""
 
 citation :: Citation -> TeX
-citation (Citation c how parts) =
-  case parts of
-    [CitationPart{..}] ->
-      cmdm cmdName
-          [citPrenote,citPostnote]
-          [tex citKey]
-      >> return ()
-    _ -> error "citation: multi-part citation not implemented yet"
+citation (Citation c how parts) = 
+  cmdGeneric cmdName (concatMap partArgs parts) >>
+  return ()
   where
+    partArgs CitationPart{..} = 
+      (brackets <$> [citPrenote,citPostnote]) ++ [braces (tex citKey)]
     cmdName =
       (++ ['s' | multi]) $
       maybeCapitalize $
@@ -67,11 +64,17 @@ prenote :: TeX -> Citation -> Citation
 prenote note Citation{..} =
   Citation{citationParts=fmap (\CitationPart{..} -> CitationPart{citPostnote = note,..}) citationParts,..}
 
+nominative :: Citation -> Citation
+nominative (Citation caps _ parts) = Citation caps CiteText parts
+
 citet :: Verbatim a -> Citation
 citet (Verbatim x _) = Citation False CiteText [CitationPart x mempty mempty] 
 
 citep :: Verbatim a -> Citation
 citep (Verbatim x _) = Citation False CiteParen [CitationPart x mempty mempty] 
+
+cites :: [Verbatim a] -> Citation
+cites vs = Citation False CiteParen [CitationPart (fromVerbatim x) mempty mempty | x <- vs] 
 
 citeauthor :: Verbatim a -> Citation
 citeauthor (Verbatim x _) = Citation False CiteAuthor [CitationPart x mempty mempty] 
