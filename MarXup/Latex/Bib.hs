@@ -80,3 +80,6 @@ citeauthor :: Verbatim a -> Citation
 citeauthor (Verbatim x _) = Citation False CiteAuthor [CitationPart x mempty mempty] 
 
 
+printBibliography :: Tex ()
+printBibliography = cmd0 "printbibliography"
+
