@@ -66,6 +66,11 @@ haskellInlineCust' mode processToks v = case lexTokenStreamWithMode mode (prepro
    ParseOk toks -> map render $ mkSpaces $ map mkTok  $ processToks toks
    ParseFailed location err -> [textual (show location ++ show err)]
 
+-- >>> splitTok "test_"
+-- ("test",Nothing)
+
+-- >>> splitTok "test_x"
+-- ("test",Just "x")
 
 splitTok :: String -> (String, Maybe String)
 splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Just (reverse subscript))
@@ -76,6 +81,13 @@ splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Ju
         (primes,rev1) = span (== '\'') rev0
         rev0 = reverse input
         subscript = explicitSubscript ++ numbers
+
+          
+-- >>> let scnd (_,x,_) = x in renderSimple . fromTexMath . scnd . printTok . VarId $ "test_"
+-- "test_"
+
+-- >>> let scnd (_,x,_) = x in renderSimple . fromTexMath . scnd . printTok . VarId $ "test_i"
+-- "\\mathsf{test}_{i}"
 
 printTok :: PrintTok
 printTok t = let self = textual $ showToken t
