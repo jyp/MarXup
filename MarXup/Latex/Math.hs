@@ -30,6 +30,9 @@ instance Element (TexMath ()) where
   type Target (TexMath ()) = Tex ()
   element = math
 
+escapeMath :: String -> TexMath ()
+escapeMath  = TexMath . tex . concatMap escape
+
 mkMathMatrix :: [[TexMath ()]] -> TexMath ()
 mkMathMatrix = TexMath . mkrows . map (mkcols . map fromTexMath)
 

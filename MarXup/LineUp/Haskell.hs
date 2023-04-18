@@ -83,17 +83,21 @@ splitTok input = (reverse rev3 ++ primes, if null subscript then Nothing else Ju
         subscript = explicitSubscript ++ numbers
 
           
+-- >>> let scnd (_,x,_) = x in renderSimple . fromTexMath . scnd . printTok . VarId $ "_"
+-- "\\mathsf{\\_}"
+
 -- >>> let scnd (_,x,_) = x in renderSimple . fromTexMath . scnd . printTok . VarId $ "test_"
--- "test_"
+-- "\\mathsf{test\\_}"
 
 -- >>> let scnd (_,x,_) = x in renderSimple . fromTexMath . scnd . printTok . VarId $ "test_i"
 -- "\\mathsf{test}_{i}"
 
+
 printTok :: PrintTok
-printTok t = let self = textual $ showToken t
+printTok t = let self = escapeMath $ showToken t
                  ident = word $ case splitTok $ showToken t of
                               (_,Nothing) -> mathsf self
-                              (pref,Just suff) -> mathsf (textual pref) <> subscript (textual suff)
+                              (pref,Just suff) -> mathsf (escapeMath pref) <> subscript (escapeMath suff)
                  unquote = word $ mathsf self
                  quote = word $ mathtt self
                  literal = word $ mathrm self
@@ -105,14 +109,14 @@ printTok t = let self = textual $ showToken t
                  rightParen = (0,mathnormal self <> allowbreak,3)
                  rightParenMed = (0,mathnormal self,4)
                  special x = med $ mathnormal $ TexMath (tex x)
-                 debug = thick $ textual "[" <> mathnormal (textual $ show t) <> textual "]"
+                 debug = thick $ escapeMath ("[" <> show t <> "]")
                  thick s = (5,s,5)
                  verythick s = (6,s,6)
                  med s = (4,s,4)
                  thin s = (3,s,3)
                  word = thin
   in case t of
-        -- _ -> mathrm $ textual $ show t -- Debug
+        -- _ -> mathrm $ escapeMath $ show t -- Debug
         VarId _ -> ident
         QVarId _ -> ident
         IDupVarId _ -> ident
