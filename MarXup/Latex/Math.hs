@@ -101,6 +101,7 @@ deflike referent nv header name statement = do
   unless (cls == LNCS) $ usepkg "amsthm" 100 []
   let envir body = case cls of
         SIGPlan -> env'' nv [name] [] (hspace (centimeters 0) >> body)
+        ACMArt -> env'' nv [name] [] (body)
         _ -> env'' nv [] [name] body
   envir $ do
     statement
