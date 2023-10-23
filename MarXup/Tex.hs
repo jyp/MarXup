@@ -116,13 +116,13 @@ texLn s = tex s >> tex "\n"
 texLines :: [String] -> Tex ()
 texLines = mapM_ texLn
 
-genParen :: String -> Tex a -> Tex a
-genParen [l,r] x = tex [l] *> x <* tex [r]
+genParen :: Char -> Char -> Tex a -> Tex a
+genParen l r x = tex [l] *> x <* tex [r]
 
-braces,brackets :: Tex a -> Tex a
-braces = genParen "{}"
-brackets = genParen "[]"
-parens = genParen "()"
+parens,braces,brackets :: Tex a -> Tex a
+braces = genParen '{' '}'
+brackets = genParen '[' ']'
+parens = genParen '(' ')'
 
 backslash :: TeX
 backslash = tex ['\\']
