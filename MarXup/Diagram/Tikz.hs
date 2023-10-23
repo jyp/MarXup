@@ -19,7 +19,7 @@ tikzPicture options d = do
   -- texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!) -- This is a bad hack because it inserts paragaph breaks
   braces $ do
     usepkg "tikz" 100 []
-    -- useTikzLib "decorations.pathmorphing" -- breaks stuff
+    -- useTikzLib "decorations.pathmorphing" -- yields "dimension too large in some paths"
     env'' "tikzpicture" (tex <$> options) [] $ -- no escaping of options, because braces are common here
       runDiagram tikzBackend d
 
@@ -61,8 +61,11 @@ instance Tikz (Frozen Segment) where
   -- toTikz (Rounded (Just r)) = "[" <> toTikz (constant r) <> "]"
 
 showDistance :: Constant -> String
-showDistance x = showFFloat (Just 4) x tikzUnit
+showDistance x = dropZeros (showFFloat (Just 4) x "") <> tikzUnit
     where tikzUnit = "pt"
+          dropZeros = reverse . dropDot . dropWhile (== '0') . reverse
+          dropDot ('.':xs) = xs
+          dropDot xs = xs
 
 instance Tikz LineTip where
   toTikz t = case t of
@@ -96,7 +99,9 @@ instance Tikz PathOptions where
     <> "dash pattern=" <> showDashPat _dashPattern
     <> (case _decoration of
            Decoration [] -> ""
-           Decoration d -> ",decorate,decoration=" ++ d)
+           Decoration _ -> error "decorations not supported! (MarXup.Diagram.Tikz)"
+             -- ",decorate,decoration=" ++ d
+       )
     <> "]"
     where col attr = maybe "" (\c -> attr <> "=" <> c <> ",")
 
@@ -122,6 +127,3 @@ tikzBackend = Backend {..} where
          fillBox bxId True $ braces $ lab
          tex ";\n"
        embedder $ getBoxFromId bxId
-
-
-type Dia = TexDiagram ()
