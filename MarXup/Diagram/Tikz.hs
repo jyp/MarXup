@@ -16,9 +16,10 @@ type TexDiagram = Diagram TeX Tex
 -- | Tikz picture with options
 tikzPicture, tikzZeroBaseline, tikzCentered, tikzLarge :: [String] -> Diagram TeX Tex b -> Tex b
 tikzPicture options d = do
-  -- texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!) -- This is a bad hack because it insert paragaph breaks
+  -- texLn "" -- otherwise beamer does not understand where a tikzpicture ends (?!!) -- This is a bad hack because it inserts paragaph breaks
   braces $ do
     usepkg "tikz" 100 []
+    -- useTikzLib "decorations.pathmorphing" -- breaks stuff
     env'' "tikzpicture" (tex <$> options) [] $ -- no escaping of options, because braces are common here
       runDiagram tikzBackend d
 
