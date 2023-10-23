@@ -12,6 +12,8 @@ import MarXup.MultiRef
 import System.Directory (doesFileExist)
 import Data.Char (isSpace,toLower)
 import Data.Map (assocs, Map)
+import Data.Set (Set)
+import Data.Foldable
 import qualified Data.Map as Map
 import Graphics.Diagrams.Core (BoxSpec (..))
 import Data.Either (rights)
@@ -23,24 +25,26 @@ data ClassFile = ACMArt | Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
 ------------------------------------
 -- MetaData
 
-data Key = PreClass ClassFile | PrePackage Int {- priority -} String | PreTheorem String String
+data Key = PreClass ClassFile | PrePackage Int {- priority -} String | PreTikzLib | PreTheorem String String
   deriving (Ord,Eq)
 
 newtheorem :: String -> String -> TeX
 newtheorem ident txt = do
   sty <- askClass
   unless ((sty == LNCS || sty == Beamer || sty == ACMArt) && ident `elem` ["theorem", "corollary", "lemma", "definition", "proposition"]) $ do
-  Tex $ metaData (PreTheorem ident txt) ""
+  Tex $ metaData (PreTheorem ident txt) []
 
 
 usepkg :: String -> Int -> [String] -> TeX
-usepkg ident prio options = Tex $ metaData (PrePackage prio ident) (intercalate "," options)
+usepkg ident prio options = Tex $ metaData (PrePackage prio ident) options
 -- regular packages: 100
 -- around "last": 1000
 
+useTikzLib :: String -> TeX
+useTikzLib lib = Tex $ metaData PreTikzLib [lib]
 
 documentClass :: ClassFile -> [String] -> TeX
-documentClass docClass options = Tex $ metaData (PreClass docClass) (intercalate "," options)
+documentClass docClass options = Tex $ metaData (PreClass docClass) options
 
 className :: ClassFile -> String
 className = \case
@@ -48,11 +52,13 @@ className = \case
   SIGPlan -> "sigplanconf"
   c -> map toLower (show c)
 
-renderKey :: Key -> String -> String
+renderKey :: Key -> Set String -> String
 renderKey o options = case o of
-  PreClass name -> "\\documentclass[" ++ options ++ "]{" ++ className name ++ "}"
-  PrePackage _ name -> "\\usepackage[" ++ options ++ "]{" ++ name ++ "}"
+  PreClass name -> "\\documentclass[" ++ opts ++ "]{" ++ className name ++ "}"
+  PrePackage _ name -> "\\usepackage[" ++ opts ++ "]{" ++ name ++ "}"
   PreTheorem ident txt  -> "\\newtheorem{" ++ ident ++ "}{" ++ txt ++ "}"
+  PreTikzLib -> "\\usetikzlibrary{"++ opts ++"}"
+ where opts = intercalate "," $ toList options
 
 newtype Tex a = Tex {fromTex :: Multi () Key a}
   deriving (Monad, MonadFix, Applicative, Functor)

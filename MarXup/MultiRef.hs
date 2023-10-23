@@ -4,10 +4,12 @@ module MarXup.MultiRef where
 
 import Control.Monad.Fix
 import Control.Monad.RWS.Lazy
-import Data.Map.Strict (Map,insert)
+import Data.Map.Strict (Map,insertWith)
+import qualified Data.Set as S
+import Data.Set (Set)
 import qualified Data.Map.Strict as M
 import Graphics.Diagrams.Core (BoxSpec, nilBoxSpec)
-type MetaData key = Map key String
+type MetaData key = Map key (Set String)
 type BoxSpecs = Map Int BoxSpec
 
 -- FIXME: Move boxspecs to the Read part.
@@ -37,10 +39,10 @@ newLabel = do (r,bx,m) <- get
               return r
 
 -- | output some meta data
-metaData :: Ord key => key -> String -> Multi config key ()
+metaData :: Ord key => key -> [String] -> Multi config key ()
 metaData k val = do
    (r,bx,m) <- get
-   put (r,bx,insert k val m)
+   put (r,bx,insertWith (S.union) k (S.fromList val) m)
    return ()
 
 getMetaData :: Multi config key (MetaData key)
