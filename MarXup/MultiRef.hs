@@ -38,7 +38,7 @@ newLabel = do (r,bx,m) <- get
               put (r+1,bx,m)
               return r
 
--- | output some meta data
+-- | Output some meta data 
 metaData :: Ord key => key -> [String] -> Multi config key ()
 metaData k val = do
    (r,bx,m) <- get
@@ -47,6 +47,10 @@ metaData k val = do
 
 getMetaData :: Multi config key (MetaData key)
 getMetaData = gets (\(_,_,m) -> m)
+
+getMetaDataOptions :: Ord key => key -> Multi config key (Maybe (Set String))
+getMetaDataOptions k = M.lookup k <$> getMetaData
+
 
 type References = Int -- how many labels have been allocated
 emptyRefs :: References

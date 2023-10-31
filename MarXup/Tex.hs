@@ -18,20 +18,21 @@ import qualified Data.Map as Map
 import Graphics.Diagrams.Core (BoxSpec (..))
 import Data.Either (rights)
 
-data ClassFile = ACMArt | Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer
+data ClassFile = ACMArt | Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer | JFP
   deriving (Ord,Eq,Show)
 
 
 ------------------------------------
 -- MetaData
 
-data Key = PreClass ClassFile | PrePackage Int {- priority -} String | PreTikzLib | PreTheorem String String
+data Key = PreClass ClassFile | PrePackage Int {- priority -} String | PreTikzLib | PreTheorem String String | Biblatex | BibResource
   deriving (Ord,Eq)
 
 newtheorem :: String -> String -> TeX
 newtheorem ident txt = do
   sty <- askClass
-  unless ((sty == LNCS || sty == Beamer || sty == ACMArt) && ident `elem` ["theorem", "corollary", "lemma", "definition", "proposition"]) $ do
+  unless ((sty == LNCS || sty == Beamer || sty == ACMArt) &&
+          ident `elem` ["theorem", "corollary", "lemma", "definition", "proposition"]) $ do
   Tex $ metaData (PreTheorem ident txt) []
 
 
@@ -58,6 +59,8 @@ renderKey o options = case o of
   PrePackage _ name -> "\\usepackage[" ++ opts ++ "]{" ++ name ++ "}"
   PreTheorem ident txt  -> "\\newtheorem{" ++ ident ++ "}{" ++ txt ++ "}"
   PreTikzLib -> "\\usetikzlibrary{"++ opts ++"}"
+  Biblatex -> mempty
+  BibResource -> mempty
  where opts = intercalate "," $ toList options
 
 newtype Tex a = Tex {fromTex :: Multi () Key a}
