@@ -102,6 +102,7 @@ deflike referent nv header name statement = do
   let envir body = case cls of
         SIGPlan -> env'' nv [name] [] (hspace (centimeters 0) >> body)
         ACMArt -> env'' nv [name] [] (body)
+        JFP -> env'' nv [name] [] (body)
         _ -> env'' nv [] [name] body
   envir $ do
     statement
