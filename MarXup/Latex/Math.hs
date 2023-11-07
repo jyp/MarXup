@@ -132,6 +132,9 @@ equation :: TexMath () -> Tex SortedLabel
 equation e = do
   env "equation" (fromTexMath e >> label "equation")
 
+equals :: TexMath () -> TexMath () -> TexMath ()
+equals (TexMath x) (TexMath y) = TexMath (x <> tex " = " <> y)
+
 multiline' :: [TexMath ()] -> Tex ()
 multiline' = env "multline*" . mkrows . fmap fromTexMath
 
