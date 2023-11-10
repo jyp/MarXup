@@ -100,7 +100,7 @@ deflike referent nv header name statement = do
     newtheorem nv header
   unless (cls == LNCS) $ usepkg "amsthm" 100 []
   let envir body = case cls of
-        SIGPlan -> env'' nv [name] [] (hspace (centimeters 0) >> body)
+        SIGPlan -> env'' nv [name] [] (hspace (0 !*^ centimeter) >> body)
         ACMArt -> env'' nv [name] [] (body)
         JFP -> env'' nv [name] [] (body)
         _ -> env'' nv [] [name] body

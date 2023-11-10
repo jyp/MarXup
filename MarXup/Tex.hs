@@ -1,7 +1,8 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies,TypeSynonymInstances,FlexibleInstances, PackageImports #-}
 
-module MarXup.Tex where
+module MarXup.Tex (module MarXup.Tex) where
 
 import MarXup
 import Control.Monad.Reader
@@ -17,6 +18,7 @@ import Data.Foldable
 import qualified Data.Map as Map
 import Graphics.Diagrams.Core (BoxSpec (..))
 import Data.Either (rights)
+import Algebra.Classes  as MarXup.Tex(Scalable'(..))
 
 data ClassFile = ACMArt | Plain | LNCS | SIGPlan | IEEE | EPTCS | Beamer | JFP
   deriving (Ord,Eq,Show)
@@ -353,18 +355,25 @@ data Size = TexSize Unit Double
 
 data Unit = TextWidth | Cm | Em | En | Ex deriving Show
 
+instance Scalable' Size where
+  type Scalar Size = Double
+  (!*^) = (*:) where 
+    (*:) :: Double -> Size -> Size
+    s *: (TexSize u t) = TexSize u (s*t)
+
+
 texSize :: Size -> TeX
 texSize (TexSize u x) = tex (show x) <> case u of
   TextWidth -> tex ("\\textwidth")
   _ -> tex (map toLower (show u))
 
-textwidth :: Double -> Size
-textwidth = TexSize TextWidth
+textwidth :: Size
+textwidth = TexSize TextWidth 1
 
-exWidth :: Double -> Size
-exWidth = TexSize Ex
+exWidth :: Size
+exWidth = TexSize Ex 1
 
-centimeters :: Double -> Size
-centimeters = TexSize Cm
+centimeter :: Size
+centimeter = TexSize Cm 1
 
 

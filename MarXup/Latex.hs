@@ -90,7 +90,7 @@ authorinfo' Beamer as = do
         inst i = when (length institutions > 1) $ cmd "inst" $ tex $ show (i+1)
 
 authorinfo' IEEE as = cmd "author" $ do
-  cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace (centimeters 1)) $ map (textual . authorName) as
+  cmd "IEEEauthorblockN" $ mconcat $ intersperse (hspace (1 !*^ centimeter)) $ map (textual . authorName) as
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
   cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
   where (AuthorInfo {authorAffil = Affiliation {affilInstitution = inst}}:_) = as
