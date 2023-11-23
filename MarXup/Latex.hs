@@ -99,9 +99,9 @@ authorinfo' JFP as = env "authgrp" $ do
     cmd "author" (textual authorName)
     cmd "affiliation" $ do
       textual affilInstitution
-      textual ","
+      textual ", "
       textual affilCity
-      textual ","
+      textual ", "
       textual affilCountry
       textual "("
       cmd "email" (textual authorEmail)
