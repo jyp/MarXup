@@ -7,6 +7,8 @@ module MarXup.Tex (module MarXup.Tex) where
 import MarXup
 import Control.Monad.Reader
 import Control.Monad.RWS
+import Control.Monad.Fix
+import Control.Monad (when, unless)
 import GHC.Exts( IsString(..) )
 import Data.List (intersperse,intercalate)
 import MarXup.MultiRef
