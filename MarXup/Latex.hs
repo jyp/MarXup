@@ -140,9 +140,10 @@ acknowledgements body = do
             body
 
 
-footnote :: Tex a -> Tex a
-footnote = cmd "footnote"
-
+footnote :: Tex a -> Tex SortedLabel
+footnote body = cmd "footnote" $ do
+  _ <- body
+  label "Footnote"
 
 newline :: TeX
 newline = backslash <> backslash
