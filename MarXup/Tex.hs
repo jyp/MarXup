@@ -5,6 +5,7 @@
 module MarXup.Tex (module MarXup.Tex) where
 
 import MarXup
+import System.IO
 import Control.Monad.Reader
 import Control.Monad.RWS
 import Control.Monad.Fix
@@ -307,14 +308,24 @@ fillBox bxId showBox x = braces $ do
 -- infinitely many boxes, and thus we need to reuse (latex-side) box
 -- ids.
 
-renderWithBoxes :: BoxSpecs -> Tex a -> String
-renderWithBoxes bs (Tex t) = (preamble ++ doc)
+renderWithBoxes :: BoxSpecs -> Tex a -> [TreeDoc]
+renderWithBoxes bs (Tex t) = Inline preamble : doc
   where (_,(_,_,metaDatum),doc) = runRWS (fromMulti $ t) () (0,bs,mempty)
         preamble :: String
         preamble = unlines $ map (uncurry renderKey) $ assocs metaDatum
 
+writeDocs :: String -> [TreeDoc] -> IO ()
+writeDocs fname ds = withFile fname WriteMode $ \h -> forM_ ds $ \case
+  Inline s -> hPutStr h s
+  SeparateFile fname' ds' -> do
+    hPutStr h ("\\input{" <> fname' <> "}")
+    writeDocs fname' ds'
+
+inSubFile :: String -> Tex a -> Tex a
+inSubFile fname (Tex x) = Tex (censor (\ds -> [ SeparateFile fname ds ]) x)
+
 renderSimple :: Tex a -> String
-renderSimple = renderWithBoxes Map.empty
+renderSimple t = concatMap flattenTreeDoc (renderWithBoxes Map.empty t)
 
 renderTex :: String -> TeX -> IO ()
 renderTex fname body = do
@@ -327,11 +338,13 @@ renderTex fname body = do
   putStrLn $ "Found " ++ show (length boxes) ++ " boxes"
   let texSource = renderWithBoxes boxes wholeDoc
       wholeDoc = do
-        tex $ "\\newwrite\\boxesfile"
-        tex $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n\\newsavebox{\\marxupbox}"
+        inSubFile ("opening_" <> fname <> ".tex") $ do
+          tex $ "\\newwrite\\boxesfile"
+          tex $ "\\immediate\\openout\\boxesfile="++boxesTxt++"\n\\newsavebox{\\marxupbox}"
         body
-        tex "\n\\immediate\\closeout\\boxesfile"
-  writeFile (fname ++ ".tex") texSource
+        inSubFile ("closing_" <> fname <> ".tex") $ do
+          tex "\n\\immediate\\closeout\\boxesfile"
+  writeDocs (fname ++ ".tex") texSource
 
 askClass :: Tex ClassFile
 askClass = Tex $ do

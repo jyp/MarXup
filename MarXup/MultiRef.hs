@@ -9,12 +9,18 @@ import qualified Data.Set as S
 import Data.Set (Set)
 import qualified Data.Map.Strict as M
 import Graphics.Diagrams.Core (BoxSpec, nilBoxSpec)
+
 type MetaData key = Map key (Set String)
 type BoxSpecs = Map Int BoxSpec
-
 -- FIXME: Move boxspecs to the Read part.
-newtype Multi config key a = Multi {fromMulti :: RWS config String (References,BoxSpecs,MetaData key) a }
-  deriving (Functor, Monad, MonadReader config, Applicative, MonadWriter String, MonadState (References,BoxSpecs,MetaData key), MonadFix)
+data TreeDoc = Inline String | SeparateFile String [TreeDoc]
+flattenTreeDoc :: TreeDoc -> String
+flattenTreeDoc (Inline s) = s
+flattenTreeDoc (SeparateFile _ ds) = concatMap flattenTreeDoc ds
+
+newtype Multi config key a = Multi {fromMulti :: RWS config [TreeDoc] (References,BoxSpecs,MetaData key) a }
+  deriving (Functor, Monad, MonadReader config, Applicative, MonadWriter [TreeDoc], MonadState (References,BoxSpecs,MetaData key), MonadFix)
+
 
 -----------------------------------
 -- Basic datatype and semantics
@@ -23,7 +29,7 @@ type Label = Int
 
 
 raw :: String -> Multi config key ()
-raw s = tell s
+raw s = tell [Inline s]
 
 getBoxSpec :: Int -> Multi config key BoxSpec
 getBoxSpec bxId = do
