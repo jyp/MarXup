@@ -16,7 +16,6 @@ derivationTree, derivationTreeD
 
 -- import DerivationTrees.Basics
 import Data.List
-import Control.Monad.Writer 
 import Data.LabeledTree
 import Data.Monoid
 import MarXup (element)
@@ -40,12 +39,14 @@ derivationTree = stringizeTex
 stringizeTex :: Derivation TeX -> TeX
 stringizeTex (Node Rule {..} premises) = braces $ do
   cmd0 "displaystyle" -- so that the text does not get smaller
-  cmdn "frac" [mconcat $
-               intersperse (cmd0 "quad")
-               [ stringizeTex v | _ ::> v <- premises]
-              ,conclusion]
   braces $ do cmd0 "small"
-              ruleLabel
+              leftLabel
+  _ <- cmdn "frac" [mconcat $
+                    intersperse (cmd0 "quad")
+                    [ stringizeTex v | _ ::> v <- premises]
+                   ,conclusion]
+  braces $ do cmd0 "small"
+              rightLabel
 
 -- -- | More compact variant
 haltDrv :: TeX -> Derivation TeX -> Derivation TeX
