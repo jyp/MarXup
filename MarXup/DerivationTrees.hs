@@ -22,6 +22,7 @@ import MarXup (element)
 import MarXup.Tex hiding (label)
 import Graphics.Diagrams.DerivationTrees
 import MarXup.Diagram
+import Data.Foldable
 
 ----------------------------------------------------------
 -- Tikzify
@@ -40,13 +41,13 @@ stringizeTex :: Derivation TeX -> TeX
 stringizeTex (Node Rule {..} premises) = braces $ do
   cmd0 "displaystyle" -- so that the text does not get smaller
   braces $ do cmd0 "small"
-              leftLabel
+              forM_ leftLabel id
   _ <- cmdn "frac" [mconcat $
                     intersperse (cmd0 "quad")
                     [ stringizeTex v | _ ::> v <- premises]
                    ,conclusion]
   braces $ do cmd0 "small"
-              rightLabel
+              forM_ rightLabel id
 
 -- -- | More compact variant
 haltDrv :: TeX -> Derivation TeX -> Derivation TeX
