@@ -147,7 +147,8 @@ frac (TexMath x) (TexMath y) = TexMath (cmdn_ "frac" [x,y])
 qedhere :: Tex ()
 qedhere = cmd0 "qedhere"
 
-mathbf, mathtt, mathrm, mathsf, mathnormal :: TexMath a -> TexMath a
+mathit,mathbf, mathtt, mathrm, mathsf, mathnormal :: TexMath a -> TexMath a
+mathit = TexMath . cmd "mathit" . fromTexMath 
 mathsf = TexMath . cmd "mathsf" . fromTexMath 
 mathnormal = TexMath . cmd "mathnormal" . fromTexMath
 mathrm = TexMath . cmd "mathrm" . fromTexMath
