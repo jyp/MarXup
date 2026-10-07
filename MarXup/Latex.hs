@@ -48,6 +48,13 @@ authorinfo' ACMArt as = forM_ as $ \AuthorInfo{authorAffil = Affiliation{..},..}
     cmd "city" $ textual affilCity
     cmd "country" $ textual affilCountry
   cmd "email" $ textual authorEmail
+authorinfo' JFP as = forM_ as $ \AuthorInfo{authorAffil = Affiliation{..},..} -> do
+  cmd "author" $ textual authorName
+  cmd "affiliation" $ do
+    cmd "institution" $ textual affilInstitution
+    cmd "city" $ textual affilCity
+    cmd "country" $ textual affilCountry
+  cmd "email" $ textual authorEmail
 authorinfo' LNCS as = do
   cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
   cmd "institute" $ mconcat $ intersperse (cmd0 "and") $ map textual $ insts
@@ -94,18 +101,6 @@ authorinfo' IEEE as = cmd "author" $ do
   tex "\n\n" -- for some reason the IEEE class wants a paragraph separation here.
   cmd "IEEEauthorblockA" $ mkrows $ [textual inst,"email: " <> textual (mconcat $ intersperse " " $ map authorEmail as)]
   where (AuthorInfo {authorAffil = Affiliation {affilInstitution = inst}}:_) = as
-authorinfo' JFP as = env "authgrp" $ do
-  forM_ as $ \AuthorInfo {authorAffil = Affiliation {..},..} -> do
-    cmd "author" (textual authorName)
-    cmd "affiliation" $ do
-      textual affilInstitution
-      textual ", "
-      textual affilCity
-      textual ", "
-      textual affilCountry
-      textual "("
-      cmd "email" (textual authorEmail)
-      textual")"
 authorinfo' _ {- Plain -} as = cmd "author" $ mconcat $ intersperse (cmd0 "and") $ map oneauthor as
   where oneauthor (AuthorInfo name _ Affiliation {affilInstitution = institution}) = textual name <> newline <> textual institution
   
@@ -130,6 +125,13 @@ acknowledgements body = do
   case classFile of
     SIGPlan -> cmd0 "acks" >> body
     ACMArt -> do
+      x <- env "acks" $ do
+        texLn "" -- some idiotic bug in acmart
+        body
+      texLn "" -- some idiotic bug in acmart
+      texLn ""
+      return x
+    JFP -> do
       x <- env "acks" $ do
         texLn "" -- some idiotic bug in acmart
         body

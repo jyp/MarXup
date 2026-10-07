@@ -54,6 +54,7 @@ documentClass docClass options = Tex $ metaData (PreClass docClass) options
 
 className :: ClassFile -> String
 className = \case
+  JFP -> "jfp-epi"
   Plain -> "article"
   SIGPlan -> "sigplanconf"
   c -> map toLower (show c)
